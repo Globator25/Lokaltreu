@@ -6,9 +6,9 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test -ws --if-present",
-    "build": "npm run build -ws --if-present",
-    "lint": "npm run lint -ws --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
   },
   "keywords": [],
   "author": "",

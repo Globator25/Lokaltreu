@@ -13,12 +13,16 @@ jobs:
         with:
           cache: npm
       - run: npm ci --include=dev
+
       - name: Lint
-        run: npm run lint
+        run: npm run lint --workspaces
+
       - name: Build
         run: npm run build --workspaces --if-present
+
       - name: Unit & Contract Tests
         run: npm test --workspaces -- --coverage
+
       - name: OpenAPI Lint
         run: npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
       - name: Artefakte hochladen (dist)
@@ -31,3 +35,9 @@ jobs:
         with:
           name: coverage
           path: "**/coverage/**"
+
+      # --- Coverage-Prüfung ---
+      # Stellt sicher, dass die Testabdeckung das Ziel von 80% erreicht.
+      # Dieser Schritt nutzt den Vitest-Reporter, um die JSON-Zusammenfassung zu prüfen.
+      - name: Check test coverage
+        run: npx vitest-coverage-check --thresholds.statements 80 --thresholds.branches 80 --thresholds.functions 80 --thresholds.lines 80

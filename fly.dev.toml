@@ -1,0 +1,37 @@
+# fly.io Konfiguration für die 'dev'-Umgebung
+# App-Name sollte mit dem in Fly.io erstellten App-Namen übereinstimmen (z.B. lokaltreu-dev)
+app = "lokaltreu-dev"
+primary_region = "fra" # Frankfurt, Deutschland
+
+# Definiert die Prozesse, die Fly.io starten soll.
+# Wir haben einen 'web'-Prozess für die Next.js-App und einen 'api'-Prozess für die Node.js-API.
+[processes]
+  web = "npm run start -w apps/web"
+  api = "npm run start -w apps/api"
+
+# HTTP-Service für die Next.js Web-App (öffentlich erreichbar)
+[[services]]
+  # Nur der 'web'-Prozess soll öffentlichen Traffic erhalten.
+  processes = ["web"]
+  protocol = "tcp"
+  internal_port = 3000 # Standard-Port von Next.js
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  # Health Check für die Web-App
+  [services.http_checks]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/" # Prüft die Startseite
+
+# Die API ist in dieser Konfiguration nur intern über 'fly-proxy' erreichbar.
+# Wenn sie öffentlich sein soll, müsste ein weiterer [[services]]-Block hinzugefügt werden.

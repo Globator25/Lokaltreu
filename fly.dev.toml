@@ -6,8 +6,8 @@ primary_region = "fra" # Frankfurt, Deutschland
 # Definiert die Prozesse, die Fly.io starten soll.
 # Wir haben einen 'web'-Prozess für die Next.js-App und einen 'api'-Prozess für die Node.js-API.
 [processes]
-  web = "npm run start -w apps/web"
-  api = "npm run start -w apps/api"
+  web = "node apps/web/.next/standalone/server.js"
+  api = "node apps/api/dist/index.js"
 
 # HTTP-Service für die Next.js Web-App (öffentlich erreichbar)
 [[services]]

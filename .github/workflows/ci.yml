@@ -15,6 +15,8 @@ jobs:
         with:
           cache: npm
       - run: npm ci --include=dev
+      - name: Ensure web workspace devDeps
+        run: npm install --workspace=apps/web --include=dev
       - name: Lint
         run: npm run lint
       - name: Build

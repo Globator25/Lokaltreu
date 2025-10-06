@@ -20,9 +20,9 @@ jobs:
       - name: Build
         run: npm run build --workspaces --if-present
 
-      - name: Unit & Contract Tests
-        run: npm test --workspaces -- --coverage
-
+      # Ersetzt den alten Test-Step
+      - name: Unit & Contract Tests (with 80% coverage check)
+        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
       - name: OpenAPI Lint
         run: npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
       - name: Artefakte hochladen (dist)
@@ -35,9 +35,3 @@ jobs:
         with:
           name: coverage
           path: "**/coverage/**"
-
-      # --- Coverage-Prüfung ---
-      # Stellt sicher, dass die Testabdeckung das Ziel von 80% erreicht.
-      # Dieser Schritt nutzt den Vitest-Reporter, um die JSON-Zusammenfassung zu prüfen.
-      - name: Check test coverage
-        run: npx vitest-coverage-check --thresholds.statements 80 --thresholds.branches 80 --thresholds.functions 80 --thresholds.lines 80

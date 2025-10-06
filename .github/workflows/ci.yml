@@ -15,8 +15,17 @@ jobs:
         with:
           cache: npm
       - run: npm ci --include=dev
-      - name: Ensure web workspace devDeps
-        run: npm install --workspace=apps/web --include=dev
+      - name: Install web workspace devDependencies
+        run: npm ci --include=dev
+        working-directory: apps/web
+
+      - name: Verify tailwindcss is installed (debug)
+        run: |
+          echo "Listing apps/web/node_modules (first 50 entries):"
+          ls -la apps/web/node_modules | head -n 50 || true
+          echo "Attempting to resolve tailwindcss from apps/web:" 
+          node -e "try{console.log(require.resolve('tailwindcss'))}catch(e){console.error('resolve failed:', e.message); process.exit(1)}"
+        working-directory: apps/web
       - name: Lint
         run: npm run lint
       - name: Build

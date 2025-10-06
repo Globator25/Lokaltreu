@@ -11,7 +11,13 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   // Globale Ignores
   {
-    ignores: ["**/node_modules/", "**/dist/", "apps/web/.next/", "**/coverage/"],
+    ignores: [
+      "**/node_modules/",
+      "**/dist/",
+      "apps/web/.next/",
+      "**/coverage/",
+      "apps/api/src/**/*.js", // Ignoriere JS-Dateien in der API
+    ],
   },
 
   // 1. Basis-Konfiguration für das gesamte Repository (JavaScript)

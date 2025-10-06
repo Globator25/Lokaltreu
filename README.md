@@ -1,3 +1,13 @@
+<<<<<<< HEAD
+# Lokaltreu
+
+Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Regionen auf PaaS, CDN mit „Regional Services“. Deployments: Blue‑Green / Canary. Environments: **dev**, **stage**, **prod**.
+
+## Inhalt
+- Betriebsrahmen
+- Anforderungen (NFR & SLO)
+- Sicherheits- & Compliance-Rahmen
+- Technologie-Stack (MVP)
 # Lokaltreu
 
 Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Regionen auf PaaS, CDN mit „Regional Services“. Deployments: Blue‑Green / Canary. Environments: **dev**, **stage**, **prod**.
@@ -81,4 +91,3 @@ npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 * `compliance/Infos-DE.md`
 
 > Hinweis: Keine Secrets im Repo. `.env*` und Terraform-States sind in `.gitignore`. SOPS-verschlüsselte Dateien dürfen versioniert werden.
-

@@ -2,6 +2,9 @@ openapi: 3.1.0
 info:
   title: Lokaltreu API
   version: "2.0"
+  license:
+    name: UNLICENSED
+    url: https://example.com/license
 servers:
   - url: https://api.lokaltreu.example/v1
 components:
@@ -14,13 +17,18 @@ components:
       type: apiKey
       in: header
       name: X-Device-Key
-  headers:
-    Idempotency-Key:
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
       schema:
         type: string
         minLength: 8
         maxLength: 128
-    X-Device-Proof:
+    XDeviceProof:
+      in: header
+      name: X-Device-Proof
+      required: true
       schema:
         type: string
   schemas:
@@ -78,12 +86,14 @@ components:
         qrToken:
           type: string
         ref:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
 paths:
   /admins/register:
     post:
       summary: Registriert Admin+Mandant
+      operationId: registerAdmin
       security: []
       requestBody:
         required: true
@@ -113,13 +123,11 @@ paths:
   /devices/registration-links:
     post:
       summary: Einmaliger Registrierungslink (TTL 15m)
+      operationId: createDeviceRegistrationLink
       security:
         - AdminAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          schema:
-            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         "201":
           description: Created
@@ -138,12 +146,10 @@ paths:
   /devices/register/confirm:
     post:
       summary: Bestätigt Gerätebindung (einmalig)
+      operationId: confirmDeviceRegistration
       security: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          schema:
-            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         "204":
           description: No Content
@@ -162,20 +168,15 @@ paths:
   /stamps/tokens:
     post:
       summary: Erzeugt einmaligen Stempel-Token (QR)
+      operationId: createStampToken
       security:
         - DeviceKey: []
         - AdminAuth: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          schema:
-            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         "201":
           description: Created
-          headers:
-            Idempotency-Key:
-              $ref: "#/components/headers/Idempotency-Key"
           content:
             application/json:
               schema:
@@ -189,12 +190,10 @@ paths:
   /stamps/claim:
     post:
       summary: Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
+      operationId: claimStamp
       security: []
       parameters:
-        - in: header
-          name: Idempotency-Key
-          schema:
-            type: string
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -228,9 +227,45 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /rewards/redeem:
+    post:
+      summary: Löst eine Prämie ein
+      operationId: redeemReward
+      security:
+        - DeviceKey: []
+      parameters:
+        - $ref: '#/components/parameters/XDeviceProof'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - redeemToken
+              properties:
+                redeemToken:
+                  type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: TOKEN_EXPIRED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: TOKEN_REUSE
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /referrals/link:
     get:
       summary: Liefert personalisierten Referral-Link (Werber)
+      operationId: getReferralLink
       security: []
       responses:
         "200":
@@ -245,3 +280,9 @@ paths:
                   refCodeURL:
                     type: string
                     format: uri
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"

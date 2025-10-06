@@ -1,0 +1,55 @@
+{
+  "Typgenerierung – Stamps": {
+    "prefix": "promptTypen",
+    "body": [
+      "Bitte generiere die TypeScript-Typen für die Route `/stamps/claim` aus folgendem OpenAPI-Schema.",
+      "Achte auf RFC 7807-konforme Fehlerobjekte und nutze `@lokaltreu/types` als Zielstruktur.",
+      "Die Typen sollen CI-konform, dokumentiert und wiederverwendbar sein."
+    ],
+    "description": "Typen aus OpenAPI generieren – RFC 7807, CI-ready"
+  },
+  "Fehleranalyse – claimStamp": {
+    "prefix": "promptFehler",
+    "body": [
+      "Bitte analysiere die Fehlerbehandlung in `claimStamp()` und schlage ein RFC 7807-konformes `Problem`-Objekt vor.",
+      "Achte auf sinnvolle `error_code`-Werte, `correlation_id` und `retry_after`.",
+      "Ziel: auditierbare Fehlerstruktur für CI und Monitoring."
+    ],
+    "description": "Fehlerobjekt nach RFC 7807 analysieren"
+  },
+  "Onboarding-Erklärung – registerAdminTenant": {
+    "prefix": "promptOnboarding",
+    "body": [
+      "Bitte erkläre die Funktion `registerAdminTenant()` für absolute Anfänger.",
+      "Ziel: verständliche Doku, Fehlerverhalten, Rückgabewerte, Sicherheitsaspekte.",
+      "Nutze einfache Sprache, klare Beispiele und vermeide Fachjargon."
+    ],
+    "description": "Funktion für Anfänger erklären"
+  },
+  "Testgenerierung – claimStamp": {
+    "prefix": "promptTests",
+    "body": [
+      "Bitte schreibe Jest-Tests für `claimStamp()` inkl. Erfolgsfall, Fehlerfall (TOKEN_EXPIRED), und Mock-Daten.",
+      "Ziel: CI-konforme Testabdeckung mit klarer Struktur und Wiederverwendbarkeit."
+    ],
+    "description": "Jest-Tests für API-Funktion generieren"
+  },
+  "Dokumentation – README": {
+    "prefix": "promptDoku",
+    "body": [
+      "Bitte erstelle ein README für Lokaltreu mit folgenden Abschnitten:",
+      "Projektziel, Setup-Anleitung, Monorepo-Struktur, API-Dokumentation, CI-Checks, Lizenz.",
+      "Ziel: verständliche Einstiegshilfe für neue Entwickler und Reviewer."
+    ],
+    "description": "README-Dokumentation generieren"
+  },
+  "Refactoring – stamps.ts": {
+    "prefix": "promptRefactor",
+    "body": [
+      "Bitte analysiere die Datei `apps/api/src/stamps.ts` und schlage ein Refactoring vor,",
+      "das die Fehlerbehandlung verbessert, Typen auslagert und CI-ready ist.",
+      "Ziel: auditierbare Architektur mit klarer Modularisierung und Wiederverwendbarkeit."
+    ],
+    "description": "Refactoring-Vorschläge für API-Datei"
+  }
+}

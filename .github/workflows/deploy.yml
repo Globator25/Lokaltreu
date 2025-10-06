@@ -30,7 +30,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env: # Definiere den Token für den gesamten Job
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV }} 
     environment: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v4 # Checkout is needed for fly.toml
@@ -49,5 +49,8 @@ jobs:
 
       # 2. Anwendung mit der umgebungsspezifischen Konfiguration deployen
       - name: Deploy app to Fly.io
-        run: flyctl deploy --config fly.${{ inputs.env }}.toml --local-only --access-token ${{ secrets.FLY_API_TOKEN }}
+        # Exportiert den Token explizit, um Shell-Scoping-Probleme zu umgehen.
+        run: |
+          export FLY_API_TOKEN="${{ secrets.FLY_API_TOKEN_DEV }}"
+          flyctl deploy --config fly.${{ inputs.env }}.toml --local-only
         

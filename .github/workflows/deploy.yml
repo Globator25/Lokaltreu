@@ -49,4 +49,5 @@ jobs:
 
       # 2. Anwendung mit der umgebungsspezifischen Konfiguration deployen
       - name: Deploy app to Fly.io
-        run: flyctl deploy --config fly.${{ inputs.env }}.toml --local-only
+        run: flyctl deploy --config fly.${{ inputs.env }}.toml --local-only --access-token ${{ secrets.FLY_API_TOKEN }}
+        

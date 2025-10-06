@@ -1,0 +1,28 @@
+name: deploy
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        options: [dev, stage, prod]
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { cache: npm }
+      - run: |
+          npm ci
+          npm run -w apps/api build
+          npm run -w apps/web build
+      # Platzhalter: Blue/Green auf EU-PaaS (Fly.io). Aktivierung in späterer Phase.
+      - name: Prepare release artifact
+        run: tar -czf release_${{ inputs.env }}.tgz apps/api/dist apps/web/.next
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release_${{ inputs.env }}
+          path: release_${{ inputs.env }}.tgz

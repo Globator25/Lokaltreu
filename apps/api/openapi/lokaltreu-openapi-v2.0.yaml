@@ -1,0 +1,247 @@
+openapi: 3.1.0
+info:
+  title: Lokaltreu API
+  version: "2.0"
+servers:
+  - url: https://api.lokaltreu.example/v1
+components:
+  securitySchemes:
+    AdminAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    DeviceKey:
+      type: apiKey
+      in: header
+      name: X-Device-Key
+  headers:
+    Idempotency-Key:
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    X-Device-Proof:
+      schema:
+        type: string
+  schemas:
+    Problem:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        error_code:
+          type: string
+          enum:
+            - TOKEN_EXPIRED
+            - TOKEN_REUSE
+            - SELF_REFERRAL_BLOCKED
+            - REFERRAL_LIMIT_REACHED
+            - REFERRAL_TENANT_MISMATCH
+            - PLAN_NOT_ALLOWED
+            - RATE_LIMITED
+        correlation_id:
+          type: string
+        retry_after:
+          type: integer
+    StampTokenResponse:
+      type: object
+      required:
+        - qrToken
+        - jti
+        - expiresAt
+      properties:
+        qrToken:
+          type: string
+        jti:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    StampClaimRequest:
+      type: object
+      required:
+        - qrToken
+      properties:
+        qrToken:
+          type: string
+        ref:
+          type: string
+          nullable: true
+paths:
+  /admins/register:
+    post:
+      summary: Registriert Admin+Mandant
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 12
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /devices/registration-links:
+    post:
+      summary: Einmaliger Registrierungslink (TTL 15m)
+      security:
+        - AdminAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: Already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /devices/register/confirm:
+    post:
+      summary: Bestätigt Gerätebindung (einmalig)
+      security: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: TOKEN_EXPIRED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: TOKEN_REUSE
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /stamps/tokens:
+    post:
+      summary: Erzeugt einmaligen Stempel-Token (QR)
+      security:
+        - DeviceKey: []
+        - AdminAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Created
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StampTokenResponse"
+        "429":
+          description: RATE_LIMITED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /stamps/claim:
+    post:
+      summary: Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
+      security: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StampClaimRequest"
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: TOKEN_EXPIRED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "409":
+          description: TOKEN_REUSE | REFERRAL_TENANT_MISMATCH
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: SELF_REFERRAL_BLOCKED | REFERRAL_LIMIT_REACHED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          description: RATE_LIMITED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /referrals/link:
+    get:
+      summary: Liefert personalisierten Referral-Link (Werber)
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - refCodeURL
+                properties:
+                  refCodeURL:
+                    type: string
+                    format: uri

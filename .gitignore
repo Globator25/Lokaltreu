@@ -1,0 +1,17 @@
+node_modules
+# Next.js / Build
+apps/web/.next/
+apps/web/out/
+apps/**/dist/
+coverage/
+
+# Env-Dateien
+.env
+.env.*
+!.env.example
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl

@@ -1,0 +1,33 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Unit & Contract Tests
+        run: npm test --workspaces -- --coverage
+      - name: OpenAPI Lint
+        run: npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+      - name: Artefakte hochladen (dist)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: apps/**/dist
+      - name: Artefakte hochladen (coverage)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: "**/coverage/**"

@@ -1,0 +1,22 @@
+{
+  "name": "lokaltreu",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "npm run test -ws --if-present",
+    "build": "npm run build -ws --if-present",
+    "lint": "npm run lint -ws --if-present"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "private": "true",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

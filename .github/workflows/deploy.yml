@@ -8,23 +8,37 @@ on:
         required: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { cache: npm }
-      - run: |
-          npm ci
-          npm run -w apps/api build
-          npm run -w apps/web build
+      - name: Install dependencies
+        run: npm ci
+      - name: Build workspaces
+        run: npm run build --workspaces --if-present
       - name: Prepare release artifact
+        # Erstellt das Artefakt und behält dabei die 'apps' Verzeichnisstruktur bei.
         run: tar -czf release_${{ inputs.env }}.tgz apps/api/dist apps/web/.next
       - uses: actions/upload-artifact@v4
         with:
           name: release_${{ inputs.env }}
           path: release_${{ inputs.env }}.tgz
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+    steps:
+      - uses: actions/checkout@v4 # Checkout is needed for fly.toml
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release_${{ inputs.env }}
+      - name: Unpack artifact
+        # Entpackt das Artefakt. Die Struktur `apps/api/dist` und `apps/web/.next` wird im Workspace wiederhergestellt.
+        run: tar -xzf release_${{ inputs.env }}.tgz
 
       # --- Deployment-Schritt für Fly.io ---
       # Nutzt die offizielle Action, um die Anwendung in der EU-Region (Frankfurt)
@@ -34,4 +48,4 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         with:
-          args: "deploy --region fra --config fly.${{ inputs.env }}.toml --detach"
+          args: "deploy --region fra --config fly.${{ inputs.env }}.toml --local-only"

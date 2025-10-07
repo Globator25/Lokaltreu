@@ -23,3 +23,10 @@ primary_region = "fra"
     grace_period = "10s"
     method = "GET"
     path = "/"
+
+    # fly.dev.toml
+# fly.dev.toml
+[vm]
+  auto_start_machines = true
+  auto_stop_machines  = true   # erlaubt Scale-to-Zero
+

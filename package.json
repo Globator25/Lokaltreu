@@ -11,14 +11,15 @@
     "build:api": "npm -w apps/api run build",
     "build": "npm run build:web && npm run build:api",
     "start:web": "node apps/web/.next/standalone/server.js",
-    "start:api": "node apps/api/dist/index.js"
+    "start:api": "node apps/api/dist/index.js",
+    "test": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": ">=20 <21"
-  },
+  "node": ">=20 <23"
+},
   "description": "",
   "private": "true",
   "workspaces": [
@@ -33,4 +34,5 @@
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
   }
+
 }

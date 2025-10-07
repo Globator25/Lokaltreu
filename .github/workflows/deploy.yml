@@ -12,13 +12,24 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Bei workflow_dispatch: gewähltes env, bei push: 'dev'
     environment: ${{ github.event.inputs.env || 'dev' }}
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV || secrets.FLY_API_TOKEN }}
+
     steps:
       - uses: actions/checkout@v4
+
+      # Optional (nicht zwingend für remote-only Build, aber ok)
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
       - name: Secret smoke test
         run: test -n "$FLY_API_TOKEN"
+
       - uses: superfly/flyctl-actions/setup-flyctl@master
+
       - name: Deploy
         run: flyctl deploy -a lokaltreu-dev --config fly.dev.toml --remote-only

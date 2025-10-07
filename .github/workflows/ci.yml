@@ -2,34 +2,39 @@ name: ci
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          cache: npm
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
       - run: npm ci --include=dev
 
       - name: Lint
-        run: npm run lint --workspaces
+        run: npm run lint --workspaces --if-present
 
       - name: Build
         run: npm run build --workspaces --if-present
 
-      # Ersetzt den alten Test-Step
       - name: Unit & Contract Tests (with 80% coverage check)
         run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
+
       - name: OpenAPI Lint
-        run: npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+
       - name: Artefakte hochladen (dist)
         uses: actions/upload-artifact@v4
         with:
           name: dist
           path: apps/**/dist
+
       - name: Artefakte hochladen (coverage)
         uses: actions/upload-artifact@v4
         with:

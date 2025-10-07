@@ -1,5 +1,5 @@
 ﻿# build
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 COPY apps/web/package*.json apps/web/
@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build
 
 # runtime
-FROM node:20-slim
+FROM node:22-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=builder /app/apps/web/.next/standalone apps/web/.next/standalone

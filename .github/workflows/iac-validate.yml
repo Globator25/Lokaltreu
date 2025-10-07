@@ -1,0 +1,61 @@
+name: IaC Validate (dev)
+
+on:
+  pull_request:
+    paths:
+      - "infra/terraform/**"
+  push:
+    branches: [ main ]
+    paths:
+      - "infra/terraform/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    env:
+      # SOPS entschlüsseln
+      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
+      # Lokal arbeiten wir ohne Backend; CI kann später Backend nutzen
+      TF_IN_AUTOMATION: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+
+      - name: Install sops
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y sops
+
+      - name: Write AGE private key
+        run: |
+          printf "%s" "${{ secrets.AGE_PRIVATE_KEY }}" > "$SOPS_AGE_KEY_FILE"
+          chmod 600 "$SOPS_AGE_KEY_FILE"
+
+      - name: terraform fmt -check
+        run: terraform fmt -check
+
+      - name: terraform init (local state)
+        run: terraform init -backend=false
+
+      - name: Decrypt dev secrets to temp
+        run: sops --decrypt secrets/dev.secrets.enc.tfvars > $RUNNER_TEMP/dev.secrets.tfvars
+
+      - name: terraform validate
+        run: terraform validate
+
+      - name: terraform plan (dev, no backend)
+        run: |
+          terraform plan \
+            -var-file="env/dev.tfvars" \
+            -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
+            -no-color

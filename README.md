@@ -95,3 +95,5 @@ npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 * `compliance/Infos-DE.md`
 
 > Hinweis: Keine Secrets im Repo. `.env*` und Terraform-States sind in `.gitignore`. SOPS-verschlüsselte Dateien dürfen versioniert werden.
+
+

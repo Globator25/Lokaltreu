@@ -17,3 +17,4 @@ apps/**/dist/
 # OS/IDE
 .DS_Store
 .vscode-test
+.terraform/

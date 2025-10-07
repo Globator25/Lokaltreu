@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "build:web", "type": "shell", "command": "npm run build:web", "problemMatcher": [] },
+    { "label": "docker:build", "type": "shell", "command": "docker build -t lokaltest .", "problemMatcher": [] },
+    { "label": "docker:run", "type": "shell", "command": "docker run -p 8080:8080 lokaltest", "problemMatcher": [] },
+    { "label": "fly:deploy:local", "type": "shell", "command": "flyctl deploy -a lokaltreu-dev --config fly.dev.toml --local-only", "problemMatcher": [] }
+  ]
+}

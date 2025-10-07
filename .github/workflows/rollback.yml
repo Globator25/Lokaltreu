@@ -1,0 +1,16 @@
+name: rollback
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "registry.fly.io/lokaltreu-dev:<tag>"
+        required: true
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV || secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy -a lokaltreu-dev --image "${{ inputs.image }}"

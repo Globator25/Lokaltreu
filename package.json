@@ -7,13 +7,18 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "build:web": "npm -w apps/web run build",
+    "build:api": "npm -w apps/api run build",
+    "build": "npm run build:web && npm run build:api",
+    "start:web": "node apps/web/.next/standalone/server.js",
+    "start:api": "node apps/api/dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "description": "",
   "private": "true",
   "workspaces": [

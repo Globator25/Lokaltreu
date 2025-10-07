@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-# Lokaltreu
-
-Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Regionen auf PaaS, CDN mit „Regional Services“. Deployments: Blue‑Green / Canary. Environments: **dev**, **stage**, **prod**.
-
-## Inhalt
-- Betriebsrahmen
-- Anforderungen (NFR & SLO)
-- Sicherheits- & Compliance-Rahmen
-- Technologie-Stack (MVP)
 # Lokaltreu
 
 Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Regionen auf PaaS, CDN mit „Regional Services“. Deployments: Blue‑Green / Canary. Environments: **dev**, **stage**, **prod**.
@@ -68,6 +58,20 @@ infra/    # Terraform + SOPS
 - **.github/workflows/ci.yml**: Lint, Build, Tests inkl. Contract-Tests, **Coverage ≥ 80 %**, OpenAPI-Lint "pass", Artefakte `dist` und `coverage`.
 - **.github/workflows/deploy.yml**: manuelles `workflow_dispatch` mit `env={dev,stage,prod}`. Environments geschützt. Deploys nur in EU-Regionen.
 - **[docs/CI-Gates.md](docs/CI-Gates.md)**: Kriterien und Links zu Berichten aus dem Pipeline-Run.
+
+## Deploy & Rollback
+
+### Via GitHub Actions (empfohlen)
+
+- **Deployment**: Navigiere zu Actions → deploy und starte den Workflow für die gewünschte Umgebung.
+- **Rollback**: Navigiere zu Actions → rollback und gib die vollständige Image-Referenz des stabilen Deployments an (z.B. `registry.fly.io/lokaltreu-dev:deployment-12345`).
+- **Smoke Test**: Führe den smoke-Workflow aus, um die Erreichbarkeit der Live-Anwendung zu prüfen.
+
+### Lokales Deployment (für Entwicklung)
+
+```bash
+flyctl deploy -a lokaltreu-dev --config fly.dev.toml --local-only
+```
 
 ## Quickstart
 ```bash

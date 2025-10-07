@@ -4,50 +4,21 @@ on:
     inputs:
       env:
         type: choice
-        options: [dev, stage, prod]
-        required: true
+        options: [dev]
+        default: dev
+  push:
+    branches: [main]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env || 'dev' }}
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV || secrets.FLY_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { cache: npm }
-      - name: Install dependencies
-        run: npm ci
-      - name: Build workspaces
-        run: npm run build --workspaces --if-present
-      - name: Prepare release artifact
-        # Erstellt das Artefakt und behält dabei die 'apps' Verzeichnisstruktur bei.
-        run: tar -czf release_${{ inputs.env }}.tgz apps/api/dist apps/web/.next
-      - uses: actions/upload-artifact@v4
-        with:
-          name: release_${{ inputs.env }}
-          path: release_${{ inputs.env }}.tgz
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-    environment: ${{ inputs.env }}
-    steps:
-      - uses: actions/checkout@v4 # Checkout is needed for fly.toml
-      - name: Download release artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: release_${{ inputs.env }}
-      - name: Unpack artifact
-        # Entpackt das Artefakt. Die Struktur `apps/api/dist` und `apps/web/.next` wird im Workspace wiederhergestellt.
-        run: tar -xzf release_${{ inputs.env }}.tgz
-
-      # --- Deployment-Schritte für Fly.io ---
-      # 1. flyctl (CLI) installieren
-      - name: Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      # 2. Anwendung mit der umgebungsspezifischen Konfiguration deployen
-      - name: Deploy app to Fly.io
-        # Übergibt den Token explizit, um alle Scoping-Probleme zu umgehen.
-        run: flyctl deploy --config fly.${{ inputs.env }}.toml --local-only --access-token "$FLY_API_TOKEN"
+      - name: Secret smoke test
+        run: test -n "$FLY_API_TOKEN"
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy -a lokaltreu-dev --config fly.dev.toml --remote-only

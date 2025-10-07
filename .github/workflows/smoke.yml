@@ -1,0 +1,7 @@
+name: smoke
+on: { workflow_dispatch: {} }
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsSL https://lokaltreu-dev.fly.dev/ >/dev/null

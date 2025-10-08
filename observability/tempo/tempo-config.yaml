@@ -1,0 +1,8 @@
+server: { http_listen_port: 3200, grpc_listen_port: 4317 }
+distributor: { receivers: { otlp: { protocols: { http: {}, grpc: {} } } } }
+storage:
+  trace:
+    backend: local          # PROD: R2 (EU) via S3 API / Cloudflare R2
+    wal: { path: /tmp/tempo/wal }
+    local: { path: /tmp/tempo/blocks }
+compactor: { compaction: { block_retention: 48h } }

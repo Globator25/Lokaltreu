@@ -23,3 +23,7 @@ Zwecke: Sicherheits-Alerts, Plan-Warnungen (80 %), Admin-Einladungen.
 **Terraform Status (dev):**
 - Variablen deklariert (variables.tf), Mail-Provider validiert.
 - Secrets via SOPS (AGE) verschlüsselt, JIT-Decrypt für Plan.
+
+**DoD:** EU-Regionen aktiv, SOPS/AGE produktiv, Plan grün, DPA/Mail EU referenziert.
+
+**Status:** EU-Regionen aktiv, SOPS/AGE produktiv, Plan grün.

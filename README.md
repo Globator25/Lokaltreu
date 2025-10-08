@@ -97,3 +97,7 @@ npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 > Hinweis: Keine Secrets im Repo. `.env*` und Terraform-States sind in `.gitignore`. SOPS-verschlüsselte Dateien dürfen versioniert werden.
 
 
+## Betriebsziele (SLO/Resilienz)
+- Verfügbarkeit Kernrouten: 99,90 %
+- Performance: p50 ≤ 500 ms, p95 ≤ 3000 ms, p99 ≤ 6000 ms
+- Resilienz: RPO 15 min, RTO 60 min

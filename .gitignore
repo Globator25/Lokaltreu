@@ -24,3 +24,10 @@ infra/terraform/terraform.tfstate.*
 infra/terraform/.keys/
 infra/terraform/secrets/*.tfvars
 !infra/terraform/secrets/*.enc.tfvars
+# SOPS/AGE
+**/keys.txt
+# Decrypted temps
+*.tfvars.plain
+*decrypted*.tfvars
+# Testartefakte
+infra/terraform/secrets/test.enc.tfvars

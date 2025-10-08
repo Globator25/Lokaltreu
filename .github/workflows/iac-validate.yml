@@ -9,6 +9,13 @@ on:
     paths:
       - "infra/terraform/**"
 
+concurrency:
+  group: iac-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -17,9 +24,7 @@ jobs:
         working-directory: infra/terraform
 
     env:
-      # SOPS entschlüsseln
       SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
-      # Lokal arbeiten wir ohne Backend; CI kann später Backend nutzen
       TF_IN_AUTOMATION: "true"
 
     steps:
@@ -58,4 +63,4 @@ jobs:
           terraform plan \
             -var-file="env/dev.tfvars" \
             -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
-            -no-color
+            -compact-warnings -no-color

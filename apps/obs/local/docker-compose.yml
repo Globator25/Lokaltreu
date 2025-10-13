@@ -1,0 +1,19 @@
+services:
+  tempo:
+    image: grafana/tempo:latest
+    command: [ "-config.expand-env=true" ]
+    ports:
+      - "3200:3200"   # Tempo UI/API
+      - "4318:4318"   # OTLP HTTP
+  loki:
+    image: grafana/loki:2.9.8
+    command: [ "-config.expand-env=true" ]
+    ports:
+      - "3100:3100"
+  grafana:
+    image: grafana/grafana:11.1.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+

@@ -1,0 +1,44 @@
+app = "lokaltreu-obs-tempo"
+primary_region = "fra"
+kill_signal = "SIGINT"
+kill_timeout = "5s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  strategy = "immediate"
+
+# HTTP/UI + /ready auf :3200
+[[services]]
+  internal_port = 3200
+  protocol = "tcp"
+  processes = ["app"]
+  [[services.ports]]
+    port = 80
+  [[services.http_checks]]
+    path = "/ready"
+    method = "GET"
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "60s"   # mehr Zeit bis Tempo ready ist
+
+# OTLP/HTTP :4318
+[[services]]
+  internal_port = 4318
+  protocol = "tcp"
+  processes = ["app"]
+  [[services.ports]]
+    port = 4318
+
+# OTLP/gRPC :4317
+[[services]]
+  internal_port = 4317
+  protocol = "tcp"
+  processes = ["app"]
+  [[services.ports]]
+    port = 4317
+
+[processes]
+  app = ""
+

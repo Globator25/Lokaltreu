@@ -7,13 +7,37 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+      OTEL_RESOURCE_ATTRIBUTES: >-
+        service.name=lokaltreu-ci,
+        deployment.environment=ci,
+        ci.workflow=${{ github.workflow }},
+        ci.job=${{ github.job }},
+        ci.sha=${{ github.sha }},
+        ci.repo=${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: OBS verify (read-only)
+        shell: pwsh
+        run: ./scripts/verify-bom-and-uid.ps1
 
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+
+      - name: OBS predeploy checks
+        shell: pwsh
+        run: |
+          ./apps/obs/tools/Set-GrafanaProviderEncoding.ps1 -Path ./apps/obs/grafana/provisioning/dashboards/provider.yaml
+          ./apps/obs/tools/Dedupe-Grafana-UIDs.ps1 -DashPath ./apps/obs/grafana/provisioning/dashboards/lokaltreu
 
       - run: npm ci --include=dev
 
@@ -40,3 +64,15 @@ jobs:
         with:
           name: coverage
           path: "**/coverage/**"
+
+  pester-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -Scope CurrentUser -Force
+      - name: Run Pester tests
+        shell: pwsh
+        run: Invoke-Pester -CI -Path tests
+

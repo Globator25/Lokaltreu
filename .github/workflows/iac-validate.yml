@@ -64,3 +64,4 @@ jobs:
             -var-file="env/dev.tfvars" \
             -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
             -compact-warnings -no-color
+

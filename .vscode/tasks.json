@@ -4,6 +4,37 @@
     { "label": "build:web", "type": "shell", "command": "npm run build:web", "problemMatcher": [] },
     { "label": "docker:build", "type": "shell", "command": "docker build -t lokaltest .", "problemMatcher": [] },
     { "label": "docker:run", "type": "shell", "command": "docker run -p 8080:8080 lokaltest", "problemMatcher": [] },
-    { "label": "fly:deploy:local", "type": "shell", "command": "flyctl deploy -a lokaltreu-dev --config fly.dev.toml --local-only", "problemMatcher": [] }
+    { "label": "fly:deploy:local", "type": "shell", "command": "flyctl deploy -a lokaltreu-dev --config fly.dev.toml --local-only", "problemMatcher": [] },
+
+    {
+      "label": "OBS: Provider UTF-8",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile","-ExecutionPolicy","Bypass","-File","./apps/obs/tools/Set-GrafanaProviderEncoding.ps1","-Path","./apps/obs/grafana/provisioning/dashboards/provider.yaml"],
+      "problemMatcher": []
+    },
+    {
+      "label": "OBS: UID Dedupe",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile","-ExecutionPolicy","Bypass","-File","./apps/obs/tools/Dedupe-Grafana-UIDs.ps1","-DashPath","./apps/obs/grafana/provisioning/dashboards/lokaltreu"],
+      "problemMatcher": []
+    },
+    {
+      "label": "OBS: Grafana Health",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile","-ExecutionPolicy","Bypass","-File","./apps/obs/tools/Test-Grafana.ps1","-App","lokaltreu-obs-grafana"],
+      "problemMatcher": []
+    },
+    {
+      "label": "OBS verify (read-only)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoProfile","-ExecutionPolicy","Bypass","-File","scripts/verify-bom-and-uid.ps1"],
+      "problemMatcher": []
+    },
+    { "label": "obs:health:all", "type": "npm", "script": "obs:health:all" }
   ]
 }
+

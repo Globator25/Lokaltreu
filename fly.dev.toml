@@ -4,6 +4,15 @@ primary_region = "fra"
 [build]
   dockerfile = "Dockerfile"
 
+[env]
+  OTEL_EXPORTER_OTLP_ENDPOINT = "https://lokaltreu-obs-tempo.fly.dev:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf"
+  OTEL_TRACES_EXPORTER = "otlp"
+  OTEL_METRICS_EXPORTER = "otlp"
+  OTEL_LOGS_EXPORTER = "otlp"
+  OTEL_EXPORTER_OTLP_HEADERS = "Authorization=Bearer ${OTEL_BEARER_TOKEN}"
+  OTEL_RESOURCE_ATTRIBUTES = "service.name=lokaltreu,deployment.environment=dev,service.version=dev"
+
 [[services]]
   internal_port = 8080
   protocol = "tcp"
@@ -23,3 +32,4 @@ primary_region = "fra"
     grace_period = "10s"
     method = "GET"
     path = "/"
+

@@ -36,3 +36,4 @@ jobs:
 
       - name: Deploy to Fly.io
         run: flyctl deploy -a lokaltreu-dev --config fly.dev.toml --remote-only
+

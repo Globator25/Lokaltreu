@@ -1,0 +1,24 @@
+// apps/api/.vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "API dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "console": "integratedTerminal",
+      "env": {
+        "OTEL_SERVICE_NAME": "lokaltreu-api",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces",
+        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "http://localhost:4318/v1/metrics",
+        "LOKI_URL": "http://localhost:3100"
+      },
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
+
+

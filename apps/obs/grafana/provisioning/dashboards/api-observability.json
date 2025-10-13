@@ -1,0 +1,14 @@
+{
+  "title": "API Observability",
+  "panels": [
+    { "type": "timeseries", "title": "Latency p50/p95/p99 by route",
+      "targets": [
+        { "datasource": "Loki", "expr": "{app=\"api\"} | json | unwrap duration_ms [5m] | quantile_over_time(0.50, 5m) by (route)" },
+        { "datasource": "Loki", "expr": "{app=\"api\"} | json | unwrap duration_ms [5m] | quantile_over_time(0.95, 5m) by (route)" },
+        { "datasource": "Loki", "expr": "{app=\"api\"} | json | unwrap duration_ms [5m] | quantile_over_time(0.99, 5m) by (route)" }
+      ]
+    }
+  ],
+  "schemaVersion": 38
+}
+

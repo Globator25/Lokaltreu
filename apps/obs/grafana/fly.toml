@@ -1,0 +1,22 @@
+# fly.toml (relevanter Teil)
+app = "lokaltreu-obs-grafana"
+
+[env]
+  GF_SERVER_HTTP_ADDR = "0.0.0.0"
+  GF_SERVER_HTTP_PORT = "3000"
+  GF_SERVER_DOMAIN = "lokaltreu-obs-grafana.fly.dev"
+  GF_SERVER_ROOT_URL = "https://lokaltreu-obs-grafana.fly.dev"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "10s"
+    timeout  = "2s"
+    method   = "GET"
+    path     = "/api/health"
+

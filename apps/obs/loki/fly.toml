@@ -1,0 +1,26 @@
+app = "lokaltreu-obs-loki"
+primary_region = "fra"
+
+[experimental]
+  auto_rollback = true
+
+[[services]]
+  internal_port = 3100
+  protocol = "tcp"
+  processes = ["app"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.http_checks]]
+    path = "/ready"
+    method = "GET"
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "10s"
+    protocol = "http"
+
+[[mounts]]
+  source = "loki_data"
+  destination = "/loki"

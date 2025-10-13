@@ -1,7 +1,88 @@
 name: smoke
 on: { workflow_dispatch: {} }
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  smoke:
+  verify:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: OBS verify (read-only)
+        shell: pwsh
+        run: ./scripts/verify-bom-and-uid.ps1
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_RESOURCE_ATTRIBUTES: >-
+        service.name=lokaltreu-smoke,
+        deployment.environment=ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: OBS verify (read-only)
+        shell: pwsh
+        run: ./scripts/verify-bom-and-uid.ps1
+
       - run: curl -fsSL https://lokaltreu-dev.fly.dev/ >/dev/null
+      - name: Grafana health (Fly)
+        shell: pwsh
+        run: ./apps/obs/tools/Test-Grafana.ps1 -App lokaltreu-obs-grafana
+
+  fly-health-windows:
+    needs: [verify]
+    timeout-minutes: 10
+    runs-on: windows-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      API_APP: ${{ secrets.API_APP }}
+      TEMPO_PROBE: ${{ secrets.TEMPO_PROBE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@v1
+      - name: Auth check
+        shell: pwsh
+        run: flyctl auth whoami
+
+      - name: Grafana health (Fly)
+        shell: pwsh
+        run: ./apps/obs/tools/Test-Grafana.ps1 -App lokaltreu-obs-grafana
+
+      - name: Tempo health (Fly)
+        shell: pwsh
+        run: ./apps/obs/tools/Test-Tempo.ps1 -App lokaltreu-obs-tempo
+
+      - name: Tempo probe (guarded)
+        if: ${{ env.TEMPO_PROBE == '1' }}
+        env:
+          TEMPO_URL: https://lokaltreu-obs-tempo.fly.dev/v1/traces
+        shell: pwsh
+        run: |
+          $b = [Text.Encoding]::UTF8.GetBytes('{"resourceSpans":[{"resource":{},"scopeSpans":[{"spans":[{"traceId":"0123456789abcdef0123456789abcdef","spanId":"0123456789abcdef","name":"smoke","kind":1,"startTimeUnixNano":"1","endTimeUnixNano":"2"}]}]}]}')
+          try {
+            Invoke-WebRequest -Uri $env:TEMPO_URL -Method POST -ContentType "application/x-protobuf" -Body $b -UseBasicParsing | Out-Null
+          } catch { throw "Tempo probe failed: $($_.Exception.Message)" }
+
+      - name: Loki health (Fly)
+        shell: pwsh
+        run: ./apps/obs/tools/Test-Loki.ps1 -App lokaltreu-obs-loki
+
+      - name: API logs scan
+        if: ${{ env.API_APP != '' }}
+        shell: pwsh
+        run: |
+          $ProgressPreference='SilentlyContinue'
+          flyctl logs -a $env:API_APP --no-follow --max-lines 300 |
+            Select-String 'otlp|export|span|metric' -AllMatches | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "No OTEL export lines found" }
+

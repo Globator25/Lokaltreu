@@ -1,0 +1,16 @@
+name: obs-verify-nightly
+on:
+  schedule:
+    - cron: "0 3 * * *"   # täglich 03:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: OBS verify (read-only)
+        shell: pwsh
+        run: ./scripts/verify-bom-and-uid.ps1
+
+

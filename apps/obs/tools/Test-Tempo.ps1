@@ -14,15 +14,24 @@ flyctl checks list -a $App
 
 function Test-HasIPv4($name) {
   try {
-    $a = Resolve-DnsName -Name $name -Type A -ErrorAction Stop
-    return $a.Count -gt 0
+    [System.Net.Dns]::GetHostAddresses($name) |
+      Where-Object { $_.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork } |
+      ForEach-Object { return $true }
+    return $false
   } catch { return $false }
 }
 
 if (Test-HasIPv4 $publicHost) {
-  Write-Host "HTTP GET $publicUrl (timeout ${timeout}s)" -ForegroundColor Cyan
+  $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+  if ($curl) {
+    Write-Host "HTTP GET (IPv4) $publicUrl via curl.exe -4 (timeout ${timeout}s)" -ForegroundColor Cyan
+    & $curl.Source -sS -4 --max-time $timeout $publicUrl | Write-Output
+    if ($LASTEXITCODE -eq 0) { return }
+    Write-Warning "curl.exe failed; trying PowerShell Invoke-WebRequest..."
+  }
   try {
-    $res = Invoke-WebRequest $publicUrl -UseBasicParsing -TimeoutSec $timeout
+    Write-Host "HTTP GET $publicUrl (timeout ${timeout}s, TLS1.2, no H2)" -ForegroundColor Cyan
+    $res = Invoke-WebRequest $publicUrl -UseBasicParsing -TimeoutSec $timeout -SslProtocol Tls12 -MaximumRedirection 0 -DisableKeepAlive
     Write-Host "Status: $($res.StatusCode)" -ForegroundColor Green
     if ($res.Content) { Write-Host $res.Content }
     return

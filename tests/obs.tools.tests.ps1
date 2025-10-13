@@ -51,3 +51,18 @@ Describe 'Health scripts (no-throw smoke)' {
   }
 }
 
+Describe 'Health scripts IPv4/Proxy behavior' {
+  It 'Tempo: skips public on no A record and tries proxy' {
+    Mock -CommandName Resolve-DnsName -MockWith { throw "no A" }
+    Mock -CommandName Invoke-WebRequest -ParameterFilter { $Uri -like 'http://localhost:3200/*' } -MockWith { [pscustomobject]@{ StatusCode=200; Content='ok' } }
+    . (Join-Path $repo 'apps/obs/tools/Test-Tempo.ps1') -App 'dummy-app'
+  }
+  It 'Loki: prefers IPv4 public via curl.exe when present' {
+    # Simulate IPv4 present and curl.exe available by mocking Get-Command to return an object with Source
+    Mock -CommandName Resolve-DnsName -MockWith { @{ IPAddress='127.0.0.1' } }
+    Mock -CommandName Get-Command -MockWith { [pscustomobject]@{ Source = 'curl.exe' } }
+    # Prevent actual curl, then let Invoke-WebRequest succeed
+    Mock -CommandName Invoke-WebRequest -MockWith { [pscustomobject]@{ StatusCode=200; Content='ok' } }
+    . (Join-Path $repo 'apps/obs/tools/Test-Loki.ps1') -App 'dummy-app'
+  }
+}

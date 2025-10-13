@@ -1,26 +1,28 @@
 app = "lokaltreu-obs-loki"
 primary_region = "fra"
 
+[build]
+  dockerfile = "Dockerfile"
+
 [experimental]
   auto_rollback = true
 
-[[services]]
+[http_service]
   internal_port = 3100
-  protocol = "tcp"
-  processes = ["app"]
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = true
+  min_machines_running = 1
 
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-
-  [[services.http_checks]]
-    path = "/ready"
-    method = "GET"
-    interval = "10s"
-    timeout = "2s"
-    grace_period = "10s"
-    protocol = "http"
+[[checks]]
+  type = "http"
+  name = "http-3100"
+  port = 3100
+  interval = "15s"
+  timeout = "2s"
+  method = "GET"
+  path = "/ready"
 
 [[mounts]]
   source = "loki_data"
-  destination = "/loki"
+  destination = "/var/loki"

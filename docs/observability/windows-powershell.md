@@ -84,3 +84,47 @@ Start-Process pwsh -Verb RunAs -ArgumentList @"
 -NoProfile -Command "[Environment]::SetEnvironmentVariable('OTEL_EXPORTER_OTLP_ENDPOINT','https://lokaltreu-obs-tempo.fly.dev:4318','Machine')"
 "@
 ```
+
+## Proxy-Tests (IPv6/IPv4)
+
+Wenn öffentliche Endpunkte nur per IPv6 erreichbar sind, nutze lokal den Fly-Proxy:
+
+```powershell
+# Tempo
+flyctl proxy 3200:3200 -a lokaltreu-obs-tempo
+Invoke-WebRequest http://localhost:3200/ready -TimeoutSec 30 | Select-Object StatusCode
+
+# Loki (intern 3100)
+flyctl proxy 3100:3100 -a lokaltreu-obs-loki
+Invoke-WebRequest http://localhost:3100/ready -TimeoutSec 30 | Select-Object StatusCode
+```
+
+## Öffentliche Health-Checks (Windows TLS Hinweis)
+
+Unter Windows nutzt `curl.exe` standardmäßig Schannel. Bei TLS-Inspection/Policy-Problemen hilft oft OpenSSL-curl und/oder explizit TLS 1.2:
+
+```powershell
+# OpenSSL-curl (Git for Windows)
+& "C:\Program Files\Git\usr\bin\curl.exe" -4 --max-time 20 https://<app>.fly.dev/ready
+
+# PowerShell (TLS 1.2, ohne HTTP/2)
+Invoke-WebRequest https://<app>.fly.dev/ready -TimeoutSec 30 -SslProtocol Tls12 -MaximumRedirection 0 -DisableKeepAlive
+```
+
+## Per-App Deploy (Repo-Root vs. Subfolder)
+
+- Aus Repo-Root deployen (per-app `fly.toml` referenziert lokalen Dockerfile):
+  - `flyctl deploy -a lokaltreu-obs-tempo`
+  - `flyctl deploy -a lokaltreu-obs-loki`
+  - `flyctl deploy -a lokaltreu-obs-grafana`
+- Aus App-Unterordner deployen (Dockerfile heißt lokal `Dockerfile`): im jeweiligen `apps/obs/<app>/` ausführen: `flyctl deploy`
+
+## Schritt-6-Checkliste (kurz)
+
+```powershell
+npm run obs:verify:readonly
+npm run obs:provider:utf8
+npm run obs:dedupe:dry; npm run obs:dedupe
+npm run obs:health:all
+flyctl auth whoami
+```

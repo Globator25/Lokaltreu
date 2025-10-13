@@ -11,8 +11,8 @@ app = "lokaltreu-obs-grafana"
   internal_port = 3000
   force_https = true
   auto_start_machines = true
-  auto_stop_machines = false
-  min_machines_running = 1
+  auto_stop_machines = true
+  processes = ["app"]
 
   [[http_service.checks]]
     interval = "10s"
@@ -20,3 +20,5 @@ app = "lokaltreu-obs-grafana"
     method   = "GET"
     path     = "/api/health"
 
+[build]
+  dockerfile = "Dockerfile"

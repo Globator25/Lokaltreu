@@ -1,0 +1,5 @@
+.keys/
+secrets/*.tfvars
+!secrets/*.enc.tfvars
+*.plan
+tf-debug.log

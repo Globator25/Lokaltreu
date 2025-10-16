@@ -1,15 +1,15 @@
 {
-	"data": "fly_token = \"FLY_API_TOKEN_DEV\"\nneon_api_key = \"NEON_API_KEY_DEV\"\nupstash_api_key = \"UPSTASH_API_KEY_DEV\"\ncloudflare_api_token = \"CLOUDFLARE_API_TOKEN_DEV\"\nmail_provider = \"mailjet\"\nmail_api_key = \"MAIL_API_KEY_DEV\"\r\n",
+	"data": "ENC[AES256_GCM,data:JMEZn/C6hZwPTVEb5OvLqcKtxEiU/FVYyRJeDGzIm6og1gHHs+erYPXU3BfVZZH4T/rh6QAJR1uS4/PYltb+25Deav0NORjXDVo/ef0/H8hSUD/KIagNgIOeNgegs8zMP876kCYNKnJZ49WUZPe+gThj0Pglzf2SgD0zjzJnCeHX3/PgnNn6O17SXGB94IicBL2Kk8pQLECXAeCq39b6Rolgj9/0V+BHXoD6sDnBcVaTJDr90EivasSMmEOv8HJxyWcDExuPZp9jR0kDjklCCwo6rWBG1jA0JlmL0n9DKJpex5LfMGyPbz7hMl0C4ThWyxm/Og==,iv:wmmUXL4KChk5J+FLkK0Uz0JAw5oA4GJAYpQNBzvR0fA=,tag:cfyvz1a/zVKrJGPaGa8CfA==,type:str]",
 	"sops": {
 		"age": [
 			{
-				"recipient": "age1pq8v4hd73f4t3nqq90w8z4c8dz9c6xhnar2h79rhwwlumffnp44sutx9hr",
-				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBRdGFSam5aMWxxaWt5MEIz\nRGZXS1JzaEdYQWRyOEdQVWJrZnRhcUJXMzIwCmcrWWthdmNDWXBlaGlxTG4wVldo\neUFITWUyVEttclNpRUZzUmYrTGMvY0UKLS0tIEdFaXlCWk5BcnJrSGdNWS9iSjhW\nNHF0a0VwbG1KOEo2RUhmSHZOUHFnclkK3W/OEboiENoItLmm5GOS+68hyqyPMlKr\n2NkAYkY/ewBLMvlFkS2dY5Lw/dg7mblfhR4M+6Jec6oeik7KcO1WoQ==\n-----END AGE ENCRYPTED FILE-----\n"
+				"recipient": "age1we0xqfwvgqazhxeyvmkgwhh4vpfyp2tuxzyu77q7hg4dxet6zcpqr7y3x8",
+				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSByYXdqbTByRzZsQnZ5OU11\nQ1gwTXVkMkRGdWFzd3VXbS8zekRhTWo3RjI0CmpYUHZDZGtVcUkwWWZPcU9qZlg3\nZS9od3htVGk3NTN0WUt3NVZHRVM5WDAKLS0tIFdTR2Q0OENOQngrSkJCZUdnRSty\nVldIeDF0TVl0L0NMcGQwQ1JpWlZHRjQKUjZmPitvHDurHGzqvG1P5Ul6SFYGBvL/\nxPeN1IqEAgejeYoj2GS5bmJ+OneRTijoCwys+tWCR7yfTimh89TyUA==\n-----END AGE ENCRYPTED FILE-----\n"
 			}
 		],
-		"lastmodified": "2025-10-08T07:18:38Z",
-		"mac": "ENC[AES256_GCM,data:rM73AgKkZ8X/mMmynkx29YQulN7WvQ1/QEww1m6l3WD19hGBoKveoVzD1r8m1h9iMUtdkDr4iwMUP6dsu2B4LwT5IwtRGx7Wot4hsdeQA1G+wHeOFpUZp8/ti55hvU70pb2+Cztc5YRuHhmVlXwTMZCuViJOBWDnvbwb9CgtaFs=,iv:zH+C+c/d3nemA0MoHCD3ztZs4WGceOt4UJi881F3BAo=,tag:LE23zihVkCXoytx+w7egIQ==,type:str]",
-		"encrypted_regex": "^(fly_token|neon_api_key|upstash_api_key|cloudflare_api_token|mail_api_key|mail_provider)$",
+		"lastmodified": "2025-10-15T16:39:25Z",
+		"mac": "ENC[AES256_GCM,data:ZWyDp8eh/SGqoEuwrCFe9XBFGT4KOooYrmJ1RtIl6niYd4r9xSxyB+cdVX7GhKZeUFOvcsTAdWcvjm/IDqoDABbVwcfMujIowUz5uLmVGxgPdRu3mjwNPi4DuFR1nBz50Mk0kMW/dGOgMDFQfAq7siXQi8Kg6aXv7AdT19j4Qpk=,iv:lQTZjR3ZaUxShc+fTAFiFM2cX9usK2GEvb+V+V4RQf0=,tag:kRVPO5VPaGVucZbkxLj5Fg==,type:str]",
+		"unencrypted_suffix": "_unencrypted",
 		"version": "3.10.2"
 	}
 }

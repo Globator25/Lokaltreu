@@ -1,78 +1,72 @@
-name: ci
+name: IaC Validate
+
 on:
-  pull_request:
   push:
-    branches: [main]
+    paths: ['infra/terraform/**']
+  pull_request:
+    paths: ['infra/terraform/**']
 
 jobs:
-  build-test:
+  iac-validate:
     runs-on: ubuntu-latest
+    environment: dev
     env:
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-      OTEL_RESOURCE_ATTRIBUTES: >-
-        service.name=lokaltreu-ci,
-        deployment.environment=ci,
-        ci.workflow=${{ github.workflow }},
-        ci.job=${{ github.job }},
-        ci.sha=${{ github.sha }},
-        ci.repo=${{ github.repository }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_REGION: auto
+      TF_IN_AUTOMATION: ${{ vars.TF_IN_AUTOMATION }} # nur EINMAL setzen
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: OBS verify (read-only)
-        shell: pwsh
-        run: ./scripts/verify-bom-and-uid.ps1
-
-      - uses: actions/setup-node@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
+          terraform_version: '1.6.x'
 
-      - name: OBS predeploy checks
+      - name: Install sops + age
         shell: pwsh
         run: |
-          ./apps/obs/tools/Set-GrafanaProviderEncoding.ps1 -Path ./apps/obs/grafana/provisioning/dashboards/provider.yaml
-          ./apps/obs/tools/Dedupe-Grafana-UIDs.ps1 -DashPath ./apps/obs/grafana/provisioning/dashboards/lokaltreu
+          sudo apt-get update
+          sudo apt-get install -y age sops
 
-      - run: npm ci --include=dev
-
-      - name: Lint
-        run: npm run lint --workspaces --if-present
-
-      - name: Build
-        run: npm run build --workspaces --if-present
-
-      - name: Unit & Contract Tests (with 80% coverage check)
-        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
-
-      - name: OpenAPI Lint
-        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
-
-      - name: Artefakte hochladen (dist)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: apps/**/dist
-
-      - name: Artefakte hochladen (coverage)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: "**/coverage/**"
-
-  pester-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Pester
+      - name: Decrypt age key
         shell: pwsh
-        run: Install-Module Pester -Scope CurrentUser -Force
-      - name: Run Pester tests
-        shell: pwsh
-        run: Invoke-Pester -CI -Path tests
+        run: |
+          New-Item -Path infra/terraform/.keys -ItemType Directory -Force | Out-Null
+          Set-Content infra/terraform/.keys/age.key "${{ secrets.AGE_PRIVATE_KEY }}"
 
+      - name: Terraform Validate + Plan (dev)
+        working-directory: infra/terraform
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # SOPS: Public Key ableiten und Konfig schreiben
+          $pub = (Select-String -Path .\.keys\age.key -Pattern 'public key:\s*(.+)').Matches[0].Groups[1].Value
+          @"
+          creation_rules:
+            - path_regex: secrets/.*\.tfvars$
+              age: ["$pub"]
+          "@ | Set-Content .\.sops.yaml
+
+          # SOPS-Umgebung für den Lauf
+          $env:SOPS_AGE_KEY_FILE = (Resolve-Path .\.keys\age.key).Path
+          $env:SOPS_CONFIG       = (Resolve-Path .\.sops.yaml).Path
+
+          # Backend initialisieren (dev)
+          $backendConfig = (Resolve-Path .\backend.dev.hcl).Path
+          terraform init -backend-config="$backendConfig"
+
+          # Secrets temporär entschlüsseln
+          $tmp        = Join-Path $env:TEMP 'dev.secrets.tfvars'
+          $secretFile = (Resolve-Path .\secrets\dev.secrets.enc.tfvars).Path
+          sops -d $secretFile | Set-Content -Path $tmp
+
+          # Validate + Plan
+          terraform fmt -check
+          terraform validate
+          $devVars = (Resolve-Path .\env\dev.tfvars).Path
+          terraform plan -no-color -input=false -var-file="$devVars" -var-file="$tmp"
+
+          # Cleanup
+          Remove-Item $tmp -ErrorAction SilentlyContinue

@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: ^(secrets/|secrets\\).+\.tfvars$
+    age: "age1we0xqfwvgqazhxeyvmkgwhh4vpfyp2tuxzyu77q7hg4dxet6zcpqr7y3x8"

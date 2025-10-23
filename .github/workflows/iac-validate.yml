@@ -1,13 +1,15 @@
-name: IaC Validate (dev)
+name: IaC Validate
 
 on:
   pull_request:
     paths:
       - "infra/terraform/**"
+      - ".github/workflows/iac-validate.yml"
   push:
     branches: [ main ]
     paths:
       - "infra/terraform/**"
+      - ".github/workflows/iac-validate.yml"
 
 concurrency:
   group: iac-validate-${{ github.ref }}
@@ -18,14 +20,17 @@ permissions:
 
 jobs:
   validate:
+    name: terraform fmt + validate (EU enforced)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: infra/terraform
+    strategy:
+      matrix:
+        environment: [dev, stage, prod]
 
     env:
-      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
       TF_IN_AUTOMATION: "true"
+      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
+      AWS_EC2_METADATA_DISABLED: "true"
+      AGE_PRIVATE_KEY_BUNDLE: ${{ secrets.AGE_PRIVATE_KEY_BUNDLE }}
 
     steps:
       - name: Checkout
@@ -34,34 +39,228 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.3
+          terraform_version: 1.6.6
 
-      - name: Install sops
+      - name: Install age
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y sops
+          sudo apt-get install -y age
+
+      - name: Install sops manually
+        run: |
+          curl -sLo sops https://github.com/mozilla/sops/releases/download/v3.8.1/sops-v3.8.1.linux.amd64
+          chmod +x sops
+          sudo mv sops /usr/local/bin/sops
 
       - name: Write AGE private key
+        # AGE_PRIVATE_KEY_BUNDLE must contain multiple "-----BEGIN AGE PRIVATE KEY-----" blocks concatenated; job writes bundle to $SOPS_AGE_KEY_FILE.
         run: |
-          printf "%s" "${{ secrets.AGE_PRIVATE_KEY }}" > "$SOPS_AGE_KEY_FILE"
+          if [ -z "$AGE_PRIVATE_KEY_BUNDLE" ]; then
+            echo "AGE_PRIVATE_KEY_BUNDLE secret is missing" >&2
+            exit 1
+          fi
+          printf "%s" "$AGE_PRIVATE_KEY_BUNDLE" > "$SOPS_AGE_KEY_FILE"
           chmod 600 "$SOPS_AGE_KEY_FILE"
 
-      - name: terraform fmt -check
-        run: terraform fmt -check
+      - name: Sync Terraform modules into environment
+        run: |
+          env_dir="infra/terraform/envs/${{ matrix.environment }}"
+          rm -rf "$env_dir/modules"
+          mkdir -p "$env_dir/modules"
+          cp -R infra/terraform/modules/. "$env_dir/modules/"
 
-      - name: terraform init (local state)
-        run: terraform init -backend=false
+      - name: terraform fmt -recursive -check
+        if: matrix.environment == 'dev'
+        working-directory: infra/terraform
+        run: terraform fmt -recursive -check
 
-      - name: Decrypt dev secrets to temp
-        run: sops --decrypt secrets/dev.secrets.enc.tfvars > $RUNNER_TEMP/dev.secrets.tfvars
+      - name: Region defaults guard
+        if: matrix.environment == 'dev'
+        working-directory: infra/terraform
+        run: |
+          disallowed=$(grep -RniE '"(us|ap|sa|ca|me|global)([-_][a-z0-9]+)*"' variables.tf envs/*/variables.tf || true)
+          if [ -n "$disallowed" ]; then
+            echo "Non-EU defaults detected:"
+            echo "$disallowed"
+            exit 1
+          fi
+
+      - name: Decrypt secrets
+        run: |
+          sops --decrypt infra/terraform/secrets/${{ matrix.environment }}.secrets.enc.tfvars > "$RUNNER_TEMP/${{ matrix.environment }}.secrets.tfvars"
+
+      - name: terraform init (remote state)
+        run: |
+          terraform -chdir=infra/terraform/envs/${{ matrix.environment }} init \
+            -backend-config=backend.hcl \
+            -input=false \
+            -reconfigure
 
       - name: terraform validate
-        run: terraform validate
+        run: terraform -chdir=infra/terraform/envs/${{ matrix.environment }} validate
 
-      - name: terraform plan (dev, no backend)
+      - name: terraform plan
+        id: plan
         run: |
-          terraform plan \
-            -var-file="env/dev.tfvars" \
-            -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
-            -compact-warnings -no-color
+          set -uo pipefail
+          PLAN_OUT="$RUNNER_TEMP/${{ matrix.environment }}.tfplan"
+          terraform -chdir=infra/terraform/envs/${{ matrix.environment }} plan \
+            -var-file="$RUNNER_TEMP/${{ matrix.environment }}.secrets.tfvars" \
+            -no-color \
+            -input=false \
+            -detailed-exitcode \
+            -out="$PLAN_OUT"
+          plan_exit=$?
+          if [ $plan_exit -gt 1 ]; then
+            exit $plan_exit
+          fi
+          terraform -chdir=infra/terraform/envs/${{ matrix.environment }} show -no-color "$PLAN_OUT" > "$RUNNER_TEMP/${{ matrix.environment }}.plan.txt"
+          echo "exit_code=$plan_exit" >> "$GITHUB_OUTPUT"
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tf-plan-${{ matrix.environment }}
+          path: ${{ runner.temp }}/${{ matrix.environment }}.plan.txt
+
+      - name: Static analysis (tflint + tfsec)
+        if: matrix.environment == 'dev'
+        working-directory: infra/terraform
+        run: |
+          set -euo pipefail
+
+          echo "::group::Install tooling"
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          sudo mv ./bin/tflint /usr/local/bin/tflint
+          curl -sSfL https://github.com/aquasecurity/tfsec/releases/latest/download/tfsec-linux-amd64 -o tfsec
+          chmod +x tfsec
+          sudo mv tfsec /usr/local/bin/tfsec
+          echo "::endgroup::"
+
+          mkdir -p "$RUNNER_TEMP"
+
+          set +e
+          tflint --format json . > "$RUNNER_TEMP/tflint-report.json"
+          tflint_exit=$?
+          tfsec --format json --out "$RUNNER_TEMP/tfsec-report.json" . >/tmp/tfsec.log 2>&1
+          tfsec_exit=$?
+          set -e
+
+          tflint_count=$(jq '.issues | length' "$RUNNER_TEMP/tflint-report.json" 2>/dev/null || echo 0)
+          tfsec_count=$(jq '.results | length' "$RUNNER_TEMP/tfsec-report.json" 2>/dev/null || echo 0)
+
+          if [ "$tflint_exit" -ne 0 ] || [ "$tfsec_exit" -ne 0 ] || [ "$tflint_count" -gt 0 ] || [ "$tfsec_count" -gt 0 ]; then
+            detail="tflint: $tflint_count; tfsec: $tfsec_count"
+            problem="$RUNNER_TEMP/iac-static-problem-${{ matrix.environment }}.json"
+            cat > "$problem" <<JSON
+{ "type":"https://lokaltreu.dev/errors/iac-static-checks",
+  "title":"IaC static checks failed",
+  "status":422,
+  "detail":"$detail",
+  "instance":"urn:lokaltreu:iac:static:${{ matrix.environment }}" }
+JSON
+            echo "STATIC_PROBLEM=$problem" >> "$GITHUB_ENV"
+            echo "::error::$detail"
+            exit 2
+          fi
+
+          # Optional human-readable summary
+          jq -r '.issues[]? | "[TFLINT] "+.message+" (@"+.range.filename+":"+(.range.start.line|tostring)+")"' "$RUNNER_TEMP/tflint-report.json" > "$RUNNER_TEMP/tflint-report.txt"
+          jq -r '.results[]? | "[TFSEC] "+.description+" ("+.rule_id+")"' "$RUNNER_TEMP/tfsec-report.json" > "$RUNNER_TEMP/tfsec-report.txt"
+      - name: terraform providers lock (verify)
+        if: matrix.environment == 'dev'
+        run: |
+          terraform -chdir=infra/terraform providers lock -platform=linux_amd64 -platform=windows_amd64
+          git diff --exit-code infra/terraform/.terraform.lock.hcl
+
+      - name: Upload static analysis reports
+        if: matrix.environment == 'dev' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iac-static-${{ matrix.environment }}
+          path: |
+            ${{ runner.temp }}/tflint-report.json
+            ${{ runner.temp }}/tflint-report.txt
+            ${{ runner.temp }}/tfsec-report.json
+            ${{ runner.temp }}/tfsec-report.txt
+
+      - name: Install awscli + jq
+        if: matrix.environment == 'prod'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y awscli jq
+
+      - name: Verify R2 versioning + SSE
+        if: matrix.environment == 'prod'
+        env:
+          R2_ENDPOINT: https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+          R2_BUCKET: lokaltreu-terraform-state
+        run: |
+          set -euo pipefail
+          vjson=$(aws s3api get-bucket-versioning --bucket "$R2_BUCKET" --endpoint-url "$R2_ENDPOINT" || true)
+          ejson=$(aws s3api get-bucket-encryption --bucket "$R2_BUCKET" --endpoint-url "$R2_ENDPOINT" || true)
+          vok=$(echo "$vjson" | jq -re '.Status=="Enabled"' >/dev/null 2>&1 && echo true || echo false)
+          eok=$(echo "$ejson" | jq -re '.ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm=="AES256"' >/dev/null 2>&1 && echo true || echo false)
+          if [ "$vok" != "true" ] || [ "$eok" != "true" ]; then
+            detail=""
+            [ "$vok" != "true" ] && detail="Versioning disabled"
+            [ "$eok" != "true" ] && detail="${detail:+$detail; }SSE AES256 disabled"
+            problem="$RUNNER_TEMP/problem-r2.json"
+            cat > "$problem" <<JSON
+{ "type":"https://lokaltreu.dev/errors/r2-hardening",
+  "title":"R2 bucket hardening failed",
+  "status":422,
+  "detail":"$detail",
+  "instance":"urn:lokaltreu:r2:bucket:$R2_BUCKET" }
+JSON
+            echo "::error::$detail"
+            echo "problem_path=$problem" >> "$GITHUB_OUTPUT"
+            exit 2
+          fi
+
+      - name: Upload R2 problem
+        if: failure() && matrix.environment == 'prod'
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-problem
+          path: ${{ runner.temp }}/problem-r2.json
+
+      - name: Emit RFC7807 problem JSON
+        if: failure()
+        run: |
+          problem_path="$RUNNER_TEMP/problem-${{ matrix.environment }}.json"
+          if [ -n "${STATIC_PROBLEM:-}" ] && [ -f "$STATIC_PROBLEM" ]; then
+            cp "$STATIC_PROBLEM" "$problem_path"
+          else
+            problem_type="https://lokaltreu.dev/errors/terraform-validation"
+            problem_title="Terraform validation failed"
+            problem_detail="Terraform fmt/validate/plan gate failed for environment '${{ matrix.environment }}'. See job logs for remediation."
+            cat <<EOF > "$problem_path"
+{
+  "type": "$problem_type",
+  "title": "$problem_title",
+  "status": 422,
+  "detail": "$problem_detail",
+  "instance": "urn:lokaltreu:terraform:${{ matrix.environment }}"
+}
+EOF
+          fi
+          echo "problem_path=$problem_path" >> "$GITHUB_OUTPUT"
+
+      - name: Upload IaC static problem artifact
+        if: failure() && env.STATIC_PROBLEM != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: iac-static-problem-${{ matrix.environment }}.json
+          path: ${{ env.STATIC_PROBLEM }}
+
+      - name: Upload problem artifact
+        if: failure() && env.STATIC_PROBLEM == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-problem-${{ matrix.environment }}
+          path: ${{ runner.temp }}/problem-${{ matrix.environment }}.json
 

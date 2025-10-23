@@ -1,11 +1,5 @@
 creation_rules:
-  # Unix-Slashes
   - path_regex: .*infra/terraform/envs/.*/.*\.tfvars$
-    key_groups:
-      - age:
-          - "age1ccqd936qky32rrpqw3pgypvy3ran5yudwemprjqruaau8zpmwd6qgmcekt"
-  # Windows-Backslashes
-  - path_regex: .*infra\\terraform\\envs\\.*\\.*\.tfvars$
     key_groups:
       - age:
           - "age1ccqd936qky32rrpqw3pgypvy3ran5yudwemprjqruaau8zpmwd6qgmcekt"

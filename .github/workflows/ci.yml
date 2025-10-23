@@ -8,13 +8,13 @@ on:
 
 jobs:
   iac-validate:
-    runs-on: ubuntu-latest
-    # R2-Creds aus Repo-Secrets; TF_IN_AUTOMATION aus Repo-Variables (oder leer ok)
+    runs-on: ubuntu-24.04
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       AWS_REGION: auto
       TF_IN_AUTOMATION: ${{ vars.TF_IN_AUTOMATION }}
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
     strategy:
       matrix:
         env: [dev, stage, prod]
@@ -34,45 +34,37 @@ jobs:
       - name: Install sops (linux amd64)
         run: |
           SOPS_VERSION="v3.8.1"
-          curl -L -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
+          curl -sSL -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
           sudo install -m 0755 sops /usr/local/bin/sops
           sops --version
 
-      - name: Write age key
-        shell: pwsh
+      - name: Decrypt tfvars (${{ matrix.env }})
         run: |
-          New-Item -Path infra/terraform/.keys -ItemType Directory -Force | Out-Null
-          Set-Content infra/terraform/.keys/age.key "${{ secrets.AGE_PRIVATE_KEY }}"
+          set -euo pipefail
+          sops --decrypt "infra/terraform/envs/${{ matrix.env }}/${{ matrix.env }}.secrets.enc.tfvars" \
+            > "/tmp/${{ matrix.env }}.secrets.tfvars"
+
+      - name: Sync Terraform modules into environment
+        run: |
+          set -euo pipefail
+          env_dir="infra/terraform/envs/${{ matrix.env }}"
+          rm -rf "${env_dir}/modules"
+          mkdir -p "${env_dir}/modules"
+          cp -R infra/terraform/modules/. "${env_dir}/modules/"
 
       - name: Terraform Validate + Plan (${{ matrix.env }})
-        working-directory: infra/terraform
-        shell: pwsh
+        working-directory: infra/terraform/envs/${{ matrix.env }}
         run: |
-          # Public Key ableiten
-          $pub = (age-keygen -y .\.keys\age.key) -replace '^public key:\s*',''
-
-          # .sops.yaml robust ohne Here-String schreiben
-          @(
-            'creation_rules:'
-            '  - path_regex: envs/.+/.+\.secrets\.enc\.tfvars$'
-            "    age: `"$pub`""
-          ) | Set-Content .\.sops.yaml
-
-          # Backend je Environment
-          $backendConfig = (Resolve-Path ".\backend.${{ matrix.env }}.hcl").Path
-          terraform init -reconfigure -backend-config="$backendConfig"
-
-          # Secrets entschlüsseln
-          $tmp        = Join-Path $env:TEMP "${{ matrix.env }}.secrets.tfvars"
-          $secretFile = (Resolve-Path ".\envs\${{ matrix.env }}\${{ matrix.env }}.secrets.enc.tfvars").Path
-          sops -d $secretFile | Set-Content -Path $tmp
-
-          # Checks + Plan
+          set -euo pipefail
+          terraform init -backend-config=backend.hcl
           terraform fmt -check
           terraform validate
-          $varsFile = (Resolve-Path ".\env\${{ matrix.env }}.tfvars").Path
-          terraform plan -no-color -input=false -var-file="$varsFile" -var-file="$tmp"
+          args=(-no-color -input=false -var-file=/tmp/${{ matrix.env }}.secrets.tfvars)
+          if [ -f terraform.tfvars ]; then
+            args+=(-var-file=terraform.tfvars)
+          fi
+          terraform plan "${args[@]}"
 
-          # Aufräumen
-          Remove-Item $tmp -ErrorAction SilentlyContinue
-          Remove-Item .\.sops.yaml -ErrorAction SilentlyContinue
+      - name: Cleanup decrypted secrets (${{ matrix.env }})
+        if: always()
+        run: rm -f "/tmp/${{ matrix.env }}.secrets.tfvars"

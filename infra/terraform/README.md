@@ -26,7 +26,7 @@
 | RTO      | 60 min          | Automatisiertes Terraform Plan/Apply + Runbooks |
 
 ## Onboarding & Ablauf
-1. `age-keygen -o .keys/age-<env>.txt` ausführen, Public-Key in `.sops.yaml` einsetzen.
+1. `age-keygen -o age-<env>.key` ausführen, Public-Key in `.sops.yaml` einsetzen, privaten Key als **GitHub Secret** `SOPS_AGE_KEY` hinterlegen (Klartext, inkl. `-----BEGIN AGE PRIVATE KEY-----` Block).
 2. Secrets befüllen: `sops infra/terraform/envs/dev/dev.secrets.enc.tfvars` (verschlüsselte tfvars per Umgebung).
 3. Remote-State initialisieren:
    ```bash
@@ -69,7 +69,7 @@
    gh auth login --hostname github.com --git-protocol https
    gh api -X PUT repos/:owner/:repo/branches/main/protection --input .github/branch-protection.json
    ```
-4. Secret `AGE_PRIVATE_KEY_BUNDLE` enthält mehrere hintereinandergehängte `-----BEGIN AGE PRIVATE KEY-----` Blöcke (je Umgebung ein Block); die CI schreibt das komplette Bundle nach `$SOPS_AGE_KEY_FILE`.
+4. Secret `SOPS_AGE_KEY` enthält den privaten age-Key (inkl. `-----BEGIN AGE PRIVATE KEY-----` Block); die CI nutzt ihn direkt zur Entschlüsselung – keine Key-Dateien im Repo.
 - **Required Context:** Der Branch-Protection-Check muss exakt dem Workflow-Namen entsprechen (`IaC Validate`).
 
 ### PR Gate – Required Status

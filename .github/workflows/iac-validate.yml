@@ -21,16 +21,15 @@ permissions:
 jobs:
   validate:
     name: terraform fmt + validate (EU enforced)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         environment: [dev, stage, prod]
 
     env:
       TF_IN_AUTOMATION: "true"
-      SOPS_AGE_KEY_FILE: ${{ github.workspace }}/.tmp/age.key
       AWS_EC2_METADATA_DISABLED: "true"
-      AGE_PRIVATE_KEY_BUNDLE: ${{ secrets.AGE_PRIVATE_KEY_BUNDLE }}
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
     steps:
       - name: Checkout
@@ -52,17 +51,6 @@ jobs:
           curl -L -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
           sudo install -m 0755 sops /usr/local/bin/sops
           sops --version
-
-      - name: Write AGE private key
-        # AGE_PRIVATE_KEY_BUNDLE must contain multiple "-----BEGIN AGE PRIVATE KEY-----" blocks concatenated; job writes bundle to $SOPS_AGE_KEY_FILE.
-        run: |
-          if [ -z "$AGE_PRIVATE_KEY_BUNDLE" ]; then
-            echo "AGE_PRIVATE_KEY_BUNDLE secret is missing" >&2
-            exit 1
-          fi
-          mkdir -p "$(dirname "$SOPS_AGE_KEY_FILE")"
-          printf "%s" "$AGE_PRIVATE_KEY_BUNDLE" > "$SOPS_AGE_KEY_FILE"
-          chmod 600 "$SOPS_AGE_KEY_FILE"
 
       - name: Sync Terraform modules into environment
         run: |

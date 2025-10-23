@@ -2,9 +2,15 @@ name: IaC Validate
 
 on:
   push:
-    paths: ['infra/terraform/**']
+    branches: [ feat/obs-step6 ]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci.yml'
   pull_request:
-    paths: ['infra/terraform/**']
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch: {}
 
 jobs:
   iac-validate:

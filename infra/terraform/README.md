@@ -3,7 +3,7 @@
 ## Struktur & Guardrails
 - `envs/{dev,stage,prod}` – Root-Module pro Umgebung inkl. `backend.hcl`.
 - `modules/*` – Komponenten-Stubs (App, Postgres, Redis, Storage, CDN, Mail) mit EU-Vorgaben.
-- `secrets/*.yaml|tfvars` – Durch SOPS (age) verschlüsselte Werte, kein Klartext im Repo.
+- `envs/*/*.secrets.enc.tfvars` – Durch SOPS (age) verschlüsselte Werte, kein Klartext im Repo.
 - `.sops.yaml` – Erzwingt age-Empfänger pro Umgebung, `*_unencrypted` als bewusste Ausnahmen.
 
 ## Betrieb in EU
@@ -27,7 +27,7 @@
 
 ## Onboarding & Ablauf
 1. `age-keygen -o .keys/age-<env>.txt` ausführen, Public-Key in `.sops.yaml` einsetzen.
-2. Secrets befüllen: `sops infra/terraform/secrets/dev.secrets.enc.tfvars` (verschlüsselte tfvars per Umgebung).
+2. Secrets befüllen: `sops infra/terraform/envs/dev/dev.secrets.enc.tfvars` (verschlüsselte tfvars per Umgebung).
 3. Remote-State initialisieren:
    ```bash
    terraform -chdir=infra/terraform/envs/dev init -backend-config=backend.hcl
@@ -39,13 +39,13 @@
    ```
 5. Plan mit Secrets (Beispiel dev):
    ```bash
-   sops -d infra/terraform/secrets/dev.secrets.enc.tfvars > $TMP/dev.tfvars
+   sops -d infra/terraform/envs/dev/dev.secrets.enc.tfvars > $TMP/dev.tfvars
    terraform -chdir=infra/terraform/envs/dev plan -var-file=$TMP/dev.tfvars -out=dev.plan
    ```
 
 ## Runbooks kurz
 - **State-Lock lösen:** `terraform force-unlock <lock-id>` nach Prüfung der ausstehenden Änderungen.
-- **Key-Rotation:** neuen age-Key erzeugen, `.sops.yaml` aktualisieren, `sops updatekeys -y secrets/*.yaml`.
+- **Key-Rotation:** neuen age-Key erzeugen, `.sops.yaml` aktualisieren, `sops updatekeys -y envs/*/*.secrets.enc.tfvars`.
 - **Incident (RPO/RTO):** Restore Neon Branch (PITR), Redis Snapshot importieren, Fly.io Deployment neu starten, CDN Cache purgen.
 - **Audit:** Plan-/Validate-Logs unter `artifacts/` ablegen (`tee -a` laut AGENTS.md Abschnitt 10).
 - **R2 Hardening:** Einmalig Versionierung + SSE aktivieren:

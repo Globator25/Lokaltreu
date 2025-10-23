@@ -29,11 +29,10 @@ tf-*.log
 # Lokaltreu Terraform Struktur
 infra/terraform/.terraform/
 infra/terraform/.keys/
-infra/terraform/secrets/*.tfvars
-!infra/terraform/secrets/*.enc.tfvars
-infra/terraform/secrets/test.enc.tfvars
 infra/terraform/envs/**/zz_secrets.auto.tfvars
 infra/terraform/envs/**/zz_secrets.auto.tfvars.json
+**/*.secrets.tfvars
+.keys/
 
 # SOPS/AGE
 **/keys.txt

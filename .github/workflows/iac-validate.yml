@@ -28,7 +28,7 @@ jobs:
 
     env:
       TF_IN_AUTOMATION: "true"
-      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
+      SOPS_AGE_KEY_FILE: ${{ github.workspace }}/.tmp/age.key
       AWS_EC2_METADATA_DISABLED: "true"
       AGE_PRIVATE_KEY_BUNDLE: ${{ secrets.AGE_PRIVATE_KEY_BUNDLE }}
 
@@ -43,14 +43,15 @@ jobs:
 
       - name: Install age
         run: |
-          sudo apt-get update -y
+          sudo apt-get update
           sudo apt-get install -y age
 
-      - name: Install sops manually
+      - name: Install sops (linux amd64)
         run: |
-          curl -sLo sops https://github.com/mozilla/sops/releases/download/v3.8.1/sops-v3.8.1.linux.amd64
-          chmod +x sops
-          sudo mv sops /usr/local/bin/sops
+          SOPS_VERSION="v3.8.1"
+          curl -L -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
+          sudo install -m 0755 sops /usr/local/bin/sops
+          sops --version
 
       - name: Write AGE private key
         # AGE_PRIVATE_KEY_BUNDLE must contain multiple "-----BEGIN AGE PRIVATE KEY-----" blocks concatenated; job writes bundle to $SOPS_AGE_KEY_FILE.
@@ -59,6 +60,7 @@ jobs:
             echo "AGE_PRIVATE_KEY_BUNDLE secret is missing" >&2
             exit 1
           fi
+          mkdir -p "$(dirname "$SOPS_AGE_KEY_FILE")"
           printf "%s" "$AGE_PRIVATE_KEY_BUNDLE" > "$SOPS_AGE_KEY_FILE"
           chmod 600 "$SOPS_AGE_KEY_FILE"
 
@@ -87,7 +89,7 @@ jobs:
 
       - name: Decrypt secrets
         run: |
-          sops --decrypt infra/terraform/secrets/${{ matrix.environment }}.secrets.enc.tfvars > "$RUNNER_TEMP/${{ matrix.environment }}.secrets.tfvars"
+          sops --decrypt "infra/terraform/envs/${{ matrix.environment }}/${{ matrix.environment }}.secrets.enc.tfvars" > "$RUNNER_TEMP/${{ matrix.environment }}.secrets.tfvars"
 
       - name: terraform init (remote state)
         run: |

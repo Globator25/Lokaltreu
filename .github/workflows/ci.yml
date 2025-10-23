@@ -26,11 +26,17 @@ jobs:
         with:
           terraform_version: '1.6.x'
 
-      - name: Install sops + age
-        shell: pwsh
+      - name: Install age
         run: |
           sudo apt-get update
-          sudo apt-get install -y age sops
+          sudo apt-get install -y age
+
+      - name: Install sops (linux amd64)
+        run: |
+          SOPS_VERSION="v3.8.1"
+          curl -L -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
+          sudo install -m 0755 sops /usr/local/bin/sops
+          sops --version
 
       - name: Write age key
         shell: pwsh
@@ -48,7 +54,7 @@ jobs:
           # .sops.yaml robust ohne Here-String schreiben
           @(
             'creation_rules:'
-            '  - path_regex: secrets/.*\.tfvars$'
+            '  - path_regex: envs/.+/.+\.secrets\.enc\.tfvars$'
             "    age: `"$pub`""
           ) | Set-Content .\.sops.yaml
 
@@ -58,7 +64,7 @@ jobs:
 
           # Secrets entschlüsseln
           $tmp        = Join-Path $env:TEMP "${{ matrix.env }}.secrets.tfvars"
-          $secretFile = (Resolve-Path ".\secrets\${{ matrix.env }}.secrets.enc.tfvars").Path
+          $secretFile = (Resolve-Path ".\envs\${{ matrix.env }}\${{ matrix.env }}.secrets.enc.tfvars").Path
           sops -d $secretFile | Set-Content -Path $tmp
 
           # Checks + Plan

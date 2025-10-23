@@ -34,7 +34,12 @@
       "args": ["-NoProfile","-ExecutionPolicy","Bypass","-File","scripts/verify-bom-and-uid.ps1"],
       "problemMatcher": []
     },
-    { "label": "obs:health:all", "type": "npm", "script": "obs:health:all" }
+    { "label": "obs:health:all", "type": "npm", "script": "obs:health:all" },
+    { "label": "obs:deploy:tempo",   "type": "shell", "command": "flyctl deploy -a lokaltreu-obs-tempo",   "options": { "cwd": "${workspaceFolder}/apps/obs/tempo" },   "problemMatcher": [] },
+    { "label": "obs:deploy:loki",    "type": "shell", "command": "flyctl deploy -a lokaltreu-obs-loki",    "options": { "cwd": "${workspaceFolder}/apps/obs/loki" },    "problemMatcher": [] },
+    { "label": "obs:deploy:grafana", "type": "shell", "command": "flyctl deploy -a lokaltreu-obs-grafana", "options": { "cwd": "${workspaceFolder}/apps/obs/grafana" }, "problemMatcher": [] },
+    { "label": "obs:smoke",          "type": "shell", "command": "npm run obs:smoke", "problemMatcher": [] },
+    { "label": "obs:prov:verify",     "type": "shell", "command": "npm run obs:prov:verify", "problemMatcher": [] },
     ,
     { "label": "proxy:tempo", "type": "shell", "command": "flyctl proxy 3200:3200 -a lokaltreu-obs-tempo", "problemMatcher": [] },
     { "label": "proxy:loki",  "type": "shell", "command": "flyctl proxy 3100:3100 -a lokaltreu-obs-loki",  "problemMatcher": [] }

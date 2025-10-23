@@ -1,0 +1,86 @@
+terraform {
+  required_version = "~> 1.6.6"
+
+  required_providers {
+    fly = {
+      source  = "fly-apps/fly"
+      version = "0.0.23"
+    }
+
+    neon = {
+      source  = "kislerdm/neon"
+      version = "0.10.0"
+    }
+
+    upstash = {
+      source  = "upstash/upstash"
+      version = "2.1.0"
+    }
+
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "5.11.0"
+    }
+  }
+}
+
+module "app" {
+  source        = "./modules/app"
+  project       = var.project
+  environment   = var.environment
+  naming_prefix = var.naming_prefix
+  region        = var.region_api
+  fly_org_slug  = var.fly_org_slug
+  fly_app_name  = var.fly_app_name
+  tags          = merge(var.tags, { tier = "stage" })
+}
+
+module "postgres" {
+  source           = "./modules/postgres"
+  project          = var.project
+  environment      = var.environment
+  naming_prefix    = var.naming_prefix
+  region           = var.region_postgres
+  neon_project_id  = var.neon_project_id
+  neon_branch_name = var.neon_branch_name
+  tags             = merge(var.tags, { tier = "stage" })
+}
+
+module "redis" {
+  source          = "./modules/redis"
+  project         = var.project
+  environment     = var.environment
+  naming_prefix   = var.naming_prefix
+  region          = var.region_redis
+  upstash_team_id = var.upstash_team_id
+  tags            = merge(var.tags, { tier = "stage" })
+}
+
+module "cdn" {
+  source                = "./modules/cdn"
+  project               = var.project
+  environment           = var.environment
+  naming_prefix         = var.naming_prefix
+  region                = var.region_cdn
+  cloudflare_account_id = var.cloudflare_account_id
+  tags                  = merge(var.tags, { tier = "stage" })
+}
+
+module "mail" {
+  source        = "./modules/mail"
+  project       = var.project
+  environment   = var.environment
+  naming_prefix = var.naming_prefix
+  mail_provider = var.mail_provider
+  tags          = merge(var.tags, { tier = "stage" })
+}
+
+module "storage" {
+  source                = "./modules/storage"
+  project               = var.project
+  environment           = var.environment
+  naming_prefix         = var.naming_prefix
+  region                = var.region_storage
+  cloudflare_account_id = var.cloudflare_account_id
+  tags                  = merge(var.tags, { tier = "stage" })
+}

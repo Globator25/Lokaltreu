@@ -1,3 +1,5 @@
 creation_rules:
-  - path_regex: ^(secrets/|secrets\\).+\.tfvars$
-    age: "age1we0xqfwvgqazhxeyvmkgwhh4vpfyp2tuxzyu77q7hg4dxet6zcpqr7y3x8"
+  - path_regex: infra/terraform/secrets/.*\.secrets\.tfvars\.enc$
+    encrypted_regex: '^(.*)$'
+    age:
+      - age1XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  # dev public key

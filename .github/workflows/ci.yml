@@ -9,12 +9,15 @@ on:
 jobs:
   iac-validate:
     runs-on: ubuntu-latest
-    environment: dev
+    # R2-Creds aus Repo-Secrets; TF_IN_AUTOMATION aus Repo-Variables (oder leer ok)
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       AWS_REGION: auto
-      TF_IN_AUTOMATION: ${{ vars.TF_IN_AUTOMATION }} # nur EINMAL setzen
+      TF_IN_AUTOMATION: ${{ vars.TF_IN_AUTOMATION }}
+    strategy:
+      matrix:
+        env: [dev, stage, prod]
 
     steps:
       - uses: actions/checkout@v4
@@ -29,44 +32,41 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y age sops
 
-      - name: Decrypt age key
+      - name: Write age key
         shell: pwsh
         run: |
           New-Item -Path infra/terraform/.keys -ItemType Directory -Force | Out-Null
           Set-Content infra/terraform/.keys/age.key "${{ secrets.AGE_PRIVATE_KEY }}"
 
-      - name: Terraform Validate + Plan (dev)
+      - name: Terraform Validate + Plan (${{ matrix.env }})
         working-directory: infra/terraform
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
+          # Public Key ableiten
+          $pub = (age-keygen -y .\.keys\age.key) -replace '^public key:\s*',''
 
-          # SOPS: Public Key ableiten und Konfig schreiben
-          $pub = (Select-String -Path .\.keys\age.key -Pattern 'public key:\s*(.+)').Matches[0].Groups[1].Value
-          @"
-          creation_rules:
-            - path_regex: secrets/.*\.tfvars$
-              age: ["$pub"]
-          "@ | Set-Content .\.sops.yaml
+          # .sops.yaml robust ohne Here-String schreiben
+          @(
+            'creation_rules:'
+            '  - path_regex: secrets/.*\.tfvars$'
+            "    age: `"$pub`""
+          ) | Set-Content .\.sops.yaml
 
-          # SOPS-Umgebung für den Lauf
-          $env:SOPS_AGE_KEY_FILE = (Resolve-Path .\.keys\age.key).Path
-          $env:SOPS_CONFIG       = (Resolve-Path .\.sops.yaml).Path
+          # Backend je Environment
+          $backendConfig = (Resolve-Path ".\backend.${{ matrix.env }}.hcl").Path
+          terraform init -reconfigure -backend-config="$backendConfig"
 
-          # Backend initialisieren (dev)
-          $backendConfig = (Resolve-Path .\backend.dev.hcl).Path
-          terraform init -backend-config="$backendConfig"
-
-          # Secrets temporär entschlüsseln
-          $tmp        = Join-Path $env:TEMP 'dev.secrets.tfvars'
-          $secretFile = (Resolve-Path .\secrets\dev.secrets.enc.tfvars).Path
+          # Secrets entschlüsseln
+          $tmp        = Join-Path $env:TEMP "${{ matrix.env }}.secrets.tfvars"
+          $secretFile = (Resolve-Path ".\secrets\${{ matrix.env }}.secrets.enc.tfvars").Path
           sops -d $secretFile | Set-Content -Path $tmp
 
-          # Validate + Plan
+          # Checks + Plan
           terraform fmt -check
           terraform validate
-          $devVars = (Resolve-Path .\env\dev.tfvars).Path
-          terraform plan -no-color -input=false -var-file="$devVars" -var-file="$tmp"
+          $varsFile = (Resolve-Path ".\env\${{ matrix.env }}.tfvars").Path
+          terraform plan -no-color -input=false -var-file="$varsFile" -var-file="$tmp"
 
-          # Cleanup
+          # Aufräumen
           Remove-Item $tmp -ErrorAction SilentlyContinue
+          Remove-Item .\.sops.yaml -ErrorAction SilentlyContinue

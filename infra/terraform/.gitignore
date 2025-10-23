@@ -1,5 +1,16 @@
+# 🔐 Lokale Schlüssel und sensible Variablen
 .keys/
 secrets/*.tfvars
 !secrets/*.enc.tfvars
+envs/**/zz_secrets.auto.tfvars
+envs/**/zz_secrets.auto.tfvars.json
+
+# 📦 Terraform-Artefakte
 *.plan
 tf-debug.log
+.terraform/
+.terraform.lock.hcl
+
+# 🧪 Lokale Test- oder Scratch-Dateien (optional)
+*.tfstate
+*.tfstate.backup

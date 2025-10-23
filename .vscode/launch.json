@@ -53,6 +53,13 @@
         "OTEL_SERVICE_NAME": "lokaltreu-web"
       }
     }
+    ,
+    {
+      "name": "Debug Smoke-Obs.ps1",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${workspaceFolder}/scripts/obs/Smoke-Obs.ps1"
+    }
   ],
   "compounds": [
     {

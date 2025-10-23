@@ -111,6 +111,20 @@ Unter Windows nutzt `curl.exe` standardmäßig Schannel. Bei TLS-Inspection/Poli
 Invoke-WebRequest https://<app>.fly.dev/ready -TimeoutSec 30 -SslProtocol Tls12 -MaximumRedirection 0 -DisableKeepAlive
 ```
 
+## Loki Push (Windows)
+
+PowerShell-Skript für einen Testeintrag, inkl. TLS1.2/HTTP1.1-Workarounds:
+
+```powershell
+pwsh -NoProfile -File scripts/obs/Push-LokiLog.ps1 -App lokaltreu-obs-loki -Tenant lokaltreu -Message 'hello'
+```
+
+Falls `Invoke-RestMethod` weiterhin blockt, den optionalen Curl-Pfad aktivieren:
+
+```powershell
+pwsh -NoProfile -File scripts/obs/Push-LokiLog.ps1 -UseCurlFirst
+```
+
 ## Per-App Deploy (Repo-Root vs. Subfolder)
 
 - Aus Repo-Root deployen (per-app `fly.toml` referenziert lokalen Dockerfile):

@@ -1,0 +1,4 @@
+secrets/*.enc.tfvars
+secrets/*.json
+secrets/*.yaml
+.keys/**

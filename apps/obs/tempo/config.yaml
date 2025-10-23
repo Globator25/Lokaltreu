@@ -15,3 +15,6 @@ storage:
     backend: local
     local:
       path: /tmp/tempo/blocks
+
+
+

@@ -1,24 +1,21 @@
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory, Position=0)]
+  [string]$Path
+)
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-param(
-  [Parameter(Mandatory=$true)][string]$Path
-)
-
-if (-not (Test-Path $Path)) {
-  throw "Path not found: $Path"
-}
-
-$isDir = Test-Path $Path -PathType Container
-if ($isDir) {
-  Get-ChildItem -Recurse -File -Path $Path -Include *.toml,*.yaml,*.yml | ForEach-Object {
-    $content = Get-Content $_.FullName -Raw
-    Set-Content -Path $_.FullName -Value $content -Encoding utf8NoBOM
-    Write-Host "Rewrote (UTF-8 no BOM): $($_.FullName)" -ForegroundColor Green
-  }
+$target = Resolve-Path -LiteralPath $Path -ErrorAction Stop
+$items  = if ((Get-Item -LiteralPath $target).PSIsContainer) {
+  Get-ChildItem -LiteralPath $target -Recurse -Include *.toml,*.yaml,*.yml -File
 } else {
-  $content = Get-Content $Path -Raw
-  Set-Content -Path $Path -Value $content -Encoding utf8NoBOM
-  Write-Host "Rewrote (UTF-8 no BOM): $Path" -ForegroundColor Green
+  Get-Item -LiteralPath $target
 }
 
+foreach ($f in $items) {
+  $raw = Get-Content -LiteralPath $f.FullName -Raw
+  Set-Content -LiteralPath $f.FullName -Value $raw -Encoding utf8NoBOM
+  Write-Output "UTF-8 ohne BOM: $($f.FullName)"
+}

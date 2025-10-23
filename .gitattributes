@@ -1,3 +1,40 @@
-* text=auto
-*.{yml,yaml,json,ndjson,toml} text eol=lf
+# Terraform: immer LF, textbasiert
+*.tf       text eol=lf merge=union
+*.tfvars   text eol=lf merge=union
+*.tfstate  binary
+*.plan     binary
 
+# JSON: immer LF, textbasiert
+*.json     text eol=lf merge=union
+
+# Markdown: immer LF, textbasiert
+*.md       text eol=lf merge=union
+
+# Shell-Skripte: immer LF, textbasiert
+*.sh       text eol=lf merge=union
+
+# YAML: immer LF, textbasiert
+*.yml      text eol=lf merge=union
+*.yaml     text eol=lf merge=union
+
+# Editorconfig: immer LF
+.editorconfig text eol=lf
+
+# Gitignore: immer LF
+.gitignore text eol=lf
+
+# VS Code Konfigurationen
+.vscode/*  text eol=lf
+
+# Devcontainer-Konfigurationen
+.devcontainer/* text eol=lf
+
+# SOPS/AGE Schlüssel: binär
+**/keys.txt binary
+
+# Secrets: textbasiert, aber nie automatisch konvertieren
+*.enc.tfvars text
+
+# Windows-spezifische Dateien ignorieren CRLF
+*.bat       text eol=crlf
+*.ps1       text eol=crlf

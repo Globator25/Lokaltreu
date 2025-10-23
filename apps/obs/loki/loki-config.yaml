@@ -30,3 +30,5 @@ compactor:
   working_directory: /var/loki/boltdb-shipper-compactor
   shared_store: filesystem
 
+
+

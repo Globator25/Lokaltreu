@@ -3,7 +3,7 @@
 
 provider "registry.terraform.io/cloudflare/cloudflare" {
   version     = "5.11.0"
-  constraints = ">= 5.0.0"
+  constraints = "5.11.0"
   hashes = [
     "h1:Sc+I2XdnSWmp3BFdlsyScM3NPw3BqcRpODWM/LMO0fg=",
     "zh:0848e1ac58cbca0adeba216742a5a7054a10386f019d4358eb69afa3ac4dc247",
@@ -20,7 +20,7 @@ provider "registry.terraform.io/cloudflare/cloudflare" {
 
 provider "registry.terraform.io/fly-apps/fly" {
   version     = "0.0.23"
-  constraints = ">= 0.0.23"
+  constraints = "0.0.23"
   hashes = [
     "h1:2dKOJQxTYEsV4xA3ZpqeN++vTpyWowdb8k+hjEqYUJo=",
     "zh:1218d3ddd6395d5f0457ba6e3831ece52068c1b168e89f31695fb97768f14846",
@@ -43,7 +43,7 @@ provider "registry.terraform.io/fly-apps/fly" {
 
 provider "registry.terraform.io/kislerdm/neon" {
   version     = "0.10.0"
-  constraints = ">= 0.9.0"
+  constraints = "0.10.0"
   hashes = [
     "h1:x24JhYcaHbq/+ub/6tUquWr0zOvWs4QSB13O4SQvYi0=",
     "zh:0813200476401451d5882646321ecf1ba4adf0d6332b3920cb8be1652e5736e9",
@@ -66,7 +66,7 @@ provider "registry.terraform.io/kislerdm/neon" {
 
 provider "registry.terraform.io/upstash/upstash" {
   version     = "2.1.0"
-  constraints = ">= 2.1.0"
+  constraints = "2.1.0"
   hashes = [
     "h1:5oAARAPhUTqzO9v1eQdhLFyHcQPdBC3e3UocvDpbRXM=",
     "zh:165a081536d428610a3244cfb9cbad9c8f0b9238b6a1aa8856c2c2aafc5e17a9",

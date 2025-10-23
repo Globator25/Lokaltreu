@@ -1,0 +1,93 @@
+terraform { }
+    neon       = { source = "kislerdm/neon",         version = "0.10.0" }
+    upstash    = { source = "upstash/upstash",       version = "2.1.0" }
+    cloudflare = { source = "cloudflare/cloudflare", version = "5.11.0" }
+  }
+}
+locals {
+  effective_environment = lower(var.environment)
+
+  effective_prefix = coalesce(
+    var.naming_prefix,
+    format("%s-%s", lower(var.project), local.effective_environment)
+  )
+
+  common_tags = merge(
+    {
+      project     = lower(var.project)
+      environment = local.effective_environment
+    },
+    var.tags
+  )
+}
+
+module "app" {
+  source = "./modules/app"
+
+  project       = var.project
+  environment   = local.effective_environment
+  naming_prefix = local.effective_prefix
+  region        = lower(var.region_api)
+  fly_org_slug  = var.fly_org_slug
+  fly_app_name  = var.fly_app_name
+  tags          = local.common_tags
+}
+
+module "postgres" {
+  source = "./modules/postgres"
+
+  project          = var.project
+  environment      = local.effective_environment
+  naming_prefix    = local.effective_prefix
+  region           = lower(var.region_postgres)
+  neon_project_id  = var.neon_project_id
+  neon_branch_name = var.neon_branch_name
+  tags             = local.common_tags
+}
+
+module "redis" {
+  source = "./modules/redis"
+
+  project        = var.project
+  environment    = local.effective_environment
+  naming_prefix  = local.effective_prefix
+  region         = lower(var.region_redis)
+  upstash_team_id = var.upstash_team_id
+  tags           = local.common_tags
+}
+
+module "storage" {
+  source = "./modules/storage"
+
+  project               = var.project
+  environment           = local.effective_environment
+  naming_prefix         = local.effective_prefix
+  region                = lower(var.region_cdn)
+  cloudflare_account_id = var.cloudflare_account_id
+  tags                  = local.common_tags
+}
+
+module "cdn" {
+  source = "./modules/cdn"
+
+  project               = var.project
+  environment           = local.effective_environment
+  naming_prefix         = local.effective_prefix
+  region                = lower(var.region_cdn)
+  cloudflare_account_id = var.cloudflare_account_id
+  tags                  = local.common_tags
+}
+
+module "mail" {
+  source = "./modules/mail"
+
+  project        = var.project
+  environment    = local.effective_environment
+  naming_prefix  = local.effective_prefix
+  mail_provider  = lower(var.mail_provider)
+  tags           = local.common_tags
+}
+
+
+
+

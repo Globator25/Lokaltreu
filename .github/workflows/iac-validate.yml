@@ -155,13 +155,16 @@ jobs:
           if [ "$tflint_exit" -ne 0 ] || [ "$tfsec_exit" -ne 0 ] || [ "$tflint_count" -gt 0 ] || [ "$tfsec_count" -gt 0 ]; then
             detail="tflint: $tflint_count; tfsec: $tfsec_count"
             problem="$RUNNER_TEMP/iac-static-problem-${{ matrix.environment }}.json"
-            cat > "$problem" <<JSON
-{ "type":"https://lokaltreu.dev/errors/iac-static-checks",
-  "title":"IaC static checks failed",
-  "status":422,
-  "detail":"$detail",
-  "instance":"urn:lokaltreu:iac:static:${{ matrix.environment }}" }
-JSON
+            jq -n \
+              --arg detail "$detail" \
+              --arg env "${{ matrix.environment }}" \
+              '{
+                type: "https://lokaltreu.dev/errors/iac-static-checks",
+                title: "IaC static checks failed",
+                status: 422,
+                detail: $detail,
+                instance: ("urn:lokaltreu:iac:static:" + $env)
+              }' > "$problem"
             echo "STATIC_PROBLEM=$problem" >> "$GITHUB_ENV"
             echo "::error::$detail"
             exit 2
@@ -209,13 +212,16 @@ JSON
             [ "$vok" != "true" ] && detail="Versioning disabled"
             [ "$eok" != "true" ] && detail="${detail:+$detail; }SSE AES256 disabled"
             problem="$RUNNER_TEMP/problem-r2.json"
-            cat > "$problem" <<JSON
-{ "type":"https://lokaltreu.dev/errors/r2-hardening",
-  "title":"R2 bucket hardening failed",
-  "status":422,
-  "detail":"$detail",
-  "instance":"urn:lokaltreu:r2:bucket:$R2_BUCKET" }
-JSON
+            jq -n \
+              --arg detail "$detail" \
+              --arg bucket "$R2_BUCKET" \
+              '{
+                type: "https://lokaltreu.dev/errors/r2-hardening",
+                title: "R2 bucket hardening failed",
+                status: 422,
+                detail: $detail,
+                instance: ("urn:lokaltreu:r2:bucket:" + $bucket)
+              }' > "$problem"
             echo "::error::$detail"
             echo "problem_path=$problem" >> "$GITHUB_OUTPUT"
             exit 2
@@ -238,15 +244,18 @@ JSON
             problem_type="https://lokaltreu.dev/errors/terraform-validation"
             problem_title="Terraform validation failed"
             problem_detail="Terraform fmt/validate/plan gate failed for environment '${{ matrix.environment }}'. See job logs for remediation."
-            cat <<EOF > "$problem_path"
-{
-  "type": "$problem_type",
-  "title": "$problem_title",
-  "status": 422,
-  "detail": "$problem_detail",
-  "instance": "urn:lokaltreu:terraform:${{ matrix.environment }}"
-}
-EOF
+            jq -n \
+              --arg type "$problem_type" \
+              --arg title "$problem_title" \
+              --arg detail "$problem_detail" \
+              --arg env "${{ matrix.environment }}" \
+              '{
+                type: $type,
+                title: $title,
+                status: 422,
+                detail: $detail,
+                instance: ("urn:lokaltreu:terraform:" + $env)
+              }' > "$problem_path"
           fi
           echo "problem_path=$problem_path" >> "$GITHUB_OUTPUT"
 

@@ -1,5 +1,5 @@
 creation_rules:
-  - path_regex: infra/terraform/envs/.*/.*\.enc\.tfvars$
+  - path_regex: infra/terraform/envs/.*/.*\.tfvars$
     key_groups:
       - age:
           - "age1ccqd936qky32rrpqw3pgypvy3ran5yudwemprjqruaau8zpmwd6qgmcekt"

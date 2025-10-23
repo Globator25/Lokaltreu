@@ -26,24 +26,38 @@ jobs:
         with:
           terraform_version: '1.6.x'
 
-      - name: Install age
+      - name: Install age + sops
         run: |
-          sudo apt-get update
+          sudo apt-get update -y
           sudo apt-get install -y age
-
-      - name: Install sops (linux amd64)
-        run: |
-          SOPS_VERSION="v3.8.1"
-          curl -sSL -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
-          sudo install -m 0755 sops /usr/local/bin/sops
+          curl -sSL https://github.com/getsops/sops/releases/download/v3.10.2/sops_3.10.2_amd64.deb -o sops.deb
+          sudo dpkg -i sops.deb
           sops --version
+          age --version
 
-      - name: Decrypt tfvars (${{ matrix.env }})
+      - name: Check SOPS key presence
         run: |
           set -euo pipefail
           test -n "${SOPS_AGE_KEY:-}"
-          sops --decrypt "infra/terraform/envs/${{ matrix.env }}/${{ matrix.env }}.secrets.enc.tfvars" \
-            > "/tmp/${{ matrix.env }}.secrets.tfvars"
+          echo "${SOPS_AGE_KEY}" | head -c 16 | grep -q '^AGE-SECRET-KEY-'
+
+      - name: Decrypt tfvars (${{ matrix.env }})
+        working-directory: infra/terraform/envs/${{ matrix.env }}
+        run: |
+          set -euo pipefail
+          test -n "${SOPS_AGE_KEY:-}"
+          shopt -s nullglob
+          found=false
+          for f in *.enc.tfvars; do
+            found=true
+            out="${f%.enc.tfvars}.tfvars"
+            sops -d "$f" > "$out"
+          done
+          if [ "$found" != "true" ]; then
+            echo "No encrypted tfvars found" >&2
+            exit 1
+          fi
+          ls -l *.tfvars
 
       - name: Sync Terraform modules into environment
         run: |
@@ -60,12 +74,21 @@ jobs:
           terraform init -backend-config=backend.hcl
           terraform fmt -check
           terraform validate
-          args=(-no-color -input=false -var-file=/tmp/${{ matrix.env }}.secrets.tfvars)
+          args=(-no-color -input=false)
           if [ -f terraform.tfvars ]; then
             args+=(-var-file=terraform.tfvars)
           fi
+          shopt -s nullglob
+          for vf in *.tfvars; do
+            case "$vf" in
+              terraform.tfvars) continue ;;
+              *.enc.tfvars) continue ;;
+            esac
+            args+=(-var-file="$vf")
+          done
           terraform plan "${args[@]}"
 
       - name: Cleanup decrypted secrets (${{ matrix.env }})
         if: always()
-        run: rm -f "/tmp/${{ matrix.env }}.secrets.tfvars"
+        working-directory: infra/terraform/envs/${{ matrix.env }}
+        run: rm -f *.secrets.tfvars

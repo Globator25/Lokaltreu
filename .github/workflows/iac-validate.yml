@@ -40,17 +40,20 @@ jobs:
         with:
           terraform_version: 1.6.6
 
-      - name: Install age
+      - name: Install age + sops
         run: |
-          sudo apt-get update
+          sudo apt-get update -y
           sudo apt-get install -y age
-
-      - name: Install sops (linux amd64)
-        run: |
-          SOPS_VERSION="v3.8.1"
-          curl -L -o sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
-          sudo install -m 0755 sops /usr/local/bin/sops
+          curl -sSL https://github.com/getsops/sops/releases/download/v3.10.2/sops_3.10.2_amd64.deb -o sops.deb
+          sudo dpkg -i sops.deb
           sops --version
+          age --version
+
+      - name: Check SOPS key presence
+        run: |
+          set -euo pipefail
+          test -n "${SOPS_AGE_KEY:-}"
+          echo "${SOPS_AGE_KEY}" | head -c 16 | grep -q '^AGE-SECRET-KEY-'
 
       - name: Sync Terraform modules into environment
         run: |
@@ -58,6 +61,24 @@ jobs:
           rm -rf "$env_dir/modules"
           mkdir -p "$env_dir/modules"
           cp -R infra/terraform/modules/. "$env_dir/modules/"
+
+      - name: Decrypt tfvars
+        working-directory: infra/terraform/envs/${{ matrix.environment }}
+        run: |
+          set -euo pipefail
+          test -n "${SOPS_AGE_KEY:-}"
+          shopt -s nullglob
+          found=false
+          for f in *.enc.tfvars; do
+            found=true
+            out="${f%.enc.tfvars}.tfvars"
+            sops -d "$f" > "$out"
+          done
+          if [ "$found" != "true" ]; then
+            echo "No encrypted tfvars found" >&2
+            exit 1
+          fi
+          ls -l *.tfvars
 
       - name: terraform fmt -recursive -check
         if: matrix.environment == 'dev'
@@ -75,29 +96,38 @@ jobs:
             exit 1
           fi
 
-      - name: Decrypt secrets
-        run: |
-          set -euo pipefail
-          test -n "${SOPS_AGE_KEY:-}"
-          sops --decrypt "infra/terraform/envs/${{ matrix.environment }}/${{ matrix.environment }}.secrets.enc.tfvars" > "$RUNNER_TEMP/${{ matrix.environment }}.secrets.tfvars"
-
       - name: terraform init (remote state)
+        working-directory: infra/terraform/envs/${{ matrix.environment }}
         run: |
-          terraform -chdir=infra/terraform/envs/${{ matrix.environment }} init \
+          terraform init \
             -backend-config=backend.hcl \
             -input=false \
             -reconfigure
 
       - name: terraform validate
-        run: terraform -chdir=infra/terraform/envs/${{ matrix.environment }} validate
+        working-directory: infra/terraform/envs/${{ matrix.environment }}
+        run: terraform validate -no-color
 
       - name: terraform plan
         id: plan
+        working-directory: infra/terraform/envs/${{ matrix.environment }}
         run: |
-          set -uo pipefail
+          set -euo pipefail
+          shopt -s nullglob
           PLAN_OUT="$RUNNER_TEMP/${{ matrix.environment }}.tfplan"
-          terraform -chdir=infra/terraform/envs/${{ matrix.environment }} plan \
-            -var-file="$RUNNER_TEMP/${{ matrix.environment }}.secrets.tfvars" \
+          vars_args=()
+          if [ -f terraform.tfvars ]; then
+            vars_args+=(-var-file=terraform.tfvars)
+          fi
+          for vf in *.tfvars; do
+            case "$vf" in
+              terraform.tfvars) continue ;;
+              *.enc.tfvars) continue ;;
+            esac
+            vars_args+=(-var-file="$vf")
+          done
+          terraform plan \
+            "${vars_args[@]}" \
             -no-color \
             -input=false \
             -detailed-exitcode \
@@ -106,8 +136,13 @@ jobs:
           if [ $plan_exit -gt 1 ]; then
             exit $plan_exit
           fi
-          terraform -chdir=infra/terraform/envs/${{ matrix.environment }} show -no-color "$PLAN_OUT" > "$RUNNER_TEMP/${{ matrix.environment }}.plan.txt"
+          terraform show -no-color "$PLAN_OUT" > "$RUNNER_TEMP/${{ matrix.environment }}.plan.txt"
           echo "exit_code=$plan_exit" >> "$GITHUB_OUTPUT"
+
+      - name: Cleanup decrypted tfvars
+        if: always()
+        working-directory: infra/terraform/envs/${{ matrix.environment }}
+        run: rm -f *.secrets.tfvars
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4

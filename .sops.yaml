@@ -1,6 +1,4 @@
 creation_rules:
-  - path_regex: ^infra[\\/]+terraform[\\/]+secrets[\\/]+.*\.secrets\.tfvars\.enc$
-    encrypted_regex: '^(.*)$'
-    age: "age1j8ac3xr95paknwr2r96puces8ug575eu9vhf4xygxsm2ltdw4qmsmtvksp"
-  - path_regex: ^secrets/.*\.enc\.tfvars$
-    age: "age1lp7kddx7090a927nn4d36p4j4g0sfwtf5x9dtlfpnywlylr50ezqfe6eg0"
+  - path_regex: secrets/.*\.enc\.tfvars$
+    age:
+      - "age1ccqd936qky32rrpqw3pgypvy3ran5yudwemprjqruaau8zpmwd6qgmcekt"

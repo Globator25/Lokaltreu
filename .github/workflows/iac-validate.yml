@@ -77,6 +77,8 @@ jobs:
 
       - name: Decrypt secrets
         run: |
+          set -euo pipefail
+          test -n "${SOPS_AGE_KEY:-}"
           sops --decrypt "infra/terraform/envs/${{ matrix.environment }}/${{ matrix.environment }}.secrets.enc.tfvars" > "$RUNNER_TEMP/${{ matrix.environment }}.secrets.tfvars"
 
       - name: terraform init (remote state)

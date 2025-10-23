@@ -41,6 +41,7 @@ jobs:
       - name: Decrypt tfvars (${{ matrix.env }})
         run: |
           set -euo pipefail
+          test -n "${SOPS_AGE_KEY:-}"
           sops --decrypt "infra/terraform/envs/${{ matrix.env }}/${{ matrix.env }}.secrets.enc.tfvars" \
             > "/tmp/${{ matrix.env }}.secrets.tfvars"
 

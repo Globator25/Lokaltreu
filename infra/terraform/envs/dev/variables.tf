@@ -1,3 +1,7 @@
+########################################
+# Allgemeine Projekt- und Umgebungseinstellungen
+########################################
+
 variable "project" {
   type    = string
   default = "lokaltreu"
@@ -12,6 +16,19 @@ variable "naming_prefix" {
   type    = string
   default = "lokaltreu-dev"
 }
+
+variable "tags" {
+  type = map(string)
+  default = {
+    project = "lokaltreu"
+    env     = "dev"
+    owner   = "platform-team"
+  }
+}
+
+########################################
+# Regionen
+########################################
 
 variable "region_api" {
   type    = string
@@ -38,6 +55,10 @@ variable "region_cdn" {
   default = "eu"
 }
 
+########################################
+# Fly.io
+########################################
+
 variable "fly_org_slug" {
   type    = string
   default = "lokaltreu"
@@ -55,6 +76,10 @@ variable "fly_access_token" {
   description = "Access token for Fly.io API."
 }
 
+########################################
+# Neon (Postgres)
+########################################
+
 variable "neon_project_id" {
   type    = string
   default = "lokaltreu-dev"
@@ -69,8 +94,17 @@ variable "neon_api_key" {
   type        = string
   sensitive   = true
   nullable    = true
-  description = "Neon API key."
+  description = "API key for Neon Postgres."
 }
+
+variable "database_name" {
+  type        = string
+  description = "Name of the Neon database."
+}
+
+########################################
+# Upstash (Redis)
+########################################
 
 variable "upstash_team_id" {
   type    = string
@@ -83,10 +117,20 @@ variable "upstash_email" {
 }
 
 variable "upstash_api_key" {
-  type      = string
-  sensitive = true
-  nullable  = true
+  type        = string
+  sensitive   = true
+  nullable    = true
+  description = "API key for Upstash Redis."
 }
+
+variable "datastore_name" {
+  type        = string
+  description = "Name of the Redis datastore."
+}
+
+########################################
+# Cloudflare (CDN / DNS)
+########################################
 
 variable "cloudflare_account_id" {
   type    = string
@@ -94,27 +138,39 @@ variable "cloudflare_account_id" {
 }
 
 variable "cloudflare_api_token" {
-  type      = string
-  sensitive = true
-  nullable  = true
+  type        = string
+  sensitive   = true
+  nullable    = true
+  description = "API token for Cloudflare DNS and CDN management."
 }
+
+variable "zone_label" {
+  type        = string
+  description = "Cloudflare zone label, e.g. 'lokaltreu.dev'."
+}
+
+variable "cname" {
+  type        = string
+  description = "CNAME record for the app, e.g. 'app.lokaltreu.dev'."
+}
+
+########################################
+# Mail Provider (z. B. Mailjet)
+########################################
 
 variable "mail_provider" {
   type    = string
   default = "mailjet"
 }
 
-variable "mail_api_key" {
-  type      = string
-  sensitive = true
-  nullable  = true
+variable "mail_service" {
+  type    = string
+  default = "transactional-mail"
 }
 
-variable "tags" {
-  type = map(string)
-  default = {
-    project = "lokaltreu"
-    env     = "dev"
-    owner   = "platform-team"
-  }
+variable "mail_api_key" {
+  type        = string
+  sensitive   = true
+  nullable    = true
+  description = "API key for Mail provider."
 }

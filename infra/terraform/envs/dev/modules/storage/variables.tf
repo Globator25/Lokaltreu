@@ -25,12 +25,16 @@ variable "cloudflare_account_id" {
 
 variable "bucket_name" {
   type        = string
-  description = "Logical name of the R2 bucket to provision."
+  default     = null
+  nullable    = true
+  description = "Optional override for the R2 bucket name; defaults to <naming_prefix>-r2."
 }
 
 variable "endpoint" {
   type        = string
-  description = "Cloudflare R2 endpoint URL used for access."
+  default     = null
+  nullable    = true
+  description = "Optional override for the R2 endpoint URL; defaults to https://<account>.r2.cloudflarestorage.com."
 }
 
 variable "tags" {

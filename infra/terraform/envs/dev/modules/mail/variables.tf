@@ -21,11 +21,15 @@ variable "mail_provider" {
 variable "mail_api_key" {
   type        = string
   sensitive   = true
+  default     = null
+  nullable    = true
   description = "API key for authenticating with the mail provider."
 }
 
 variable "mail_service" {
   type        = string
+  default     = null
+  nullable    = true
   description = "Logical service name used for mail routing."
 }
 

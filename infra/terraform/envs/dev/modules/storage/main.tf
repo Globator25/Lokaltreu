@@ -1,6 +1,6 @@
 locals {
-  bucket_name = format("%s-r2", var.naming_prefix)
-  endpoint    = format("https://%s.r2.cloudflarestorage.com", var.cloudflare_account_id)
+  bucket_name = coalesce(var.bucket_name, format("%s-r2", var.naming_prefix))
+  endpoint    = coalesce(var.endpoint, format("https://%s.r2.cloudflarestorage.com", var.cloudflare_account_id))
 }
 
 resource "terraform_data" "descriptor" {

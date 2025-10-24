@@ -10,10 +10,13 @@ variable "config" {
     region_cdn            = string
     cloudflare_account_id = string
     cloudflare_api_token  = optional(string)
+    zone_label            = optional(string)
+    cname                 = optional(string)
     fly_org_slug          = string
     fly_app_name          = optional(string)
     fly_access_token      = optional(string)
     mail_provider         = string
+    mail_service          = optional(string)
     mail_api_key          = optional(string)
     neon_project_id       = string
     neon_branch_name      = string

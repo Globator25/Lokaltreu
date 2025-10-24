@@ -10,7 +10,9 @@ locals {
     project = local.cfg.project
     env     = local.cfg.environment
   }
-  tags = merge(local.default_tags, local.optional_tags)
+  cdn_zone_label = coalesce(try(local.cfg.zone_label, null), format("%s-%s", local.naming_prefix, "cdn"))
+  cdn_cname      = coalesce(try(local.cfg.cname, null), format("%s.lokaltreu.dev", local.naming_prefix))
+  tags           = merge(local.default_tags, local.optional_tags)
 }
 
 module "app" {
@@ -65,6 +67,9 @@ module "cdn" {
 
   region                = local.cfg.region_cdn
   cloudflare_account_id = local.cfg.cloudflare_account_id
+  cloudflare_api_token  = try(local.cfg.cloudflare_api_token, null)
+  zone_label            = local.cdn_zone_label
+  cname                 = local.cdn_cname
   tags                  = local.tags
 }
 
@@ -75,6 +80,8 @@ module "mail" {
   naming_prefix = local.naming_prefix
 
   mail_provider = local.cfg.mail_provider
+  mail_service  = try(local.cfg.mail_service, null)
+  mail_api_key  = try(local.cfg.mail_api_key, null)
   region        = "eu"
   tags          = local.tags
 }

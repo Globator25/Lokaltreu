@@ -20,9 +20,20 @@ upstash_email   = "platform@lokaltreu.dev"
 cloudflare_account_id = "00000000000000000000000000000000"
 
 mail_provider = "mailjet"
+mail_service  = "transactional-mail"
+
+zone_label = "lokaltreu-dev-cdn"
+cname      = "lokaltreu-dev.lokaltreu.dev"
 
 tags = {
   project = "lokaltreu"
   env     = "dev"
   owner   = "platform-team"
 }
+
+datastore_name = "lokaltreu-dev-cache"
+database_name = "lokaltreu-dev-db"
+
+
+
+

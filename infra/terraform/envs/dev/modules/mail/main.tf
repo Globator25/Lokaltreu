@@ -1,6 +1,6 @@
 locals {
   provider_slug = lower(var.mail_provider)
-  service_id    = format("%s-%s-mail", var.project, var.environment)
+  service_id    = coalesce(var.mail_service, format("%s-%s-mail", var.project, var.environment))
 }
 
 resource "terraform_data" "descriptor" {

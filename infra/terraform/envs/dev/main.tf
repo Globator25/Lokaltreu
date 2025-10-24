@@ -43,6 +43,8 @@ module "postgres" {
   region           = var.region_postgres
   neon_project_id  = var.neon_project_id
   neon_branch_name = var.neon_branch_name
+  neon_api_key   = var.neon_api_key
+  database_name  = var.database_name
   tags             = merge(var.tags, { tier = "dev" })
 }
 
@@ -53,6 +55,9 @@ module "redis" {
   naming_prefix   = var.naming_prefix
   region          = var.region_redis
   upstash_team_id = var.upstash_team_id
+  datastore_name   = var.datastore_name
+  upstash_email    = var.upstash_email
+  upstash_api_key  = var.upstash_api_key
   tags            = merge(var.tags, { tier = "dev" })
 }
 
@@ -63,6 +68,9 @@ module "cdn" {
   naming_prefix         = var.naming_prefix
   region                = var.region_cdn
   cloudflare_account_id = var.cloudflare_account_id
+  cloudflare_api_token  = var.cloudflare_api_token
+  zone_label            = var.zone_label
+  cname                 = var.cname
   tags                  = merge(var.tags, { tier = "dev" })
 }
 
@@ -72,6 +80,8 @@ module "mail" {
   environment   = var.environment
   naming_prefix = var.naming_prefix
   mail_provider = var.mail_provider
+  mail_api_key  = var.mail_api_key
+  mail_service  = var.mail_service
   tags          = merge(var.tags, { tier = "dev" })
 }
 

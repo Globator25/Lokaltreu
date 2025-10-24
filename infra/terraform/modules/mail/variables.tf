@@ -18,6 +18,21 @@ variable "mail_provider" {
   description = "Transactional mail provider slug."
 }
 
+variable "mail_api_key" {
+  type        = string
+  sensitive   = true
+  default     = null
+  nullable    = true
+  description = "Optional API key for the provider."
+}
+
+variable "mail_service" {
+  type        = string
+  default     = null
+  nullable    = true
+  description = "Explicit service identifier; defaults to <project>-<environment>-mail when omitted."
+}
+
 variable "region" {
   type        = string
   default     = "eu"

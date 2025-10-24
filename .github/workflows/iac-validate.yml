@@ -67,18 +67,8 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${SOPS_AGE_KEY:-}"
-          shopt -s nullglob
-          found=false
-          for f in *.enc.tfvars; do
-            found=true
-            out="${f%.enc.tfvars}.tfvars"
-            sops -d "$f" > "$out"
-          done
-          if [ "$found" != "true" ]; then
-            echo "No encrypted tfvars found" >&2
-            exit 1
-          fi
-          ls -l *.tfvars
+          sops -d "${{ matrix.environment }}.secrets.enc.tfvars" > secrets.tfvars
+          ls -l secrets.tfvars
 
       - name: terraform fmt -recursive -check
         if: matrix.environment == 'dev'
@@ -113,23 +103,16 @@ jobs:
         working-directory: infra/terraform/envs/${{ matrix.environment }}
         run: |
           set -euo pipefail
-          shopt -s nullglob
           PLAN_OUT="$RUNNER_TEMP/${{ matrix.environment }}.tfplan"
-          vars_args=()
+          args=(-no-color -input=false)
           if [ -f terraform.tfvars ]; then
-            vars_args+=(-var-file=terraform.tfvars)
+            args+=(-var-file=terraform.tfvars)
           fi
-          for vf in *.tfvars; do
-            case "$vf" in
-              terraform.tfvars) continue ;;
-              *.enc.tfvars) continue ;;
-            esac
-            vars_args+=(-var-file="$vf")
-          done
+          if [ -f secrets.tfvars ]; then
+            args+=(-var-file=secrets.tfvars)
+          fi
           terraform plan \
-            "${vars_args[@]}" \
-            -no-color \
-            -input=false \
+            "${args[@]}" \
             -detailed-exitcode \
             -out="$PLAN_OUT"
           plan_exit=$?
@@ -142,7 +125,7 @@ jobs:
       - name: Cleanup decrypted tfvars
         if: always()
         working-directory: infra/terraform/envs/${{ matrix.environment }}
-        run: rm -f *.secrets.tfvars
+        run: rm -f secrets.tfvars
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4

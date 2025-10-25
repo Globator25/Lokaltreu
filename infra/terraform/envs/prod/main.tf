@@ -63,3 +63,15 @@ module "platform" {
     tags                  = merge(var.tags, { tier = "prod" })
   }
 }
+
+module "app" {
+  source           = "../../modules/app"
+  project          = var.project
+  environment      = var.environment
+  naming_prefix    = var.naming_prefix
+  region           = var.region_api
+  fly_org_slug     = var.fly_org_slug
+  fly_app_name     = var.fly_app_name
+  fly_access_token = var.fly_access_token   # <- diese Zeile MUSS da sein
+  tags             = merge(var.tags, { tier = "prod" })
+}

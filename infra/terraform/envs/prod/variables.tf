@@ -101,9 +101,24 @@ variable "cloudflare_api_token" {
   nullable  = true
 }
 
+variable "zone_label" {
+  type    = string
+  default = "lokaltreu-prod-cdn"
+}
+
+variable "cname" {
+  type    = string
+  default = "lokaltreu-prod.lokaltreu.dev"
+}
+
 variable "mail_provider" {
   type    = string
   default = "mailjet"
+}
+
+variable "mail_service" {
+  type    = string
+  default = "transactional-mail"
 }
 
 variable "mail_api_key" {

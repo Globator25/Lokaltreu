@@ -46,7 +46,10 @@ module "platform" {
     upstash_api_key       = var.upstash_api_key
     cloudflare_account_id = var.cloudflare_account_id
     cloudflare_api_token  = var.cloudflare_api_token
+    zone_label            = var.zone_label
+    cname                 = var.cname
     mail_provider         = var.mail_provider
+    mail_service          = var.mail_service
     mail_api_key          = var.mail_api_key
     tags                  = merge(var.tags, { tier = "prod" })
   }

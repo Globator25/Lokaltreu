@@ -43,3 +43,4 @@ infra/terraform/envs/**/zz_secrets.auto.tfvars.json
 
 # Devcontainer
 .devcontainer/devcontainer.env
+infra/terraform/envs/*/*.secrets.tfvars

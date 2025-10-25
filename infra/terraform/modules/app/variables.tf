@@ -35,19 +35,8 @@ variable "tags" {
   description = "Tags merged into the Fly descriptor."
 }
 
-variable "project" {
-  type = string
-}
-
-variable "environment" {
-  type = string
-}
-
-variable "fly_org_slug" {
-  type = string
-}
-
 variable "fly_access_token" {
-  type      = string
-  sensitive = true
+  type        = string
+  sensitive   = true
+  description = "Fly.io API token for provisioning."
 }

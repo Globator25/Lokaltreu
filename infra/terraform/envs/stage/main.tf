@@ -63,6 +63,9 @@ module "cdn" {
   naming_prefix         = var.naming_prefix
   region                = var.region_cdn
   cloudflare_account_id = var.cloudflare_account_id
+  cloudflare_api_token  = var.cloudflare_api_token
+  zone_label            = var.zone_label
+  cname                 = var.cname
   tags                  = merge(var.tags, { tier = "stage" })
 }
 
@@ -72,6 +75,8 @@ module "mail" {
   environment   = var.environment
   naming_prefix = var.naming_prefix
   mail_provider = var.mail_provider
+  mail_api_key  = var.mail_api_key
+  mail_service  = var.mail_service
   tags          = merge(var.tags, { tier = "stage" })
 }
 

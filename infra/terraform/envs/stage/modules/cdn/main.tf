@@ -1,13 +1,9 @@
-locals {
-  zone_label = format("%s-%s", var.naming_prefix, "cdn")
-  cname      = format("%s.lokaltreu.dev", var.naming_prefix)
-}
-
 resource "terraform_data" "descriptor" {
   input = {
-    zone_label = local.zone_label
-    cname      = local.cname
+    zone_label = var.zone_label
+    cname      = var.cname
     account_id = var.cloudflare_account_id
+    api_token  = var.cloudflare_api_token
     region     = var.region
     tags       = var.tags
   }

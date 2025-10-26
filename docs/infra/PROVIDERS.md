@@ -14,8 +14,12 @@ Constraints: eine aktive Kampagne je Mandant.
 Region: EU. Nutzung: Anti-Replay SETNX(jti), Idempotenz-Locks, Rate-Limits, kleine Queues.
 
 ## Cloudflare R2 (EU-Jurisdiction) + CDN Regional Services
-R2 Buckets: audit/, reports/. WORM-Exports signiert, 180 Tage.
+R2 Buckets: audit/, reports/.
+Retention: 180 Tage (WORM, signiert). Audit-Events werden unveränderbar exportiert und 180 Tage aufbewahrt.
+Zweck: Missbrauchs- und Sicherheitsanalyse (Art. 6 Abs. 1 lit. f DSGVO).
 CDN: Regional Services aktiv (EU-TLS). PWA-Delivery, Static/Images.
+Siehe DNS-CDN.md für Origin-Mapping und EU-TLS-Nachweis.
+
 
 ## Mail (Mailjet oder Brevo)
 EU-Datenhaltung, DPA referenziert.

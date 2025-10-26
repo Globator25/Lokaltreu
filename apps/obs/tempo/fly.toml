@@ -1,0 +1,15 @@
+app = "obs-tempo"
+primary_region = "fra"
+
+[http_service]
+  internal_port = 3200
+  force_https = true
+
+[[services]]
+  internal_port = 4318
+  protocol = "tcp"
+  [[services.ports]]
+    port = 4318
+
+[[vm]]
+  size = "shared-cpu-1x"

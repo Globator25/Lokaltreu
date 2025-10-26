@@ -1,38 +1,16 @@
-variable "fly_token" {
-  type      = string
-  sensitive = true
-}
-
-variable "neon_api_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "upstash_api_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "cloudflare_api_token" {
-  type      = string
-  sensitive = true
-}
-
 provider "fly" {
-  access_token = var.fly_token
+  access_token = coalesce(try(var.config.fly_access_token, null), "")
 }
 
 provider "neon" {
-  api_key = var.neon_api_key
+  api_key = coalesce(try(var.config.neon_api_key, null), "")
 }
 
-
+provider "upstash" {
+  api_key = coalesce(try(var.config.upstash_api_key, null), "")
+  email   = coalesce(try(var.config.upstash_email, null), "")
+}
 
 provider "cloudflare" {
-  api_token = var.cloudflare_api_token
+  api_token = coalesce(try(var.config.cloudflare_api_token, null), "")
 }
-variable "upstash_email" {
-  type      = string
-  sensitive = true
-}
-

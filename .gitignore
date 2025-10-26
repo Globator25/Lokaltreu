@@ -17,17 +17,30 @@ apps/**/dist/
 # OS/IDE
 .DS_Store
 .vscode-test
+
+# Terraform
 .terraform/
+*.tfstate
+*.tfstate.*
+*.plan
+tf-*.log
+.terraform.lock.hcl
+
+# Lokaltreu Terraform Struktur
 infra/terraform/.terraform/
-infra/terraform/terraform.tfstate
-infra/terraform/terraform.tfstate.*
 infra/terraform/.keys/
-infra/terraform/secrets/*.tfvars
-!infra/terraform/secrets/*.enc.tfvars
+infra/terraform/envs/**/zz_secrets.auto.tfvars
+infra/terraform/envs/**/zz_secrets.auto.tfvars.json
+**/*.secrets.tfvars
+.keys/
+
 # SOPS/AGE
 **/keys.txt
+
 # Decrypted temps
 *.tfvars.plain
 *decrypted*.tfvars
-# Testartefakte
-infra/terraform/secrets/test.enc.tfvars
+
+# Devcontainer
+.devcontainer/devcontainer.env
+infra/terraform/envs/*/*.secrets.tfvars

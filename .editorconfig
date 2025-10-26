@@ -1,8 +1,35 @@
-﻿root = true
+# Top-most EditorConfig file
+root = true
 
+# Standard für alle Dateien
 [*]
+charset = utf-8
 end_of_line = lf
 insert_final_newline = true
-charset = utf-8
+trim_trailing_whitespace = true
+
+# Terraform-Dateien
+[*.tf]
 indent_style = space
 indent_size = 2
+
+# JSON-Dateien (z. B. zz_secrets.auto.tfvars.json)
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Markdown-Dokumentation
+[*.md]
+trim_trailing_whitespace = false
+indent_style = space
+indent_size = 2
+
+# Shell-Skripte
+[*.sh]
+indent_style = space
+indent_size = 2
+
+# Gitignore-Dateien
+[.gitignore]
+end_of_line = lf
+insert_final_newline = true

@@ -1,0 +1,8 @@
+variable "project"               { type = string }
+variable "environment"           { type = string }
+variable "naming_prefix"         { type = string  default = null }
+variable "region"                { type = string }
+variable "cloudflare_account_id" { type = string }
+variable "fly_org_slug"          { type = string }
+variable "fly_app_name"          { type = string  default = null }
+variable "tags"                  { type = map(string) }

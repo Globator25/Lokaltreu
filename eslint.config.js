@@ -18,6 +18,7 @@ export default tseslint.config(
       "**/coverage/",
       "apps/api/src/**/*.js", // Ignoriere JS-Dateien in der API
     ],
+     
   },
 
   // 1. Basis-Konfiguration für das gesamte Repository (JavaScript)

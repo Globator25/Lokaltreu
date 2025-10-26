@@ -1,0 +1,12 @@
+apiVersion: 1
+datasources:
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    url: https://lokaltreu-obs-tempo.fly.dev
+    jsonData:
+      tracesToLogs:
+        datasourceUid: loki
+
+
+

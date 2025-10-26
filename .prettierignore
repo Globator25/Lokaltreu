@@ -1,0 +1,4 @@
+infra/terraform/envs/**/.terraform/
+infra/terraform/envs/**/zz_secrets.auto.tfvars*
+*.plan
+*.tfstate

@@ -1,20 +1,45 @@
 {
-  "name": "@lokaltreu/api",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "vitest run",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "lint": "eslint ."
+    "dev": "tsx watch src/index.ts",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "stop": "kill-port 3000",
+    "prestart": "kill-port 3000"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "type": "module",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.48.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.48.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.48.0",
+    "@opentelemetry/resources": "1.9.0",
+    "@opentelemetry/sdk-metrics": "1.9.0",
+    "@opentelemetry/sdk-node": "^0.48.0",
+    "@opentelemetry/semantic-conventions": "1.9.0",
+    "express": "^4.19.2",
+    "pino": "^10.0.0",
+    "pino-loki": "^2.6.0",
+    "tslib": "2.8.1"
+  },
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.4",
+    "@types/express": "^4.17.21",
+    "@types/node": "22.7.5",
+    "@vitest/coverage-v8": "3.2.4",
+    "eslint": "^9.37.0",
+    "kill-port": "^2.0.1",
+    "rimraf": "6.0.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

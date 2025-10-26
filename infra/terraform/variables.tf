@@ -1,31 +1,30 @@
-variable "env" {
-  type = string
+variable "config" {
+  type = object({
+    project               = string
+    environment           = string
+    naming_prefix         = optional(string)
+    region_api            = string
+    region_postgres       = string
+    region_redis          = string
+    region_storage        = string
+    region_cdn            = string
+    cloudflare_account_id = string
+    cloudflare_api_token  = optional(string)
+    zone_label            = optional(string)
+    cname                 = optional(string)
+    fly_org_slug          = string
+    fly_app_name          = optional(string)
+    fly_access_token      = optional(string)
+    mail_provider         = string
+    mail_service          = optional(string)
+    mail_api_key          = optional(string)
+    neon_project_id       = string
+    neon_branch_name      = string
+    neon_api_key          = optional(string)
+    upstash_team_id       = string
+    upstash_email         = optional(string)
+    upstash_api_key       = optional(string)
+    tags                  = optional(map(string))
+  })
+  description = "Normalized configuration map passed from environment modules."
 }
-variable "region_api" {
-  type = string
-}
-variable "region_cdn" {
-  type = string
-}
-variable "r2_bucket" {
-  type = string
-}
-# Nur deklarieren, wenn NICHT bereits in providers.tf vorhanden:
-# variable "mail_provider" { type = string }
-# variable "mail_api_key"  { type = string  sensitive = true }
-variable "mail_provider" {
-  type = string
-  validation {
-    condition     = contains(["mailjet","brevo"], var.mail_provider)
-    error_message = "mail_provider muss 'mailjet' oder 'brevo' sein."
-  }
-}
-variable "mail_api_key" {
-  type      = string
-  sensitive = true
-}
-# optionale Dev-Defaults (nur wenn ihr das wollt)
-# variable "env"        { type = string default = "dev" }
-# variable "region_api" { type = string default = "eu-central" }
-# variable "region_cdn" { type = string default = "eu" }
-# variable "r2_bucket"  { type = string default = "lokaltreu-dev-audit" }

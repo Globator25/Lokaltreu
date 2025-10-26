@@ -1,0 +1,9 @@
+app = "obs-loki"
+primary_region = "fra"
+
+[http_service]
+  internal_port = 3100
+  force_https = true
+
+[[vm]]
+  size = "shared-cpu-1x"

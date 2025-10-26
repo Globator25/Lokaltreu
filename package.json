@@ -1,5 +1,5 @@
 {
-  "name": "lokaltreu",
+  "name": "lokaltreu-monorepo",
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
@@ -12,20 +12,34 @@
     "build": "npm run build:web && npm run build:api",
     "start:web": "node apps/web/.next/standalone/server.js",
     "start:api": "node apps/api/dist/index.js",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "obs:provider:utf8": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./apps/obs/tools/Set-GrafanaProviderEncoding.ps1 -Path ./apps/obs/grafana/provisioning/dashboards/provider.yaml",
+    "obs:dedupe": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./apps/obs/tools/Dedupe-Grafana-UIDs.ps1 -DashPath ./apps/obs/grafana/provisioning/dashboards/lokaltreu",
+    "obs:dedupe:dry": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./apps/obs/tools/Dedupe-Grafana-UIDs.ps1 -DashPath ./apps/obs/grafana/provisioning/dashboards/lokaltreu -DryRun",
+    "obs:health:grafana": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./apps/obs/tools/Test-Grafana.ps1 -App lokaltreu-obs-grafana",
+    "obs:health:tempo": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./apps/obs/tools/Test-Tempo.ps1 -App lokaltreu-obs-tempo",
+    "obs:health:loki": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./apps/obs/tools/Test-Loki.ps1 -App lokaltreu-obs-loki",
+    "obs:health:all": "pwsh -NoProfile -Command \"./apps/obs/tools/Test-Grafana.ps1 -App lokaltreu-obs-grafana; ./apps/obs/tools/Test-Tempo.ps1 -App lokaltreu-obs-tempo; ./apps/obs/tools/Test-Loki.ps1 -App lokaltreu-obs-loki\"",
+    "repo:audit:bash": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/audit-bash-usage.ps1",
+    "obs:predeploy": "npm run obs:provider:utf8 && npm run obs:dedupe",
+    "obs:verify": "npm run obs:health:grafana && npm run repo:audit:bash",
+    "obs:verify:readonly": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-bom-and-uid.ps1",
+    "obs:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/obs/Smoke-Obs.ps1",
+    "obs:prov:verify": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/obs/Ensure-Utf8.ps1 -Path ./apps/obs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "engines": {
-  "node": ">=20 <23"
-},
+    "node": ">=20 <23"
+  },
   "description": "",
-  "private": "true",
+  "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "packageManager": "npm@10",
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.5.4",
     "@typescript-eslint/parser": "^8.45.0",
@@ -34,5 +48,4 @@
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
   }
-
 }

@@ -1,6 +1,12 @@
-﻿.git
+.git
 node_modules
 .next/cache
 dist
 coverage
 tmp
+
+# Ensure lockfile and manifests are included
+!package-lock.json
+!apps/api/package.json
+!apps/web/package.json
+

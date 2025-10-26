@@ -1,22 +1,54 @@
-Developer-Checkliste
+# CONTRIBUTING
 
-- H1 vorhanden.
-- Verzeichnisbaum als Codeblock.
-- Quickstart-Block vorhanden und getestet.
-- CI-Gates in `.github/workflows` vorhanden.
+## Editor & Line Endings
+- UTF-8 ohne BOM und LF sind verpflichtend für `*.yml`, `*.yaml`, `*.json`, `*.ndjson`, `*.toml` (siehe `.editorconfig`, `.gitattributes`).
+- VS Code (Empfehlung, user/workspace):
 
-Typische Stolpersteine & Erste Hilfe
+```json
+{
+  "files.eol": "\n",
+  "files.insertFinalNewline": true
+}
+```
 
-- Wenn Markdown unten „weiterläuft": prüfe schließende Backticks (```).
-- Wenn der Baum inline erscheint: stelle sicher, dass der Codeblock mit ``` geöffnet und geschlossen ist.
+- Git repo-weit:
 
-Hinweise
+```bash
+git config core.autocrlf false
+git config core.hooksPath .githooks
+```
 
-> Hinweis: Keine Secrets im Repo. `.env*` und Terraform-States sind in `.gitignore`. SOPS-verschlüsselte Dateien dürfen versioniert werden.
+## Pre-commit Hook
 
-Contribution workflow (kurz)
+- Der Hook `.githooks/pre-commit` ruft `scripts/verify-bom-and-uid.ps1`.
+- Abbruch bei:
+  - Byte Order Mark (BOM) in `yml|yaml|json|ndjson|toml`
+  - doppelten Grafana-UIDs in JSON/NDJSON
+- Aktivierung:
 
-1. Fork oder branch vom `main`/`master`.
-2. Commit nach konventionellem Style (z. B. "docs: ...", "fix: ...").
-3. Öffne PR, verlinke relevante Issues und CI-Checklist.
-4. CI muss grün sein (Lint, Tests, Coverage) bevor Merge.
+```bash
+chmod +x .githooks/pre-commit   # falls nötig
+git config core.hooksPath .githooks
+```
+
+- Manuell prüfen:
+
+```powershell
+pwsh -NoProfile -File scripts/verify-bom-and-uid.ps1
+```
+
+## Nützliche NPM-Befehle
+
+```bash
+npm run obs:verify:readonly   # Read-only BOM/UID-Check
+npm run obs:provider:utf8     # provider.yaml -> UTF-8 ohne BOM
+npm run obs:dedupe:dry        # UID-Dedupe Dry-Run
+npm run obs:dedupe            # UID-Dedupe anwenden
+npm run obs:health:grafana    # Grafana Health (Fly)
+```
+
+## CI-Erwartungen
+
+- "OBS verify (read-only)" läuft früh im CI und im Smoke-Workflow.
+- Commits/PRs sollten lokal fehlerfrei durch `npm run obs:verify:readonly` gehen.
+

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+exec pwsh -NoProfile -ExecutionPolicy Bypass -File "$root/scripts/verify-bom-and-uid.ps1"
+

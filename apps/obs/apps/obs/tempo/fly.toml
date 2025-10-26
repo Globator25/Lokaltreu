@@ -1,0 +1,18 @@
+app = "lokaltreu-obs-tempo"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[[services]]
+  internal_port = 3200
+  protocol = "tcp"
+  [[services.ports]]
+    port = 80
+
+[[services]]
+  internal_port = 4318
+  protocol = "tcp"
+
+
+

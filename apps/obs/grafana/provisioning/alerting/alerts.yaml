@@ -1,0 +1,42 @@
+apiVersion: 1
+groups:
+  - name: slo-breach
+    interval: 1m
+    rules:
+      - uid: slo_availability_core_30d
+        title: SLO 99.90% Kernrouten 30d
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: loki
+            model:
+              expr: |
+                1 - (
+                  sum by (route) (rate(http_server_responses_total{status=~"5..",route=~"/(stamps/claim|rewards/redeem)"}[30d]))
+                  / sum by (route) (rate(http_server_responses_total{route=~"/(stamps/claim|rewards/redeem)"}[30d]))
+                ) < 0.999
+              queryType: range
+        for: 10m
+  - name: abuse-spikes
+    interval: 1m
+    rules:
+      - uid: token_invalid_spike
+        title: Fehlscan Spike
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: loki
+            model:
+              expr: rate(rate_token_invalid[1m]) > 5
+              queryType: range
+        for: 2m
+      - uid: http_429_rate
+        title: 429 Rate hoch
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: loki
+            model:
+              expr: rate(http_server_responses_total{status="429"}[5m]) > 0
+              queryType: range
+        for: 5m

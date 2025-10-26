@@ -2,6 +2,12 @@
 
 Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Regionen auf PaaS, CDN mit „Regional Services“. Deployments: Blue‑Green / Canary. Environments: **dev**, **stage**, **prod**.
 
+> Beiträge willkommen – siehe **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+![ci](https://github.com/Globator25/Lokaltreu/actions/workflows/ci.yml/badge.svg)
+![smoke](https://github.com/Globator25/Lokaltreu/actions/workflows/smoke.yml/badge.svg)
+![obs-verify-nightly](https://github.com/Globator25/Lokaltreu/actions/workflows/obs-verify-nightly.yml/badge.svg)
+
 ## Inhalt
 - Betriebsrahmen
 - Anforderungen (NFR & SLO)
@@ -12,6 +18,7 @@ Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Reg
 - CI/CD-Gates
 - Quickstart
 - Compliance-Artefakte (Ausschnitt)
+- [Contributing](#contributing)
 
 ## Betriebsrahmen
 - Plattformen (EU): PaaS (z. B. Fly.io), CDN: Cloudflare Regional Services, Object‑Storage: Cloudflare R2 (EU‑Jurisdiction), Datenbank: Neon (EU), Cache: Upstash Redis (EU), Mail: Mailjet oder Brevo (EU).
@@ -84,6 +91,18 @@ npm test --workspaces -- --coverage
 npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 ```
 
+## OpenTelemetry (OTLP) Setup
+- Windows (PowerShell): `scripts/set-otel-env.ps1`
+  - Session: `./scripts/set-otel-env.ps1`
+  - Persist (User): `./scripts/set-otel-env.ps1 -Persist`
+  - Persist (Machine/Admin): `./scripts/set-otel-env.ps1 -Persist -Scope Machine`
+- Linux/macOS (bash/zsh): `scripts/set-otel-env.sh`
+  - Session: `source scripts/set-otel-env.sh`
+  - Persist: `scripts/set-otel-env.sh --persist` (fügt einen verwalteten Block in dein rc-File)
+  - Entfernen: `scripts/set-otel-env.sh --remove --persist`
+  - Hinweis: Das Bash-Skript ist optional/„Legacy“; unter Windows bevorzugt PowerShell verwenden.
+
+
 ## Compliance-Artefakte (Ausschnitt)
 
 * [docs/CI-Gates.md](docs/CI-Gates.md)
@@ -101,3 +120,20 @@ npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 - Verfügbarkeit Kernrouten: 99,90 %
 - Performance: p50 ≤ 500 ms, p95 ≤ 3000 ms, p99 ≤ 6000 ms
 - Resilienz: RPO 15 min, RTO 60 min
+
+## Contributing
+
+Bitte lies **[CONTRIBUTING.md](CONTRIBUTING.md)**, bevor du PRs erstellst.
+Kurzfassung:
+
+```bash
+git config core.hooksPath .githooks
+# Unix
+chmod +x .githooks/pre-commit
+```
+
+Lokal prüfen:
+
+```powershell
+pwsh -NoProfile -File scripts/verify-bom-and-uid.ps1
+```

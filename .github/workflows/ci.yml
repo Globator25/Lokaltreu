@@ -1,42 +1,85 @@
-name: ci
+name: IaC Validate
+
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches: [ feat/obs-step6 ]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch: {}
 
 jobs:
-  build-test:
-    runs-on: ubuntu-latest
+  iac-validate:
+    runs-on: ubuntu-24.04
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_REGION: auto
+      TF_IN_AUTOMATION: ${{ vars.TF_IN_AUTOMATION }}
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+    strategy:
+      matrix:
+        env: [dev, stage, prod]
+
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: hashicorp/setup-terraform@v3
         with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
+          terraform_version: '1.6.x'
 
-      - run: npm ci --include=dev
+      - name: Install age + sops
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y age
+          curl -sSL https://github.com/getsops/sops/releases/download/v3.10.2/sops_3.10.2_amd64.deb -o sops.deb
+          sudo dpkg -i sops.deb
+          sops --version
+          age --version
 
-      - name: Lint
-        run: npm run lint --workspaces --if-present
+      - name: Check SOPS key presence
+        run: |
+          set -euo pipefail
+          test -n "${SOPS_AGE_KEY:-}"
+          echo "${SOPS_AGE_KEY}" | head -c 16 | grep -q '^AGE-SECRET-KEY-'
 
-      - name: Build
-        run: npm run build --workspaces --if-present
+      - name: Decrypt tfvars (${{ matrix.env }})
+        working-directory: infra/terraform/envs/${{ matrix.env }}
+        run: |
+          set -euo pipefail
+          test -n "${SOPS_AGE_KEY:-}"
+          sops -d "${{ matrix.env }}.secrets.enc.tfvars" > secrets.tfvars
+          ls -l secrets.tfvars
 
-      - name: Unit & Contract Tests (with 80% coverage check)
-        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
+      - name: Sync Terraform modules into environment
+        run: |
+          set -euo pipefail
+          env_dir="infra/terraform/envs/${{ matrix.env }}"
+          rm -rf "${env_dir}/modules"
+          mkdir -p "${env_dir}/modules"
+          cp -R infra/terraform/modules/. "${env_dir}/modules/"
 
-      - name: OpenAPI Lint
-        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+      - name: Terraform Validate + Plan (${{ matrix.env }})
+        working-directory: infra/terraform/envs/${{ matrix.env }}
+        run: |
+          set -euo pipefail
+          terraform init -backend-config=backend.hcl
+          terraform fmt -check
+          terraform validate
+          args=(-no-color -input=false)
+          if [ -f terraform.tfvars ]; then
+            args+=(-var-file=terraform.tfvars)
+          fi
+          if [ -f secrets.tfvars ]; then
+            args+=(-var-file=secrets.tfvars)
+          fi
+          terraform plan "${args[@]}"
 
-      - name: Artefakte hochladen (dist)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: apps/**/dist
-
-      - name: Artefakte hochladen (coverage)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: "**/coverage/**"
+      - name: Cleanup decrypted secrets (${{ matrix.env }})
+        if: always()
+        working-directory: infra/terraform/envs/${{ matrix.env }}
+        run: rm -f secrets.tfvars

@@ -1,0 +1,72 @@
+// apps/api/.vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "API dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "console": "integratedTerminal",
+      "env": {
+        "OTEL_SERVICE_NAME": "lokaltreu-api",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces",
+        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "http://localhost:4318/v1/metrics",
+        "LOKI_URL": "http://localhost:3100"
+      },
+      "skipFiles": ["<node_internals>/**"]
+    }
+    ,
+    {
+      "name": "API (OTEL)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/api/server.js",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "runtimeExecutable": "pwsh",
+      "preLaunchTask": "OBS verify (read-only)",
+      "postDebugTask": "obs:health:all",
+      "env": {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "https://lokaltreu-obs-tempo.fly.dev:4318",
+        "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+        "OTEL_SERVICE_NAME": "lokaltreu-api"
+      }
+    },
+    {
+      "name": "Web (OTEL)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/web/node_modules/next/dist/bin/next",
+      "args": ["dev", "-p", "3000"],
+      "cwd": "${workspaceFolder}/apps/web",
+      "console": "integratedTerminal",
+      "runtimeExecutable": "pwsh",
+      "preLaunchTask": "OBS verify (read-only)",
+      "postDebugTask": "obs:health:all",
+      "env": {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "https://lokaltreu-obs-tempo.fly.dev:4318",
+        "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+        "OTEL_SERVICE_NAME": "lokaltreu-web"
+      }
+    }
+    ,
+    {
+      "name": "Debug Smoke-Obs.ps1",
+      "type": "PowerShell",
+      "request": "launch",
+      "script": "${workspaceFolder}/scripts/obs/Smoke-Obs.ps1"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "App Stack (API+Web, OTEL)",
+      "configurations": ["API (OTEL)", "Web (OTEL)"],
+      "stopAll": true
+    }
+  ]
+}
+

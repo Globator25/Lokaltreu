@@ -12,6 +12,7 @@
     "build": "npm run build:web && npm run build:api",
     "start:web": "node apps/web/.next/standalone/server.js",
     "start:api": "node apps/api/dist/index.js",
+    "pretest": "npm -w packages/types run build",
     "test": "vitest run --coverage"
   },
   "keywords": [],

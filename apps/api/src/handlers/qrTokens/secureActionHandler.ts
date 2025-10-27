@@ -7,11 +7,13 @@ import { getReplayStore } from "../../security/tokens/replayStore.js";
 export async function secureActionHandler(req: Request, res: Response): Promise<void> {
   const jti = req.header("x-device-jti") ?? "";
   const deviceId = req.header("x-device-id") ?? "unknown-device";
-  const tenantId = "unknown-tenant";
+  const tenantId = req.get("x-tenant-id") ?? "unknown-tenant";
   const requestId =
     typeof (req as Record<string, unknown>).id === "string" ? (req as Record<string, string>).id : "unknown-request";
+  const ip = req.ip ?? "unknown-ip";
+  const userAgent = req.get("user-agent") ?? "unknown-ua";
   // TODO: In Produktion MUSS tenantId aus Auth-Context kommen (SPEC verlangt Zuordnung zu Tenant).
-  // TODO: In Produktion MUSS deviceId aus Gerätebindung kommen (SPEC verlangt Zuordnung zu Gerät).
+  // TODO: In Produktion MUSS deviceId aus Geraetebindung kommen (SPEC verlangt Zuordnung zu Geraet).
 
   const store = getReplayStore();
   const first = await store.firstUse(jti, 60); // 60s TTL ist MUSS laut SPEC
@@ -24,7 +26,7 @@ export async function secureActionHandler(req: Request, res: Response): Promise<
       },
     });
 
-    // Audit-Pflicht: Jeder Replay-Versuch wird unveränderlich protokolliert.
+    // Audit-Pflicht: Jeder Replay-Versuch wird unveraenderlich protokolliert.
     // Forensik laut SPEC.
     await auditEvent({
       type: "secure_action.blocked_replay",
@@ -33,12 +35,19 @@ export async function secureActionHandler(req: Request, res: Response): Promise<
       requestId: jti || requestId,
       meta: {
         tenantId,
+        actorType: "device",
+        action: "secure_action",
+        result: "blocked_replay",
+        deviceId,
+        ip,
+        userAgent,
+        jti: jti || requestId,
         reason: "TOKEN_REUSE",
         ttlSeconds: 60,
       },
     });
 
-    res.status(429).type("application/problem+json").json(createTokenReuseProblem());
+    res.status(409).type("application/problem+json").json(createTokenReuseProblem());
     return;
   }
 
@@ -49,6 +58,13 @@ export async function secureActionHandler(req: Request, res: Response): Promise<
     requestId: jti || requestId,
     meta: {
       tenantId,
+      actorType: "device",
+      action: "secure_action",
+      result: "ok",
+      deviceId,
+      ip,
+      userAgent,
+      jti: jti || requestId,
     },
   });
 

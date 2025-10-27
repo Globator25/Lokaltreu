@@ -29,7 +29,7 @@ export interface HealthCheckResponse {
 
 export interface TokenReuseProblem extends ProblemJson {
   title: "TOKEN_REUSE";
-  status: 429;
+  status: 409;
   type: "about:blank";
   detail: string;
 }
@@ -81,7 +81,7 @@ export function createTokenReuseProblem(detail = "jti replay within ttl"): Token
   return {
     type: "about:blank",
     title: "TOKEN_REUSE",
-    status: 429,
+    status: 409,
     detail,
   };
 }
@@ -114,7 +114,7 @@ export function createInternalServerErrorProblem(requestId: string, detail?: str
   };
 }
 
-export type SecurityMetricName = "device_proof_failed" | "rate_token_reuse";
+export type SecurityMetricName = "deviceProofFailed" | "rate_token_reuse";
 
 export interface MetricEvent {
   name: SecurityMetricName;

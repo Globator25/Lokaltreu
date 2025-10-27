@@ -1,27 +1,32 @@
-// Anti-Replay-Store basierend auf SETNX-Logik.
-// In Production wird dieser Store gegen Upstash Redis (EU-Region) implementiert.
-// Hier nur eine lokale In-Memory-Version für dev. Kein Klartext-Secret nötig.
+// Umschalten per process.env.REDIS_URL / REDIS_TOKEN.
+// SPEC: Produktion MUSS Redis benutzen.
+// Dev: InMemory erlaubt lokale Iteration ohne Upstash.
 
-export interface ReplayStore {
-  checkAndSetJti(jti: string, ttlSeconds: number): Promise<boolean>;
-  // true  -> jti war neu, Request darf weiterlaufen
-  // false -> jti existierte schon, Replay-Versuch blockieren
-}
+import { InMemoryReplayStore, RedisReplayStore, ReplayStore } from "./redisStore";
 
-// InMemoryReplayStore simuliert Redis SETNX(jti) + TTL.
-class InMemoryReplayStore implements ReplayStore {
-  private seen = new Map<string, number>();
+let instance: ReplayStore | null = null;
 
-  async checkAndSetJti(jti: string, ttlSeconds: number): Promise<boolean> {
-    const now = Date.now() / 1000;
-    if (this.seen.has(jti)) {
-      // jti wurde schon einmal verwendet -> Replay blocken
-      return false;
-    }
-    // jti registrieren mit Ablauf (TTL)
-    this.seen.set(jti, now + ttlSeconds);
-    return true;
+export function getReplayStore(): ReplayStore {
+  if (instance) {
+    return instance;
   }
+
+  const redisUrl = process.env.REDIS_URL;
+  const redisToken = process.env.REDIS_TOKEN;
+
+  if (redisUrl && redisToken) {
+    // Produktionspfad. Upstash Redis EU.
+    // SPEC: Produktion MUSS Redis SETNX(jti)+TTL=60s nutzen.
+    instance = new RedisReplayStore(redisUrl, redisToken);
+  } else {
+    // Lokaler Fallback blockiert Entwickler-Workflow nicht.
+    instance = new InMemoryReplayStore();
+  }
+
+  return instance;
 }
 
-export const replayStore: ReplayStore = new InMemoryReplayStore();
+// Nur fuer Tests: Reset zwischen Testfaellen erlaubt es, unterschiedliche Stores zu initialisieren.
+export function resetReplayStoreForTests(): void {
+  instance = null;
+}

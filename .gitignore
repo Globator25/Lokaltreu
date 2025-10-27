@@ -31,3 +31,4 @@ infra/terraform/secrets/*.tfvars
 *decrypted*.tfvars
 # Testartefakte
 infra/terraform/secrets/test.enc.tfvars
+*.tsbuildinfo

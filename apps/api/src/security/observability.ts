@@ -11,7 +11,7 @@ function getCounter(name: SecurityMetricName): Counter {
   }
 
   const descriptions: Record<SecurityMetricName, string> = {
-    device_proof_failed: "Counts rejected device proofs (SPEC: Abuse Detection, 60s Proof Window).",
+    deviceProofFailed: "Counts rejected device proofs (SPEC: Abuse Detection, 60s Proof Window).",
     rate_token_reuse: "Counts replayed secure-action tokens (SPEC: Anti-Replay via Redis TTL=60s).",
   };
 

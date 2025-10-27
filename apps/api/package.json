@@ -6,7 +6,8 @@
     "test": "vitest run",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "dev": "tsx src/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +17,11 @@
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.66.0",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.207.0",
+    "@opentelemetry/sdk-node": "^0.207.0",
+    "tsx": "^4.20.6"
   }
 }

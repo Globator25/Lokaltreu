@@ -89,7 +89,7 @@ describe("verifyDeviceProof", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toBe("TIMESTAMP_OUTSIDE_ALLOWED_WINDOW");
     expect(vi.mocked(emitSecurityMetric)).toHaveBeenCalledWith({
-      name: "device_proof_failed",
+      name: "deviceProofFailed",
       attributes: {
         reason: "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW",
       },
@@ -102,7 +102,7 @@ describe("verifyDeviceProof", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toBe("MISSING_HEADERS");
     expect(emitSecurityMetric).toHaveBeenCalledWith({
-      name: "device_proof_failed",
+      name: "deviceProofFailed",
       attributes: { reason: "MISSING_HEADERS" },
     });
   });
@@ -121,7 +121,7 @@ describe("verifyDeviceProof", () => {
     expect(result.ok).toBe(false);
     expect(result.reason).toBe("INVALID_SIGNATURE");
     expect(emitSecurityMetric).toHaveBeenCalledWith({
-      name: "device_proof_failed",
+      name: "deviceProofFailed",
       attributes: { reason: "INVALID_SIGNATURE" },
     });
   });

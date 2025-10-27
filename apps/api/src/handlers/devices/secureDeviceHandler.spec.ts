@@ -44,7 +44,24 @@ describe("secureDeviceHandler", () => {
   });
 
   it("responds with 200 and audit ok when device proof succeeds", async () => {
-    const req = { id: "req-200" } as unknown as Request;
+    const req = {
+      id: "req-200",
+      ip: "10.0.0.1",
+      get: (name: string) => {
+        switch (name.toLowerCase()) {
+          case "user-agent":
+          return "vitest-device-agent";
+          case "x-device-id":
+            return "device-200";
+          case "x-device-jti":
+            return "jti-200";
+          case "x-tenant-id":
+            return "tenant-200";
+          default:
+            return "";
+        }
+      },
+    } as unknown as Request;
     const res = new MockResponse();
 
     vi.mocked(verifyDeviceProof).mockResolvedValue({
@@ -59,15 +76,38 @@ describe("secureDeviceHandler", () => {
     expect(res.body).toEqual(SECURE_DEVICE_OK_RESPONSE);
     expect(auditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "secure_device.attempt",
-        meta: expect.objectContaining({ result: "ok" }),
+        type: "secure_device.ok",
+        meta: expect.objectContaining({
+          result: "ok",
+          action: "secure_device",
+          ip: "10.0.0.1",
+          jti: "jti-200",
+          tenantId: "tenant-200",
+        }),
       })
     );
     expect(rejectDeviceProof).not.toHaveBeenCalled();
   });
 
   it("delegates to rejectDeviceProof when validation fails", async () => {
-    const req = { id: "req-403" } as unknown as Request;
+    const req = {
+      id: "req-403",
+      ip: "10.0.0.2",
+      get: (name: string) => {
+        switch (name.toLowerCase()) {
+          case "user-agent":
+            return "vitest-device-agent";
+          case "x-device-id":
+            return "device-403";
+          case "x-device-jti":
+            return "jti-403";
+          case "x-tenant-id":
+            return "tenant-403";
+          default:
+            return "";
+        }
+      },
+    } as unknown as Request;
     const res = new MockResponse();
     vi.mocked(verifyDeviceProof).mockResolvedValue({
       ok: false,
@@ -80,7 +120,13 @@ describe("secureDeviceHandler", () => {
     expect(rejectDeviceProof).toHaveBeenCalledWith(res, "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW");
     expect(auditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        meta: expect.objectContaining({ result: "failed" }),
+        type: "secure_device.proof_failed",
+        meta: expect.objectContaining({
+          result: "failed",
+          ip: "10.0.0.2",
+          jti: "jti-403",
+          tenantId: "tenant-403",
+        }),
       })
     );
   });

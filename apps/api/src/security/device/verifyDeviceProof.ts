@@ -25,7 +25,7 @@ export type DeviceProofResult = {
  */
 function metricsDeviceProofFailed(reason: DeviceProofRejectionReason): void {
   emitSecurityMetric({
-    name: "device_proof_failed",
+    name: "deviceProofFailed",
     attributes: {
       reason,
     },

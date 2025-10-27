@@ -7,23 +7,51 @@ export async function secureDeviceHandler(req: Request, res: Response): Promise<
   const result = await verifyDeviceProof(req);
   const requestId =
     typeof (req as Record<string, unknown>).id === "string" ? (req as Record<string, string>).id : "unknown-request";
-
-  // Audit-Pflicht (SPEC v2.0): Jeder Proof wird WORM-append protokolliert (Retention 180 Tage, Export R2 EU).
-  await auditEvent({
-    type: "secure_device.attempt",
-    at: new Date().toISOString(),
-    actorDeviceId: result.deviceId ?? "unknown-device",
-    requestId,
-    meta: {
-      result: result.ok ? "ok" : "failed",
-      reason: result.reason ?? "none",
-    },
-  });
+  const tenantId = req.get("x-tenant-id") ?? "unknown-tenant";
+  const deviceId = result.deviceId ?? req.get("x-device-id") ?? "unknown-device";
+  const ip = req.ip ?? "unknown-ip";
+  const userAgent = req.get("user-agent") ?? "unknown-ua";
+  const jti = req.get("x-device-jti") ?? requestId;
 
   if (result.ok) {
+    await auditEvent({
+      type: "secure_device.ok",
+      at: new Date().toISOString(),
+      actorDeviceId: deviceId,
+      requestId,
+      meta: {
+        tenantId,
+        actorType: "device",
+        action: "secure_device",
+        result: "ok",
+        deviceId,
+        ip,
+        userAgent,
+        jti,
+      },
+    });
+
     res.status(200).type("application/json").json(SECURE_DEVICE_OK_RESPONSE);
     return;
   }
+
+  await auditEvent({
+    type: "secure_device.proof_failed",
+    at: new Date().toISOString(),
+    actorDeviceId: deviceId,
+    requestId,
+    meta: {
+      tenantId,
+      actorType: "device",
+      action: "secure_device",
+      result: "failed",
+      deviceId,
+      ip,
+      userAgent,
+      jti,
+      reason: result.reason ?? "UNKNOWN",
+    },
+  });
 
   rejectDeviceProof(res, result.reason ?? "INVALID_SIGNATURE");
 }

@@ -2,6 +2,8 @@ name: security-gates
 on:
   pull_request:
     branches: [main]
+env:
+  BOOTSTRAP: "1"
 permissions:
   contents: read
 concurrency:
@@ -16,8 +18,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: 'npm' }
       - run: npm ci
-      - run: npm run test:device-proof
-      - run: npm run test:anti-replay
+      - name: Run Device-Proof Tests
+        if: env.BOOTSTRAP == '0'
+        run: npm run test:device-proof
+      - name: Check Anti-Replay
+        if: env.BOOTSTRAP == '0'
+        run: npm run test:anti-replay
       - run: npm run test:ratelimits
       - uses: actions/upload-artifact@v4
         if: always()

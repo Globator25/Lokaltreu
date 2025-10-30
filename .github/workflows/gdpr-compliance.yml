@@ -1,0 +1,24 @@
+name: gdpr-compliance
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: gdpr-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  gdpr-compliance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/check-dsr-endpoints.sh
+      - run: ./scripts/check-retention.sh
+      - run: ./scripts/scan-logs-for-pii.sh
+      - run: ./scripts/validate-compliance-artifacts.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gdpr-artifacts
+          path: artifacts/gdpr/**

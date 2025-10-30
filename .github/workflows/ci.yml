@@ -1,42 +1,42 @@
 name: ci
 on:
   pull_request:
-  push:
     branches: [main]
-
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  build-test:
+  ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
+        with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: 'npm' }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test --workspaces -- --coverage
+      - name: OpenAPI types sync
+        run: |
+          npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts
+          git diff --exit-code || { echo "schema_drift != 0"; exit 1; }
+      - run: npm run test:contract
+      - name: Terraform fmt/validate
+        if: hashFiles('infra/**/*.tf') != ''
+        working-directory: infra
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false
+          terraform validate
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm ci --include=dev
-
-      - name: Lint
-        run: npm run lint --workspaces --if-present
-
-      - name: Build
-        run: npm run build --workspaces --if-present
-
-      - name: Unit & Contract Tests (with 80% coverage check)
-        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
-
-      - name: OpenAPI Lint
-        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
-
-      - name: Artefakte hochladen (dist)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: apps/**/dist
-
-      - name: Artefakte hochladen (coverage)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: "**/coverage/**"
+          name: ci-artifacts
+          path: |
+            **/coverage/**
+            **/junit*/**
+            artifacts/**

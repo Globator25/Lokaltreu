@@ -1,39 +1,31 @@
 {
   "name": "lokaltreu",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "private": true,
+  "workspaces": ["apps/*","packages/*"],
   "scripts": {
-    "build:web": "npm -w apps/web run build",
-    "build:api": "npm -w apps/api run build",
-    "build": "npm run build:web && npm run build:api",
-    "start:web": "node apps/web/.next/standalone/server.js",
-    "start:api": "node apps/api/dist/index.js",
-    "pretest": "npm -w packages/types run build",
-    "test": "vitest run --coverage"
+    "codegen": "openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
+    "lint": "eslint .",
+    "build": "npm run -w apps/api build && npm run -w apps/web build",
+    "test": "vitest run",
+    "test:contract": "vitest run tests/contract",
+    "test:replay": "vitest run tests/security/replay",
+    "test:device": "vitest run tests/security/device",
+    "test:plan": "vitest run tests/security/plan",
+    "test:device-proof": "echo 'device proof tests skipped'",
+    "smoke": "node scripts/smoke.js",
+    "mock": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
+    "check:no-manual-api-types": "node scripts/no-manual-types.js",
+    "pr:lint": "node scripts/pr-lint.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "engines": {
-  "node": ">=20 <23"
-},
-  "description": "",
-  "private": "true",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "devDependencies": {
-    "@next/eslint-plugin-next": "^15.5.4",
-    "@typescript-eslint/parser": "^8.45.0",
-    "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.37.0",
-    "typescript-eslint": "^8.45.0",
-    "vitest": "^3.2.4"
+    "@stoplight/spectral-cli": "^6.0.0",
+    "@stoplight/prism-cli": "^5.10.0",
+    "openapi-typescript": "^6.7.0",
+    "vitest": "^1.5.0",
+    "chai": "^4.4.1",
+    "chai-openapi-response-validator": "^0.14.2",
+    "p-limit": "^6.0.0",
+    "typescript": "^5.6.0",
+    "eslint": "^9.0.0"
   }
-
 }

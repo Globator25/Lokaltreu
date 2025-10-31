@@ -32,3 +32,4 @@ infra/terraform/secrets/*.tfvars
 # Testartefakte
 infra/terraform/secrets/test.enc.tfvars
 *.tsbuildinfo
+infra/terraform/local.auto.tfvars

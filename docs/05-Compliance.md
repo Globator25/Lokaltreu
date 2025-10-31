@@ -48,3 +48,33 @@ _Quelle: [DOC:REQ §7], [DOC:LEGAL], [DPIA Lokaltreu]_
   Ein optionaler Hinweistext wird in der PWA angezeigt, aber kein Cookie-Banner.
 
 _Quelle: [DOC:LEGAL], [DPIA Lokaltreu], [EDPB Guidelines]_
+---
+
+## 5. Datenstandorte, Secrets & Backups (EU-only)
+
+**Ziel.** Alle produktiven Daten, Secrets und Backups verbleiben in der EU. Keine Nutzung von US/AP/SA/AU-Regionen.
+
+**Provider-Regeln.**
+- Fly.io: Primärregion ∈ {ams, cdg, fra, lhr, arn}
+- Neon: Projektregion ∈ {aws-eu-central-1, aws-eu-west-2, azure-gwc}
+- Upstash Redis: Region ∈ {eu-central-1, eu-west-1, eu-west-2}; URL muss mit `https://eu-` beginnen
+- Cloudflare R2: `r2_location_hint` ∈ {weur, eeur}, `r2_jurisdiction` = eu
+
+**Technische Durchsetzung.**
+- Terraform-Validation per Regex in `infra/terraform/variables*.tf`
+- CI: `terraform fmt -check`, `terraform validate`, und EU-Whitelist-Scan (`scripts/ci-terraform-eu.ps1`)
+
+**Verifikation (Runbook).**
+1) Static Code: EU-Scan ausführen, keine Non-EU-Treffer (`us-`, `ap-`, `sa-`, `au-`).
+2) Plan/State: `terraform plan` prüfen; danach `terraform state show <resource>` auf Felder `region|location|jurisdiction|url`.
+3) Provider-UIs:
+   - Fly: Primary Region = EU
+   - Neon: Project Region = EU, Backups = EU
+   - Upstash: Database Region = EU, URL-Präfix `eu-`
+   - Cloudflare R2: Jurisdiction = eu, Location Hint = weur/eeur
+
+**Nachweise (Audit).**
+- Artefakte: Plan, State-Auszüge, UI-Screenshots
+- PR-Pflicht: Änderungen an Regionen müssen diesen Abschnitt verlinken
+
+_Siehe auch:_ `docs/compliance/EU-REGIONS.md`, `ARCH.md#EU-Datenstandorte-secrets--backups`

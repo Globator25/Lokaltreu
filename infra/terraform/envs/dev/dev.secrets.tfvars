@@ -1,0 +1,5 @@
+fly_access_token     = "REPLACE_ME_FLY_ACCESS_TOKEN"
+neon_api_key         = "REPLACE_ME_NEON_API_KEY"
+upstash_api_key      = "REPLACE_ME_UPSTASH_API_KEY"
+cloudflare_api_token = "REPLACE_ME_CLOUDFLARE_API_TOKEN"
+mail_api_key         = "REPLACE_ME_MAIL_API_KEY"

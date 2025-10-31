@@ -1,0 +1,21 @@
+name: terraform-ci
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+      - name: fmt
+        run: terraform -chdir=infra/terraform fmt -check
+      - name: validate
+        run: terraform -chdir=infra/terraform validate
+      - name: EU whitelist scan
+        shell: pwsh
+        run: .\scripts\ci-terraform-eu.ps1 -Root .

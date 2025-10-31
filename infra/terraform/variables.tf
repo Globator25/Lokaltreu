@@ -1,31 +1,33 @@
-variable "env" {
-  type = string
-}
-variable "region_api" {
-  type = string
-}
-variable "region_cdn" {
-  type = string
-}
-variable "r2_bucket" {
-  type = string
-}
-# Nur deklarieren, wenn NICHT bereits in providers.tf vorhanden:
-# variable "mail_provider" { type = string }
-# variable "mail_api_key"  { type = string  sensitive = true }
-variable "mail_provider" {
+variable "fly_primary_region" {
   type = string
   validation {
-    condition     = contains(["mailjet","brevo"], var.mail_provider)
-    error_message = "mail_provider muss 'mailjet' oder 'brevo' sein."
+    condition     = can(regex("^(ams|cdg|fra|lhr|arn)$", var.fly_primary_region))
+    error_message = "Fly-Region muss EU sein."
   }
 }
-variable "mail_api_key" {
-  type      = string
-  sensitive = true
+
+variable "neon_region" {
+  type = string
+  validation {
+    condition     = can(regex("^(aws-eu-central-1|aws-eu-west-2|azure-gwc)$", var.neon_region))
+    error_message = "Neon-Region muss EU sein."
+  }
 }
-# optionale Dev-Defaults (nur wenn ihr das wollt)
-# variable "env"        { type = string default = "dev" }
-# variable "region_api" { type = string default = "eu-central" }
-# variable "region_cdn" { type = string default = "eu" }
-# variable "r2_bucket"  { type = string default = "lokaltreu-dev-audit" }
+
+variable "r2_location_hint" {
+  type    = string
+  default = "weur"
+  validation {
+    condition     = can(regex("^(weur|eeur)$", var.r2_location_hint))
+    error_message = "R2 Location Hint muss weur oder eeur sein."
+  }
+}
+
+variable "r2_jurisdiction" {
+  type    = string
+  default = "eu"
+  validation {
+    condition     = can(regex("^eu$", var.r2_jurisdiction))
+    error_message = "R2 Jurisdiction muss 'eu' sein."
+  }
+}

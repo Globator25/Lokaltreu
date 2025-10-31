@@ -3,3 +3,6 @@ region_api = "eu-central"  # Fly
 region_cdn = "eu"          # Cloudflare Regional Services
 r2_bucket = "lokaltreu-dev-audit"
 upstash_email = "dev@example.com"
+observability_region = "eu-central"
+grafana_admin_user   = "admin"
+grafana_admin_pass   = "admin"

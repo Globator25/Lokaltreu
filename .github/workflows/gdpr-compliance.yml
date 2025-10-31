@@ -1,0 +1,9 @@
+name: gdpr-compliance
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  gdpr:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "gdpr-compliance bootstrap ok"

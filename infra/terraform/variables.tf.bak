@@ -1,0 +1,72 @@
+# -------- EU-Only Variablen mit reiner Regex-Validierung --------
+}
+}
+}
+}
+
+# Optional: gemeinsame Testvariable, wenn du eine einzelne Region zentral übergeben willst
+# Achtung: in validation{} darf nur var.<name> geprüft werden, daher Regex.
+variable "region_api" {
+  type    = string
+  default = "fra"
+  validation {
+    condition     = can(regex("^(ams|cdg|fra|lhr|arn|aws-eu-central-1|aws-eu-west-2|azure-gwc|eu-central-1|eu-west-1|eu-west-2|weur|eeur|eu)$", var.region_api))
+    error_message = "Region muss EU sein."
+  }
+}
+# Laufzeit-Umgebung
+variable "env" {
+  type = string
+  validation {
+    condition     = can(regex("^(dev|stage|prod)$", var.env))
+    error_message = "env muss dev|stage|prod sein."
+  }
+}
+
+# Upstash Zugang (sensitiv). Hier keine harte Validierung, damit validate ohne Secrets läuft.
+variable "upstash_redis_url" {
+  type      = string
+  sensitive = true
+  default   = ""   # leer erlaubt für terraform validate
+}
+
+variable "upstash_redis_token" {
+  type      = string
+  sensitive = true
+  default   = ""   # leer erlaubt für terraform validate
+}
+
+
+variable "fly_primary_region" {
+  type = string
+  validation {
+    condition     = can(regex("^(ams|cdg|fra|lhr|arn)$", var.fly_primary_region))
+    error_message = "Fly-Region muss EU sein."
+  }
+}
+
+variable "neon_region" {
+  type = string
+  validation {
+    condition     = can(regex("^(aws-eu-central-1|aws-eu-west-2|azure-gwc)$", var.neon_region))
+    error_message = "Neon-Region muss EU sein."
+  }
+}
+
+variable "r2_location_hint" {
+  type    = string
+  default = "weur"
+  validation {
+    condition     = can(regex("^(weur|eeur)$", var.r2_location_hint))
+    error_message = "R2 Location Hint muss weur oder eeur sein."
+  }
+}
+
+variable "r2_jurisdiction" {
+  type    = string
+  default = "eu"
+  validation {
+    condition     = can(regex("^eu$", var.r2_jurisdiction))
+    error_message = "R2 Jurisdiction muss 'eu' sein."
+  }
+}

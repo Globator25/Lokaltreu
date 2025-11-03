@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Request, Response } from "express";
+import type { Response } from "express";
 import { SECURE_ACTION_OK_RESPONSE, createTokenReuseProblem } from "@lokaltreu/types";
+import { makeRequest } from "../../test-utils/http.js";
 import { secureActionHandler } from "./secureActionHandler.js";
 import { resetReplayStoreForTests } from "../../security/tokens/replayStore.js";
 
@@ -12,49 +13,57 @@ vi.mock("../../security/observability.js", () => ({
   emitSecurityMetric: vi.fn(),
 }));
 
+vi.mock("@upstash/redis", () => ({
+  Redis: class {
+    constructor(_opts: unknown) {
+      void _opts;
+    }
+    set(): void {
+      // noop for test
+    }
+  },
+}));
+
 import { auditEvent } from "../../audit/auditEvent.js";
 import { emitSecurityMetric } from "../../security/observability.js";
 
-function createRequest(headers: Record<string, string>, options: { requestId?: string } = {}): Request {
-  const lowerHeaders = Object.fromEntries(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]));
-  const req = {
-    method: "POST",
-    path: "/secure-action",
-    header(name: string) {
-      return lowerHeaders[name.toLowerCase()] ?? headers[name] ?? "";
-    },
-    get(name: string) {
-      return lowerHeaders[name.toLowerCase()] ?? headers[name] ?? "";
-    },
-    ip: "127.0.0.1",
-  } as unknown as Request;
-
-  if (options.requestId) {
-    (req as unknown as { id: string }).id = options.requestId;
-  }
-
-  return req;
+function makeRes(): {
+  res: Response;
+  status: ReturnType<typeof vi.fn>;
+  type: ReturnType<typeof vi.fn>;
+  json: ReturnType<typeof vi.fn>;
+} {
+  const status = vi.fn();
+  const type = vi.fn();
+  const json = vi.fn();
+  const res: Partial<Response> = {};
+  res.status = ((code: number) => {
+    status(code);
+    return res as Response;
+  }) as Response["status"];
+  res.type = ((value: string) => {
+    type(value);
+    return res as Response;
+  }) as Response["type"];
+  res.json = ((payload: unknown) => {
+    json(payload);
+    return res as Response;
+  }) as Response["json"];
+  res.setHeader = vi.fn() as Response["setHeader"];
+  res.getHeader = vi.fn() as Response["getHeader"];
+  return { res: res as Response, status, type, json };
 }
 
-class MockResponse implements Partial<Response> {
-  statusCode = 0;
-  contentType?: string;
-  body: unknown;
-
-  status(code: number): this {
-    this.statusCode = code;
-    return this;
-  }
-
-  type(value: string): this {
-    this.contentType = value;
-    return this;
-  }
-
-  json(payload: unknown): this {
-    this.body = payload;
-    return this;
-  }
+function createRequest(headers: Record<string, string>, options: { requestId?: string } = {}) {
+  return makeRequest({
+    method: "POST",
+    path: "/secure-action",
+    ip: "127.0.0.1",
+    headers: {
+      ...headers,
+      ...(options.requestId ? { "x-request-id": options.requestId } : {}),
+    },
+  });
 }
 
 describe("secureActionHandler", () => {
@@ -73,13 +82,13 @@ describe("secureActionHandler", () => {
       },
       { requestId: "req-1" }
     );
-    const res = new MockResponse();
+    const { res, status, type, json } = makeRes();
 
-    await secureActionHandler(req, res as unknown as Response);
+    await secureActionHandler(req, res);
 
-    expect(res.statusCode).toBe(200);
-    expect(res.contentType).toBe("application/json");
-    expect(res.body).toEqual(SECURE_ACTION_OK_RESPONSE);
+    expect(status).toHaveBeenCalledWith(200);
+    expect(type).toHaveBeenCalledWith("application/json");
+    expect(json).toHaveBeenCalledWith(SECURE_ACTION_OK_RESPONSE);
     expect(emitSecurityMetric).not.toHaveBeenCalled();
     expect(auditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -102,18 +111,18 @@ describe("secureActionHandler", () => {
       "x-tenant-id": "tenant-1",
     };
     const req = createRequest(headers, { requestId: "req-replay" });
-    const res1 = new MockResponse();
-    await secureActionHandler(req, res1 as unknown as Response);
+    const { res: res1 } = makeRes();
+    await secureActionHandler(req, res1);
 
     vi.mocked(auditEvent).mockClear();
     vi.mocked(emitSecurityMetric).mockClear();
 
-    const res2 = new MockResponse();
-    await secureActionHandler(req, res2 as unknown as Response);
+    const { res: res2, status: statusMock, type: typeMock, json: jsonMock } = makeRes();
+    await secureActionHandler(req, res2);
 
-    expect(res2.statusCode).toBe(409);
-    expect(res2.contentType).toBe("application/problem+json");
-    expect(res2.body).toEqual(createTokenReuseProblem());
+    expect(statusMock).toHaveBeenCalledWith(409);
+    expect(typeMock).toHaveBeenCalledWith("application/problem+json");
+    expect(jsonMock).toHaveBeenCalledWith(createTokenReuseProblem("dup-token"));
     expect(emitSecurityMetric).toHaveBeenCalledWith({
       name: "rate_token_reuse",
       attributes: {
@@ -141,16 +150,18 @@ describe("secureActionHandler", () => {
     };
     const req1 = createRequest(headers, { requestId: "req-par-1" });
     const req2 = createRequest(headers, { requestId: "req-par-2" });
-    const res1 = new MockResponse();
-    const res2 = new MockResponse();
+    const { res: res1, status: statusOne } = makeRes();
+    const { res: res2, status: statusTwo } = makeRes();
 
     await Promise.all([
-      secureActionHandler(req1, res1 as unknown as Response),
-      secureActionHandler(req2, res2 as unknown as Response),
+      secureActionHandler(req1, res1),
+      secureActionHandler(req2, res2),
     ]);
 
-    const statuses = [res1.statusCode, res2.statusCode].sort();
-    expect(statuses).toEqual([200, 409]);
+    const statusValues = [statusOne.mock.calls.at(-1)?.[0], statusTwo.mock.calls.at(-1)?.[0]].filter(
+      (value): value is number => typeof value === "number",
+    );
+    expect(statusValues.sort()).toEqual([200, 409]);
     const metricCalls = vi.mocked(emitSecurityMetric).mock.calls.filter(
       ([payload]) => payload?.name === "rate_token_reuse"
     );

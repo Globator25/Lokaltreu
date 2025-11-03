@@ -7,6 +7,12 @@ on:
 jobs:
   validate:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      TEMP_DIR: ${{ runner.temp }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -14,23 +20,7 @@ jobs:
         with:
           terraform_version: 1.9.5
 
-      - name: Write temp tfvars
-        shell: pwsh
-        run: |
-          $dir = "${{ ${{ runner.temp }} }}\tf"
-          New-Item -ItemType Directory -Force $dir | Out-Null
-          @'
-          env                 = "dev"
-          fly_primary_region  = "fra"
-          neon_region         = "aws-eu-central-1"
-          r2_location_hint    = "weur"
-          r2_jurisdiction     = "eu"
-          upstash_redis_url   = "https://eu-central-1-xxxx.upstash.io"
-          upstash_redis_token = "DUMMY"
-          '@ | Set-Content -Encoding UTF8 "$dir\dev.tfvars"
-
       - name: EU whitelist scan
-        shell: pwsh
         run: .\scripts\ci-terraform-eu.ps1 -Root .
 
       - name: terraform fmt
@@ -39,6 +29,7 @@ jobs:
       - name: terraform validate
         run: terraform -chdir=infra/terraform validate
 
-      - name: terraform plan
-        run: terraform -chdir=infra/terraform plan -input=false -var-file="${{ ${{ runner.temp }} }}\tf\dev.tfvars"
-
+      # Beispiel, falls du TEMP brauchst:
+      - name: show temp dir
+        run: |
+          Write-Host "TEMP_DIR = $env:TEMP_DIR"

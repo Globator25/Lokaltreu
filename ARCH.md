@@ -1,5 +1,6 @@
 # Architektur (Referenz)
 Modularer Monolith TS, Next.js PWA, Node API, Postgres, Redis, R2, EU-PaaS.
+Spezifikationsanker: Anforderungen laut `SPEC.md` und OpenAPI SSOT `apps/api/openapi/lokaltreu-openapi-v2.0.yaml`.
 ## EU-Datenstandorte, Secrets & Backups
 
 ### Ziel

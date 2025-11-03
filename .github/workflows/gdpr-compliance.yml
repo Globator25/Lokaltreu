@@ -1,9 +1,9 @@
 name: gdpr-compliance
-on:
-  pull_request:
-    branches: [main]
+on: [pull_request]
 jobs:
-  gdpr:
+  gdpr-compliance:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "gdpr-compliance bootstrap ok"
+      - uses: actions/checkout@v4
+      - run: node .github/scripts/gdpr-checks.mjs
+        # Checks: Art.11 DSR-Flows vorhanden, Retention=180T in Jobs/Policies, keine PII in Logs.

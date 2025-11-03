@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { NextFunction, Request, Response } from "express";
+import type { NextFunction, Response } from "express";
+import { makeRequest } from "../../test-utils/http.js";
 import { globalErrorHandler } from "./globalErrorHandler.js";
 
 describe("globalErrorHandler", () => {
@@ -9,12 +10,16 @@ describe("globalErrorHandler", () => {
     const type = vi.fn().mockReturnThis();
     const json = vi.fn().mockReturnThis();
 
-    const req = {
-      id: "req-123",
-      path: "/foo",
+    const req = makeRequest({
       method: "GET",
-      headers: { "x-correlation-id": "corr-987", "user-agent": "should-not-log" },
-    } as unknown as Request;
+      path: "/foo",
+      headers: {
+        "x-correlation-id": "corr-987",
+        "x-request-id": "req-123",
+        "x-forwarded-for": "203.0.113.5",
+        "user-agent": "should-not-log",
+      },
+    });
 
     const res = {
       status,
@@ -40,8 +45,13 @@ describe("globalErrorHandler", () => {
     expect(json).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 500,
+        type: "https://errors.lokaltreu.example/internal",
+        title: "INTERNAL_SERVER_ERROR",
+        error_code: "INTERNAL_SERVER_ERROR",
+        detail: "boom",
+        correlation_id: "corr-987",
         requestId: "req-123",
-      })
+      }),
     );
 
     consoleSpy.mockRestore();

@@ -10,8 +10,6 @@ jobs:
     defaults:
       run:
         shell: pwsh
-    env:
-      TEMP_DIR: ${{ runner.temp }}
 
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +27,7 @@ jobs:
       - name: terraform validate
         run: terraform -chdir=infra/terraform validate
 
-      # Beispiel, falls du TEMP brauchst:
+      # Beispiel: Temp-Verzeichnis des Runners anzeigen
       - name: show temp dir
         run: |
-          Write-Host "TEMP_DIR = $env:TEMP_DIR"
+          Write-Host "RUNNER_TEMP = $env:RUNNER_TEMP"

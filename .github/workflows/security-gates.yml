@@ -1,9 +1,11 @@
 name: security-gates
-on:
-  pull_request:
-    branches: [main]
+on: [pull_request]
 jobs:
-  gates:
+  security-gates:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "security-gates bootstrap ok"
+      - uses: actions/checkout@v4
+      - run: node .github/scripts/test-anti-replay.mjs  # 10 parallel → 1x201, 9x409
+      - run: node .github/scripts/test-device-proof.mjs  # Ed25519 proof cases
+      - run: node .github/scripts/test-rate-limits.mjs   # /stamps/claim, /rewards/redeem
+      - run: node .github/scripts/test-plan-gate.mjs     # 403 PLAN_NOT_ALLOWED

@@ -1,5 +1,17 @@
-# Automatisierte Smoke-Calls
-1) Prism: npx prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010
-2) /stamps/tokens → 201; /stamps/claim → 201 (Erstclaim), Replay → 409; /referrals/link (Starter) → 403 PLAN_NOT_ALLOWED
-3) /rewards/redeem mit X-Device-Proof → 200, Invalid/Skew → 403
-Erfolg: Antworten entsprechen OpenAPI und RFC7807; Logs unter artifacts/smoke/*.log
+# Automatisierte Smoke-Calls (Mock-Server Prism)
+1) Prism starten:
+   ```powershell
+   # Verzeichnis: .\
+   npx prism mock .\apps\api\openapi\lokaltreu-openapi-v2.0.yaml -p 4010
+   ```
+2) Smoke-Suite ausführen (schreibt Artefakte nach `artifacts/smoke/*.json`):
+   ```powershell
+   # Verzeichnis: .\
+   npm run test:smoke
+   ```
+3) Erwartete Antworten:
+   - GET http://localhost:4010/referrals/link → 403 PLAN_NOT_ALLOWED (Starter)
+   - POST http://localhost:4010/stamps/claim → 200 {cardState}
+   - POST http://localhost:4010/stamps/tokens → 201 {token}
+
+Erfolg: Responses entsprechen OpenAPI, RFC7807 und werden als JSON-Artefakte gespeichert.

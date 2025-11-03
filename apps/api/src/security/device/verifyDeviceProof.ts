@@ -72,12 +72,26 @@ const encoder = new TextEncoder();
  *
  * Verifies the Ed25519 based device proof headers on the incoming request.
  */
+function readHeader(req: Request, name: string): string | undefined {
+  const viaGet = req.get(name);
+  if (viaGet && viaGet.trim().length > 0) {
+    return viaGet;
+  }
+  const raw = req.headers[name.toLowerCase() as keyof typeof req.headers];
+  if (Array.isArray(raw)) {
+    return raw.find((value) => typeof value === "string" && value.trim().length > 0) as string | undefined;
+  }
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    return raw;
+  }
+  return undefined;
+}
+
 export async function verifyDeviceProof(req: Request): Promise<DeviceProofResult> {
-  const signatureHeader = req.get("x-device-proof") ?? ""; // Expect Base64 encoded Ed25519 signature (64 bytes).
-  const deviceId = req.get("x-device-id") ?? "";
-  const timestampHeader = req.get("x-device-timestamp") ?? ""; // Unix timestamp in milliseconds as string.
-  const jtiHeader =
-    req.get("x-device-jti") ?? (typeof (req as Record<string, unknown>).id === "string" ? (req as Record<string, string>).id : "missing-jti");
+  const signatureHeader = readHeader(req, "x-device-proof") ?? "";
+  const deviceId = readHeader(req, "x-device-id") ?? "";
+  const timestampHeader = readHeader(req, "x-device-timestamp") ?? "";
+  const jtiHeader = readHeader(req, "x-device-jti") ?? readHeader(req, "x-request-id") ?? "missing-jti";
 
   const now = Date.now();
   if (!signatureHeader || !deviceId || !timestampHeader) {
@@ -131,7 +145,11 @@ export async function verifyDeviceProof(req: Request): Promise<DeviceProofResult
  *
  * Sends a standardised RFC7807 rejection for failed device proofs.
  */
-export function rejectDeviceProof(res: Response, reason: DeviceProofRejectionReason): void {
-  const problem = createDeviceProofProblem(reason);
-  res.status(403).type("application/problem+json").json(problem);
+export function rejectDeviceProof(
+  res: Response,
+  reason: DeviceProofRejectionReason,
+  correlationId: string
+): void {
+  const problem = createDeviceProofProblem(reason, correlationId);
+  res.status(problem.status).type("application/problem+json").json(problem);
 }

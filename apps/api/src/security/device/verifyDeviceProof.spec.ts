@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Request, Response } from "express";
+import type { Response } from "express";
 
 vi.mock("@noble/ed25519", () => ({
   verify: vi.fn().mockResolvedValue(true),
@@ -10,41 +10,39 @@ vi.mock("../observability.js", () => ({
 }));
 
 import { verify } from "@noble/ed25519";
+import { createDeviceProofProblem } from "@lokaltreu/types";
+import { makeRequest } from "../../test-utils/http.js";
 import { emitSecurityMetric } from "../observability.js";
 import { registerDevicePublicKey, rejectDeviceProof, verifyDeviceProof } from "./verifyDeviceProof.js";
 
-function createRequest(headers: Record<string, string>, overrides: Partial<Request> = {}): Request {
-  return {
-    method: "POST",
-    path: "/secure-device",
-    get(name: string) {
-      const key = name.toLowerCase();
-      const value = headers[key] ?? headers[name];
-      return value ?? "";
-    },
-    ...overrides,
-  } as Request;
-}
+const createRequest = (headers: Record<string, string>) =>
+  makeRequest({ method: "POST", path: "/secure-device", headers, ip: "127.0.0.1" });
 
-class MockResponse implements Partial<Response> {
-  statusCode = 0;
-  contentType?: string;
-  body: unknown;
-
-  status(code: number): this {
-    this.statusCode = code;
-    return this;
-  }
-
-  type(value: string): this {
-    this.contentType = value;
-    return this;
-  }
-
-  json(payload: unknown): this {
-    this.body = payload;
-    return this;
-  }
+function makeRes(): {
+  res: Response;
+  status: ReturnType<typeof vi.fn>;
+  type: ReturnType<typeof vi.fn>;
+  json: ReturnType<typeof vi.fn>;
+} {
+  const status = vi.fn();
+  const type = vi.fn();
+  const json = vi.fn();
+  const res: Partial<Response> = {};
+  res.status = ((code: number) => {
+    status(code);
+    return res as Response;
+  }) as Response["status"];
+  res.type = ((value: string) => {
+    type(value);
+    return res as Response;
+  }) as Response["type"];
+  res.json = ((payload: unknown) => {
+    json(payload);
+    return res as Response;
+  }) as Response["json"];
+  res.setHeader = vi.fn() as Response["setHeader"];
+  res.getHeader = vi.fn() as Response["getHeader"];
+  return { res: res as Response, status, type, json };
 }
 
 describe("verifyDeviceProof", () => {
@@ -129,14 +127,13 @@ describe("verifyDeviceProof", () => {
 
 describe("rejectDeviceProof", () => {
   it("responds with Problem+JSON for time window violations", () => {
-    const res = new MockResponse();
-    rejectDeviceProof(res as unknown as Response, "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW");
-    expect(res.statusCode).toBe(403);
-    expect(res.contentType).toBe("application/problem+json");
-    expect(res.body).toMatchObject({
-      title: "DEVICE_PROOF_INVALID_TIME",
-      status: 403,
-      detail: "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW",
-    });
+    const { res, status, type, json } = makeRes();
+    const correlationId = "corr-123";
+    rejectDeviceProof(res, "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW", correlationId);
+    expect(status).toHaveBeenCalledWith(403);
+    expect(type).toHaveBeenCalledWith("application/problem+json");
+    expect(json).toHaveBeenCalledWith(
+      createDeviceProofProblem("TIMESTAMP_OUTSIDE_ALLOWED_WINDOW", correlationId),
+    );
   });
 });

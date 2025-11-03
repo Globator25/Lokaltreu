@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Request, Response } from "express";
+import type { Response } from "express";
 import { SECURE_DEVICE_OK_RESPONSE } from "@lokaltreu/types";
+import { makeRequest } from "../../test-utils/http.js";
 import { secureDeviceHandler } from "./secureDeviceHandler.js";
 
 vi.mock("../../audit/auditEvent.js", () => ({
@@ -15,25 +16,31 @@ vi.mock("../../security/device/verifyDeviceProof.js", () => ({
 import { auditEvent } from "../../audit/auditEvent.js";
 import { rejectDeviceProof, verifyDeviceProof } from "../../security/device/verifyDeviceProof.js";
 
-class MockResponse implements Partial<Response> {
-  statusCode = 0;
-  contentType?: string;
-  body: unknown;
-
-  status(code: number): this {
-    this.statusCode = code;
-    return this;
-  }
-
-  type(value: string): this {
-    this.contentType = value;
-    return this;
-  }
-
-  json(payload: unknown): this {
-    this.body = payload;
-    return this;
-  }
+function makeRes(): {
+  res: Response;
+  status: ReturnType<typeof vi.fn>;
+  type: ReturnType<typeof vi.fn>;
+  json: ReturnType<typeof vi.fn>;
+} {
+  const status = vi.fn();
+  const type = vi.fn();
+  const json = vi.fn();
+  const res: Partial<Response> = {};
+  res.status = ((code: number) => {
+    status(code);
+    return res as Response;
+  }) as Response["status"];
+  res.type = ((value: string) => {
+    type(value);
+    return res as Response;
+  }) as Response["type"];
+  res.json = ((payload: unknown) => {
+    json(payload);
+    return res as Response;
+  }) as Response["json"];
+  res.setHeader = vi.fn() as Response["setHeader"];
+  res.getHeader = vi.fn() as Response["getHeader"];
+  return { res: res as Response, status, type, json };
 }
 
 describe("secureDeviceHandler", () => {
@@ -44,36 +51,30 @@ describe("secureDeviceHandler", () => {
   });
 
   it("responds with 200 and audit ok when device proof succeeds", async () => {
-    const req = {
-      id: "req-200",
+    const req = makeRequest({
+      method: "POST",
+      path: "/secure-device",
       ip: "10.0.0.1",
-      get: (name: string) => {
-        switch (name.toLowerCase()) {
-          case "user-agent":
-          return "vitest-device-agent";
-          case "x-device-id":
-            return "device-200";
-          case "x-device-jti":
-            return "jti-200";
-          case "x-tenant-id":
-            return "tenant-200";
-          default:
-            return "";
-        }
+      headers: {
+        "x-request-id": "req-200",
+        "x-device-id": "device-200",
+        "x-device-jti": "jti-200",
+        "x-tenant-id": "tenant-200",
+        "user-agent": "vitest-device-agent",
       },
-    } as unknown as Request;
-    const res = new MockResponse();
+    });
+    const { res, status, type, json } = makeRes();
 
     vi.mocked(verifyDeviceProof).mockResolvedValue({
       ok: true,
       deviceId: "device-200",
     });
 
-    await secureDeviceHandler(req, res as unknown as Response);
+    await secureDeviceHandler(req, res);
 
-    expect(res.statusCode).toBe(200);
-    expect(res.contentType).toBe("application/json");
-    expect(res.body).toEqual(SECURE_DEVICE_OK_RESPONSE);
+    expect(status).toHaveBeenCalledWith(200);
+    expect(type).toHaveBeenCalledWith("application/json");
+    expect(json).toHaveBeenCalledWith(SECURE_DEVICE_OK_RESPONSE);
     expect(auditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "secure_device.ok",
@@ -90,34 +91,28 @@ describe("secureDeviceHandler", () => {
   });
 
   it("delegates to rejectDeviceProof when validation fails", async () => {
-    const req = {
-      id: "req-403",
+    const req = makeRequest({
+      method: "POST",
+      path: "/secure-device",
       ip: "10.0.0.2",
-      get: (name: string) => {
-        switch (name.toLowerCase()) {
-          case "user-agent":
-            return "vitest-device-agent";
-          case "x-device-id":
-            return "device-403";
-          case "x-device-jti":
-            return "jti-403";
-          case "x-tenant-id":
-            return "tenant-403";
-          default:
-            return "";
-        }
+      headers: {
+        "x-request-id": "req-403",
+        "x-device-id": "device-403",
+        "x-device-jti": "jti-403",
+        "x-tenant-id": "tenant-403",
+        "user-agent": "vitest-device-agent",
       },
-    } as unknown as Request;
-    const res = new MockResponse();
+    });
+    const { res } = makeRes();
     vi.mocked(verifyDeviceProof).mockResolvedValue({
       ok: false,
       reason: "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW",
       deviceId: "device-403",
     });
 
-    await secureDeviceHandler(req, res as unknown as Response);
+    await secureDeviceHandler(req, res);
 
-    expect(rejectDeviceProof).toHaveBeenCalledWith(res, "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW");
+    expect(rejectDeviceProof).toHaveBeenCalledWith(res, "TIMESTAMP_OUTSIDE_ALLOWED_WINDOW", "jti-403");
     expect(auditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "secure_device.proof_failed",

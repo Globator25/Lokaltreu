@@ -1,6 +1,14 @@
-import { expect } from 'vitest';
-import { requireDeviceProof } from '../../../apps/api/src/mw/device-proof';
-test('missing proof → 401', async () => {
-  const req = new Request('http://localhost:4010/rewards/redeem',{ method:'POST', headers:{} });
-  await expect(requireDeviceProof(req, 'PUBKEY', 'jti-1')).rejects.toBeTruthy();
+import { expect } from "vitest";
+import { verifyDeviceProof } from "../../../apps/api/src/mw/device-proof";
+
+test("missing proof → 401", async () => {
+  const request = new Request("http://localhost:4010/rewards/redeem", { method: "POST", headers: {} });
+  await expect(
+    verifyDeviceProof(
+      { request, devicePublicKey: "PUBKEY", jti: "jti-1" },
+      async () => {
+        /* no-op */
+      },
+    ),
+  ).rejects.toBeTruthy();
 });

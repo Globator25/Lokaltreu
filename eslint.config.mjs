@@ -59,5 +59,16 @@ export default tseslint.config(
   },
 
   // 5. Globale Regelanpassungen für das gesamte Projekt
-  { rules: { "no-console": ["warn", { allow: ["warn", "error"] }] } },
+  {
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "TSTypeReference[typeName.name=/^(Api|Manual).*$/]",
+          message: "no-manual-api-types",
+        },
+      ],
+    },
+  },
 );

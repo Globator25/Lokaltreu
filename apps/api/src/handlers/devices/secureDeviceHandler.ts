@@ -3,15 +3,31 @@ import { SECURE_DEVICE_OK_RESPONSE } from "@lokaltreu/types";
 import { auditEvent } from "../../audit/auditEvent.js";
 import { rejectDeviceProof, verifyDeviceProof } from "../../security/device/verifyDeviceProof.js";
 
+function readHeader(req: Request, name: string): string | undefined {
+  const viaGet = req.get(name);
+  if (viaGet && viaGet.trim().length > 0) {
+    return viaGet;
+  }
+
+  const raw = req.headers[name.toLowerCase() as keyof typeof req.headers];
+  if (Array.isArray(raw)) {
+    return raw.find((value) => typeof value === "string" && value.trim().length > 0) as string | undefined;
+  }
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    return raw;
+  }
+  return undefined;
+}
+
 export async function secureDeviceHandler(req: Request, res: Response): Promise<void> {
   const result = await verifyDeviceProof(req);
-  const requestId =
-    typeof (req as Record<string, unknown>).id === "string" ? (req as Record<string, string>).id : "unknown-request";
-  const tenantId = req.get("x-tenant-id") ?? "unknown-tenant";
-  const deviceId = result.deviceId ?? req.get("x-device-id") ?? "unknown-device";
+  const requestId = readHeader(req, "x-request-id") ?? "unknown-request";
+  const tenantId = readHeader(req, "x-tenant-id") ?? "unknown-tenant";
+  const deviceId = result.deviceId ?? readHeader(req, "x-device-id") ?? "unknown-device";
   const ip = req.ip ?? "unknown-ip";
-  const userAgent = req.get("user-agent") ?? "unknown-ua";
-  const jti = req.get("x-device-jti") ?? requestId;
+  const userAgent = readHeader(req, "user-agent") ?? "unknown-ua";
+  const jti = readHeader(req, "x-device-jti") ?? requestId;
+  const correlationId = readHeader(req, "x-correlation-id") ?? jti;
 
   if (result.ok) {
     await auditEvent({
@@ -28,6 +44,7 @@ export async function secureDeviceHandler(req: Request, res: Response): Promise<
         ip,
         userAgent,
         jti,
+        correlationId,
       },
     });
 
@@ -50,8 +67,9 @@ export async function secureDeviceHandler(req: Request, res: Response): Promise<
       userAgent,
       jti,
       reason: result.reason ?? "UNKNOWN",
+      correlationId,
     },
   });
 
-  rejectDeviceProof(res, result.reason ?? "INVALID_SIGNATURE");
+  rejectDeviceProof(res, result.reason ?? "INVALID_SIGNATURE", correlationId);
 }

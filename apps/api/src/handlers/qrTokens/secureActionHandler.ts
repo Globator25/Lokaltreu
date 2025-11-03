@@ -4,14 +4,29 @@ import { auditEvent } from "../../audit/auditEvent.js";
 import { emitSecurityMetric } from "../../security/observability.js";
 import { getReplayStore } from "../../security/tokens/replayStore.js";
 
+function readHeader(req: Request, name: string): string | undefined {
+  const viaGet = req.get(name);
+  if (viaGet && viaGet.trim().length > 0) {
+    return viaGet;
+  }
+  const raw = req.headers[name.toLowerCase() as keyof typeof req.headers];
+  if (Array.isArray(raw)) {
+    return raw.find((value) => typeof value === "string" && value.trim().length > 0) as string | undefined;
+  }
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    return raw;
+  }
+  return undefined;
+}
+
 export async function secureActionHandler(req: Request, res: Response): Promise<void> {
-  const jti = req.header("x-device-jti") ?? "";
-  const deviceId = req.header("x-device-id") ?? "unknown-device";
-  const tenantId = req.get("x-tenant-id") ?? "unknown-tenant";
-  const requestId =
-    typeof (req as Record<string, unknown>).id === "string" ? (req as Record<string, string>).id : "unknown-request";
+  const jti = readHeader(req, "x-device-jti") ?? "";
+  const deviceId = readHeader(req, "x-device-id") ?? "unknown-device";
+  const tenantId = readHeader(req, "x-tenant-id") ?? "unknown-tenant";
+  const requestId = readHeader(req, "x-request-id") ?? "unknown-request";
   const ip = req.ip ?? "unknown-ip";
-  const userAgent = req.get("user-agent") ?? "unknown-ua";
+  const userAgent = readHeader(req, "user-agent") ?? "unknown-ua";
+  const correlationId = readHeader(req, "x-correlation-id") ?? (jti || requestId);
   // TODO: In Produktion MUSS tenantId aus Auth-Context kommen (SPEC verlangt Zuordnung zu Tenant).
   // TODO: In Produktion MUSS deviceId aus Geraetebindung kommen (SPEC verlangt Zuordnung zu Geraet).
 
@@ -26,8 +41,6 @@ export async function secureActionHandler(req: Request, res: Response): Promise<
       },
     });
 
-    // Audit-Pflicht: Jeder Replay-Versuch wird unveraenderlich protokolliert.
-    // Forensik laut SPEC.
     await auditEvent({
       type: "secure_action.blocked_replay",
       at: new Date().toISOString(),
@@ -44,10 +57,11 @@ export async function secureActionHandler(req: Request, res: Response): Promise<
         jti: jti || requestId,
         reason: "TOKEN_REUSE",
         ttlSeconds: 60,
+        correlationId,
       },
     });
 
-    res.status(409).type("application/problem+json").json(createTokenReuseProblem());
+    res.status(409).type("application/problem+json").json(createTokenReuseProblem(correlationId));
     return;
   }
 
@@ -65,6 +79,7 @@ export async function secureActionHandler(req: Request, res: Response): Promise<
       ip,
       userAgent,
       jti: jti || requestId,
+      correlationId,
     },
   });
 

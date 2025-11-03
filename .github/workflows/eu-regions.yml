@@ -1,0 +1,26 @@
+name: EU-Regions-Gate
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+jobs:
+  verify-eu-only:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8 }
+      - name: Quick regex scan
+        shell: pwsh
+        run: pwsh -File infra/scripts/scan-eu-regions.ps1 -Root "infra/terraform"
+      - name: Terraform plan (machine readable)
+        working-directory: infra/terraform
+        shell: pwsh
+        run: |
+          terraform init
+          terraform validate
+          terraform plan -out tf.plan
+          terraform show -json tf.plan > tfplan.json
+      - name: Enforce whitelist on plan
+        shell: pwsh
+        run: pwsh -File infra/scripts/check-tfplan-regions.ps1 -PlanJson "infra/terraform/tfplan.json"

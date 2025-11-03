@@ -5,3 +5,15 @@
 - DeviceProof Guard: ±60 s Zeitfenster, `DEVICE_PROOF_INVALID_TIME` bei Verstoß, `deviceProofFailed` Metric MUSS emittiert werden.
 - Audit Guard: `secure_action.*` und `secure_device.*` Events werden WORM-append geschrieben; `globalErrorHandler.spec.ts` verifiziert, dass Runtime-Logs keine IP/UA enthalten.
 - Produktions-Pipeline validiert `REPLAY_STORE` (`redis` in Prod, `memory` für lokale Tests) in Kombination mit `REDIS_URL`/`REDIS_TOKEN`.
+
+## Branch-Protection aktivieren
+PowerShell (Repo-Root) setzt die Required Checks gemäß AGENTS.md:
+
+```powershell
+# Verzeichnis: .\
+gh api --method PUT repos/:owner/:repo/branches/main/protection `
+  -f required_status_checks.strict=true `
+  -f required_status_checks.contexts[]=ci `
+  -f required_status_checks.contexts[]=gdpr-compliance `
+  -f required_status_checks.contexts[]=security-gates
+```

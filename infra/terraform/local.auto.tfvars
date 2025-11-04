@@ -1,0 +1,5 @@
+cloudflare_api_token  = "dummy"
+cloudflare_account_id = "acc_dummy"
+upstash_api_key       = "dummy"
+upstash_email         = "dev@example.invalid"
+neon_api_key          = "dummy"

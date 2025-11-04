@@ -1,0 +1,25 @@
+name: gdpr-compliance
+on:
+  pull_request:
+  push:
+jobs:
+  docs-present:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          test -f compliance/AVV.md
+          test -f compliance/TOMs.md
+          test -f compliance/RoPA.md
+          test -f compliance/DPIA.md
+          test -f compliance/Infos-DE.md
+          test -f compliance/Retention-Policy.md
+          test -f docs/runbooks/Incident-Breach.md
+  link-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm i -g markdown-link-check
+      - run: |
+          find compliance -name "*.md" -print0 | xargs -0 -I {} markdown-link-check "{}" -q
+          find docs -name "*.md" -print0 | xargs -0 -I {} markdown-link-check "{}" -q

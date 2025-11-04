@@ -1,42 +1,26 @@
 name: ci
-on:
-  pull_request:
-  push:
-    branches: [main]
-
+on: [pull_request]
 jobs:
-  build-test:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm ci --include=dev
-
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Codegen from OpenAPI
+        run: npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts
       - name: Lint
-        run: npm run lint --workspaces --if-present
-
+        run: npm run lint
       - name: Build
-        run: npm run build --workspaces --if-present
-
-      - name: Unit & Contract Tests (with 80% coverage check)
-        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
-
-      - name: OpenAPI Lint
-        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
-
-      - name: Artefakte hochladen (dist)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: apps/**/dist
-
-      - name: Artefakte hochladen (coverage)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: "**/coverage/**"
+        run: npm run build
+      - name: Unit + Contract tests
+        run: npm test --workspaces -- --coverage
+      - name: Enforce coverage≥80%
+        run: node .github/scripts/check-coverage.mjs
+      - name: Spectral OpenAPI lint
+        run: npx @stoplight/spectral-cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+      - name: Schema drift = 0
+        run: node .github/scripts/check-schema-drift.mjs

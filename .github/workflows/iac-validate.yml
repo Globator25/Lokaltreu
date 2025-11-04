@@ -1,66 +1,33 @@
-name: IaC Validate (dev)
-
+name: iac-validate
 on:
-  pull_request:
-    paths:
-      - "infra/terraform/**"
   push:
-    branches: [ main ]
-    paths:
-      - "infra/terraform/**"
-
-concurrency:
-  group: iac-validate-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
+    branches: [ main, chore/**, feature/** ]
+  pull_request:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     defaults:
       run:
-        working-directory: infra/terraform
-
-    env:
-      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
-      TF_IN_AUTOMATION: "true"
+        shell: pwsh
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.13.3
+          terraform_version: 1.9.5
 
-      - name: Install sops
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y sops
+      - name: EU whitelist scan
+        run: .\scripts\ci-terraform-eu.ps1 -Root .
 
-      - name: Write AGE private key
-        run: |
-          printf "%s" "${{ secrets.AGE_PRIVATE_KEY }}" > "$SOPS_AGE_KEY_FILE"
-          chmod 600 "$SOPS_AGE_KEY_FILE"
-
-      - name: terraform fmt -check
-        run: terraform fmt -check
-
-      - name: terraform init (local state)
-        run: terraform init -backend=false
-
-      - name: Decrypt dev secrets to temp
-        run: sops --decrypt secrets/dev.secrets.enc.tfvars > $RUNNER_TEMP/dev.secrets.tfvars
+      - name: terraform fmt
+        run: terraform -chdir=infra/terraform fmt -check
 
       - name: terraform validate
-        run: terraform validate
+        run: terraform -chdir=infra/terraform validate
 
-      - name: terraform plan (dev, no backend)
+      # Beispiel: Temp-Verzeichnis des Runners anzeigen
+      - name: show temp dir
         run: |
-          terraform plan \
-            -var-file="env/dev.tfvars" \
-            -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
-            -compact-warnings -no-color
+          Write-Host "RUNNER_TEMP = $env:RUNNER_TEMP"

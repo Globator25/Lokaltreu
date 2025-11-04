@@ -1,0 +1,37 @@
+# fly.toml app configuration file generated for lokaltreu-dev on 2025-11-02T12:54:16+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'lokaltreu-dev'
+primary_region = 'fra'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8080
+  processes = ['app']
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+
+  [[services.ports]]
+    port = 443
+    handlers = ['tls', 'http']
+
+[[services.http_checks]]
+  interval = '15s'
+  timeout = '5s'
+  grace_period = '10s'
+  method = 'GET'
+  path = '/'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_start_machines = false
+  auto_stop_machines = true
+  min_machines_running = 0

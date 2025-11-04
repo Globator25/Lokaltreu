@@ -1,0 +1,23 @@
+{
+  "name": "referrals-link",
+  "url": "http://localhost:4010/referrals/link",
+  "status": 403,
+  "headers": {
+    "access-control-allow-credentials": "true",
+    "access-control-allow-headers": "*",
+    "access-control-allow-origin": "*",
+    "access-control-expose-headers": "*",
+    "connection": "keep-alive",
+    "content-length": "188",
+    "content-type": "application/problem+json",
+    "date": "Mon, 03 Nov 2025 11:21:58 GMT",
+    "keep-alive": "timeout=5"
+  },
+  "body": {
+    "type": "https://errors.lokaltreu.example/plan/not-allowed",
+    "title": "Plan not allowed",
+    "status": 403,
+    "error_code": "PLAN_NOT_ALLOWED",
+    "correlation_id": "00000000-0000-0000-0000-000000000000"
+  }
+}

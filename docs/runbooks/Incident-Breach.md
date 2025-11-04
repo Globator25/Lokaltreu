@@ -1,3 +1,7 @@
-# Art. 11 Incident & Breach
-1) Identification → 2) Containment → 3) Eradication → 4) Recovery → 5) Lessons learned.
-PII-Scope erfassen, Behördenmeldung ≤72h, Benachrichtigung betroffener Personen, Beweisführung/Audit.
+# Runbook: Incident + Breach (72 h)
+## Zweck
+## Erkennung und Erstmaßnahmen
+## Klassifikation
+## Benachrichtigung (innerhalb 72 h)
+## Forensik & WORM-Export sichern
+## Kommunikation & Nachweise

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { HEALTH_CHECK_RESPONSE } from "@lokaltreu/types";
+import { HEALTH_CHECK_RESPONSE } from "../runtime/contracts.js";
 import { secureDeviceHandler } from "../handlers/devices/secureDeviceHandler.js";
 
 const router = Router();
@@ -12,3 +12,6 @@ router.get("/health", (_req: Request, res: Response) => {
 router.post("/secure-device", secureDeviceHandler);
 
 export default router;
+
+
+

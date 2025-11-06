@@ -1,4 +1,4 @@
-import type { AuditRecord } from "./auditEvent.js";
+import type { AuditRecord } from './auditEvent.js';
 
 export interface AuditBundleStore {
   flush(bundle: Uint8Array, records: AuditRecord[]): Promise<void>;
@@ -35,6 +35,6 @@ export class R2Store implements AuditBundleStore {
   private signBundle(bundle: Uint8Array, ts: string): { hash: string; ts: string } {
     void bundle;
     // TODO: echte Hash-Berechnung (SHA-256) implementieren
-    return { hash: "TODO_HASH", ts };
+    return { hash: 'TODO_HASH', ts };
   }
 }

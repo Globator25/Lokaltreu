@@ -3,131 +3,15 @@
  * Do not make direct changes to the file.
  */
 
-
-export interface paths {
-  "/stamps/tokens": {
-    /** Issue QR stamp token */
-    post: {
-      parameters: {
-        header: {
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-        };
-      };
-      responses: {
-        /** @description Created */
-        201: {
-          content: {
-            "application/json": {
-              token: string;
-            };
-          };
-        };
-        400: components["responses"]["Problem"];
-      };
-    };
-  };
-  "/stamps/claim": {
-    /** Claim a stamp */
-    post: {
-      parameters: {
-        header: {
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-        };
-      };
-      requestBody: {
-        content: {
-          "application/json": {
-            qrToken: string;
-          };
-        };
-      };
-      responses: {
-        /** @description OK */
-        201: {
-          content: {
-            "application/json": {
-              cardState: {
-                [key: string]: unknown;
-              };
-            };
-          };
-        };
-        400: components["responses"]["Problem"];
-        409: components["responses"]["Problem"];
-      };
-    };
-  };
-  "/rewards/redeem": {
-    /** Redeem reward (Device-Proof required) */
-    post: {
-      parameters: {
-        header: {
-          "X-Device-Proof": components["parameters"]["XDeviceProof"];
-          "X-Device-Timestamp": components["parameters"]["XDeviceTimestamp"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          content: {
-            "application/json": Record<string, never>;
-          };
-        };
-        401: components["responses"]["Problem"];
-        403: components["responses"]["Problem"];
-      };
-    };
-  };
-  "/referrals/link": {
-    /** Create referral link (plan-gated) */
-    get: {
-      responses: {
-        /** @description Plan not allowed */
-        403: {
-          content: {
-            "application/problem+json": components["schemas"]["Problem"];
-          };
-        };
-      };
-    };
-  };
-}
-
+export type paths = Record<string, never>;
 export type webhooks = Record<string, never>;
-
 export interface components {
-  schemas: {
-    Problem: {
-      /** Format: uri */
-      type: string;
-      title: string;
-      status: number;
-      detail?: string;
-      instance?: string;
-      error_code: string;
-      correlation_id: string;
-    };
-  };
-  responses: {
-    /** @description RFC7807 Problem */
-    Problem: {
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-  };
-  parameters: {
-    IdempotencyKey: string;
-    XDeviceProof: string;
-    XDeviceTimestamp: string;
-  };
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    schemas: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
-
 export type $defs = Record<string, never>;
-
-export type external = Record<string, never>;
-
 export type operations = Record<string, never>;

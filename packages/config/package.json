@@ -1,0 +1,14 @@
+{
+  "name": "@lokaltreu/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": { "types": "./index.d.ts", "require": "./index.js", "default": "./index.js" }
+  },
+  "files": ["index.js", "index.d.ts"],
+  "scripts": {
+    "test": "echo \"no tests for this workspace\" && exit 0"
+  }
+}

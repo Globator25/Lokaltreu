@@ -1,1 +1,1 @@
-export * from "./secureActionHandler.js";
+export * from './secureActionHandler.js';

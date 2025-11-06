@@ -1,11 +1,75 @@
 name: security-gates
-on: [pull_request]
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  NODE_VERSION: 20
+  VITEST_COVERAGE: 'false'
+
 jobs:
-  security-gates:
+  anti-replay:
+    name: anti-replay
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: node .github/scripts/test-anti-replay.mjs  # 10 parallel → 1x201, 9x409
-      - run: node .github/scripts/test-device-proof.mjs  # Ed25519 proof cases
-      - run: node .github/scripts/test-rate-limits.mjs   # /stamps/claim, /rewards/redeem
-      - run: node .github/scripts/test-plan-gate.mjs     # 403 PLAN_NOT_ALLOWED
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - working-directory: apps/api
+        run: npm ci
+      - working-directory: apps/api
+        run: npm test -- --pool=threads tests/parallel/anti-replay.spec.ts
+
+  device-proof:
+    name: device-proof
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - working-directory: apps/api
+        run: npm ci
+      - working-directory: apps/api
+        run: npm test -- --pool=threads src/security/device/verifyDeviceProof.spec.ts
+
+  problem-json:
+    name: rfc7807-and-plan-gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - working-directory: apps/api
+        run: npm ci
+      - working-directory: apps/api
+        run: npm test -- --pool=threads tests/plan/plan-gate.spec.ts
+
+  terraform:
+    name: terraform-validate-eu-only
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check
+      - run: terraform validate
+      - name: Ensure only EU regions are referenced
+        run: |
+          ! grep -R -n -E "region\\s*=\\s*\"(us|ap|sa|af|me)" . || (echo "non-EU cloud region detected" && exit 1)
+
+  secrets:
+    name: secrets-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gitleaks/gitleaks-action@v2

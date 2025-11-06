@@ -2,7 +2,7 @@
 // SPEC: Produktion MUSS Redis benutzen.
 // Dev: InMemory erlaubt lokale Iteration ohne Upstash.
 
-import { InMemoryReplayStore, RedisReplayStore, ReplayStore } from "./redisStore";
+import { InMemoryReplayStore, RedisReplayStore, ReplayStore } from "./redisStore.js";
 
 let instance: ReplayStore | null = null;
 
@@ -44,3 +44,6 @@ export function getReplayStore(): ReplayStore {
 export function resetReplayStoreForTests(): void {
   instance = null;
 }
+
+
+

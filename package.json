@@ -1,57 +1,52 @@
 {
   "name": "lokaltreu",
-  "private": "true",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ]
+  },
   "scripts": {
-    "codegen": "openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
-    "codegen:types": "openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
-    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
-    "build": "npm run -ws build",
-    "test": "vitest --run",
-    "test:contract": "vitest run tests/contract",
-    "test:replay": "vitest run tests/security/replay",
-    "test:device": "vitest run tests/security/device",
-    "test:plan": "vitest run tests/security/plan",
-    "test:device-proof": "echo \"[PLACEHOLDER] device-proof skipped\"",
-    "test:anti-replay": "echo \"[PLACEHOLDER] anti-replay skipped\"",
-    "test:ratelimits": "echo \"[PLACEHOLDER] ratelimits skipped\"",
-    "test:smoke": "npm run smoke",
-    "smoke": "node scripts/smoke.mjs",
-    "mock": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
-    "check:no-manual-api-types": "node scripts/no-manual-types.mjs",
-    "pr:lint": "node scripts/pr-lint.js",
-    "dev": "npm run -w @lokaltreu/api dev",
-    "openapi:lint": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml",
-    "types:gen": "npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
-    "check": "npm run lint && npm run types:gen && npm run -ws build",
-    "lint:openapi": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml"
+    "build": "npm run build -w @lokaltreu/api && npm run build -w @lokaltreu/web",
+    "codegen": "npm run codegen -w @lokaltreu/types",
+    "lint": "eslint apps/api packages tests --ext .ts,.tsx,.js --max-warnings 0 && npm run -w @lokaltreu/web lint",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "contract": "npm run -w packages/types types:codegen && npm run -w apps/api test:contract",
+    "oas:lint": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml",
+    "oas:bundle": "redocly bundle apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o artifacts/lokaltreu-openapi.yaml",
+    "schema:drift": "git diff --quiet -- packages/types/src/index.d.ts || (echo schema_drift && exit 2)",
+    "gdpr:check": "node ./tools/gdpr-check.mjs",
+    "prepare": "husky"
   },
-  "version": "0.1.0",
-  "description": "SSOT: apps/api/openapi/lokaltreu-openapi-v2.0.yaml (vollständig, eingecheckt). Typen werden generiert. Priorität: SPEC → OpenAPI → ARCH → AGENTS.md → Code. Siehe /AGENTS.md für Rollen, Gates, Rezepte.",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "test": "tests"
+  "devDependencies": {
+    "@changesets/cli": "^2.27.8",
+    "@commitlint/cli": "^19.7.1",
+    "@commitlint/config-conventional": "^19.7.1",
+    "@next/eslint-plugin-next": "^16.0.1",
+    "@redocly/openapi-core": "^2.11.0",
+    "@redocly/cli": "^1.25.0",
+    "@stoplight/prism-cli": "^5.14.2",
+    "@stoplight/spectral-cli": "^6.15.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "chai-openapi-response-validator": "^0.14.2",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.13",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "next": "^14.2.13",
+    "prettier": "^3.4.2",
+    "typescript": "^5.3.3",
+    "tsx": "^4.20.6",
+    "vitest": "^4.0.7"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Globator25/Lokaltreu.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Globator25/Lokaltreu/issues"
-  },
-  "homepage": "https://github.com/Globator25/Lokaltreu#readme",
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "apps/*",
-    "packages/*"
-  ],
-  "volta": {
-    "node": "20.19.5",
-    "npm": "10.9.2"
-  },
-  "packageManager": "npm@10.9.2"
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,cjs,mjs,json,yml,yaml,md}": "prettier -w"
+  }
+
 }

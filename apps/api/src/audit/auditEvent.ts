@@ -1,5 +1,5 @@
-import { appendFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import { appendFile, mkdir } from 'node:fs/promises';
+import path from 'node:path';
 
 export interface AuditRecord {
   type: string;
@@ -9,7 +9,7 @@ export interface AuditRecord {
   meta?: Record<string, unknown>;
 }
 
-const AUDIT_DIR = "./var/audit";
+const AUDIT_DIR = './var/audit';
 
 /**
  * auditEvent
@@ -32,7 +32,7 @@ export async function auditEvent(event: AuditRecord): Promise<void> {
   });
   // Timestamp wird einmal erzeugt und wiederverwendet. Das macht Audit-Eintraege deterministischer und stabiler fuer spaetere Forensik.
   // append-only, no overwrite
-  await appendFile(file, `${line}\n`, { encoding: "utf8" });
+  await appendFile(file, `${line}\n`, { encoding: 'utf8' });
   // Export erfolgt ueber flushAuditLogs() (signierter Batch in R2-Bucket, EU-Region, 180 Tage Aufbewahrung).
 }
 

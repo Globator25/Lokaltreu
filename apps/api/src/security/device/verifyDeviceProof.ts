@@ -1,7 +1,7 @@
 import { verify } from "@noble/ed25519";
 import type { Request, Response } from "express";
 import { TextEncoder } from "node:util";
-import { createDeviceProofProblem, type DeviceProofRejectionReason } from "@lokaltreu/types";
+import { createDeviceProofProblem, type DeviceProofRejectionReason } from "../../runtime/contracts.js";
 import { emitSecurityMetric } from "../observability.js";
 
 type DeviceRegistryEntry = {
@@ -151,5 +151,10 @@ export function rejectDeviceProof(
   correlationId: string
 ): void {
   const problem = createDeviceProofProblem(reason, correlationId);
-  res.status(problem.status).type("application/problem+json").json(problem);
+  res.status(403).type("application/problem+json").json(problem);
 }
+
+
+
+
+

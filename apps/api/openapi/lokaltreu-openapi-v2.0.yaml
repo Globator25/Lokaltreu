@@ -1,288 +1,116 @@
 openapi: 3.1.0
 info:
-  title: Lokaltreu API
+  title: Lokaltreu HTTP-API
   version: "2.0"
-  license:
-    name: UNLICENSED
-    url: https://example.com/license
-servers:
-  - url: https://api.lokaltreu.example/v1
-components:
-  securitySchemes:
-    AdminAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-    DeviceKey:
-      type: apiKey
-      in: header
-      name: X-Device-Key
-  parameters:
-    IdempotencyKey:
-      in: header
-      name: Idempotency-Key
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 128
-    XDeviceProof:
-      in: header
-      name: X-Device-Proof
-      required: true
-      schema:
-        type: string
-  schemas:
-    Problem:
-      type: object
-      required:
-        - type
-        - title
-        - status
-      properties:
-        type:
-          type: string
-          format: uri
-        title:
-          type: string
-        status:
-          type: integer
-        detail:
-          type: string
-        instance:
-          type: string
-        error_code:
-          type: string
-          enum:
-            - TOKEN_EXPIRED
-            - TOKEN_REUSE
-            - SELF_REFERRAL_BLOCKED
-            - REFERRAL_LIMIT_REACHED
-            - REFERRAL_TENANT_MISMATCH
-            - PLAN_NOT_ALLOWED
-            - RATE_LIMITED
-        correlation_id:
-          type: string
-        retry_after:
-          type: integer
-    StampTokenResponse:
-      type: object
-      required:
-        - qrToken
-        - jti
-        - expiresAt
-      properties:
-        qrToken:
-          type: string
-        jti:
-          type: string
-        expiresAt:
-          type: string
-          format: date-time
-    StampClaimRequest:
-      type: object
-      required:
-        - qrToken
-      properties:
-        qrToken:
-          type: string
-        ref:
-          type:
-            - string
-            - "null"
+  x-guidelines:
+    agentsSpec:
+      version: "v2.2-gold"
+      requiredKpis: { schema_drift: 0, error_conformity: "100%", coverage_min: 80 }
+    agentsAnchors:
+      problemJson: "#/components/schemas/Problem"
+      idempotencyHeader: "#/components/parameters/IdempotencyKey"
+      deviceProof:
+        header: "#/components/parameters/XDeviceProof"
+        tsHeader: "#/components/parameters/XDeviceTimestamp"
+      planGateExample: "#/paths/~1referrals~1link/get/responses/403"
+  x-schema-drift-policy: "0"
+servers: [{ url: https://api.lokaltreu.example }]
 paths:
-  /admins/register:
-    post:
-      summary: Registriert Admin+Mandant
-      operationId: registerAdmin
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - email
-                - password
-              properties:
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                  minLength: 12
-      responses:
-        "201":
-          description: Created
-        "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /devices/registration-links:
-    post:
-      summary: Einmaliger Registrierungslink (TTL 15m)
-      operationId: createDeviceRegistrationLink
-      security:
-        - AdminAuth: []
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        "201":
-          description: Created
-        "409":
-          description: Already exists
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "429":
-          description: Rate limited
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /devices/register/confirm:
-    post:
-      summary: Bestätigt Gerätebindung (einmalig)
-      operationId: confirmDeviceRegistration
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: TOKEN_REUSE
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
   /stamps/tokens:
     post:
-      summary: Erzeugt einmaligen Stempel-Token (QR)
-      operationId: createStampToken
-      security:
-        - DeviceKey: []
-        - AdminAuth: []
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
+      summary: Issue QR stamp token
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
       responses:
         "201":
           description: Created
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/StampTokenResponse"
-        "429":
-          description: RATE_LIMITED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+              schema: { type: object, properties: { token: { type: string } }, required: [token] }
+        "400": { $ref: "#/components/responses/Problem" }
   /stamps/claim:
     post:
-      summary: Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
-      operationId: claimStamp
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/StampClaimRequest"
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: TOKEN_REUSE | REFERRAL_TENANT_MISMATCH
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "422":
-          description: SELF_REFERRAL_BLOCKED | REFERRAL_LIMIT_REACHED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "429":
-          description: RATE_LIMITED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /rewards/redeem:
-    post:
-      summary: Löst eine Prämie ein
-      operationId: redeemReward
-      security:
-        - DeviceKey: []
-      parameters:
-        - $ref: '#/components/parameters/XDeviceProof'
-        - $ref: '#/components/parameters/IdempotencyKey'
+      summary: Claim a stamp
+      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - redeemToken
-              properties:
-                redeemToken:
-                  type: string
+              properties: { qrToken: { type: string } }
+              required: [qrToken]
       responses:
-        "200":
-          description: OK
-        "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: TOKEN_REUSE
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-  /referrals/link:
-    get:
-      summary: Liefert personalisierten Referral-Link (Werber)
-      operationId: getReferralLink
-      security: []
-      responses:
-        "200":
+        "201":
           description: OK
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - refCodeURL
-                properties:
-                  refCodeURL:
-                    type: string
-                    format: uri
-        "401":
-          description: Unauthorized
+                properties: { cardState: { type: object, additionalProperties: true } }
+                required: [cardState]
+        "409": { $ref: "#/components/responses/Problem" }
+        "400": { $ref: "#/components/responses/Problem" }
+  /rewards/redeem:
+    post:
+      summary: Redeem reward (Device-Proof required)
+      parameters:
+        - { $ref: "#/components/parameters/XDeviceProof" }
+        - { $ref: "#/components/parameters/XDeviceTimestamp" }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { type: object } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+  /referrals/link:
+    get:
+      summary: Create referral link (plan-gated)
+      responses:
+        "403":
+          description: Plan not allowed
           content:
             application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+              schema: { $ref: "#/components/schemas/Problem" }
+              examples:
+                plan_gate:
+                  value:
+                    type: https://errors.lokaltreu.example/plan/not-allowed
+                    title: Plan not allowed
+                    status: 403
+                    error_code: PLAN_NOT_ALLOWED
+                    correlation_id: 00000000-0000-0000-0000-000000000000
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    XDeviceProof:
+      name: X-Device-Proof
+      in: header
+      required: true
+      schema: { type: string }
+    XDeviceTimestamp:
+      name: X-Device-Timestamp
+      in: header
+      required: true
+      schema: { type: string, pattern: "^[0-9]{10,}$" }
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        error_code: { type: string }
+        correlation_id: { type: string }
+      required: [type, title, status, error_code, correlation_id]
+  responses:
+    Problem:
+      description: RFC7807 Problem
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }

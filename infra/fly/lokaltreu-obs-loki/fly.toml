@@ -1,0 +1,22 @@
+app = "lokaltreu-obs-loki"
+primary_region = "fra"
+
+image = "grafana/loki:2.9.0"
+
+[experimental]
+auto_rollback = true
+
+[http_service]
+internal_port = 3100
+force_https = true
+auto_start_machines = false
+auto_stop_machines = true
+min_machines_running = 0
+
+[checks.http-3100]
+port = 3100
+type = "http"
+interval = "15s"
+timeout = "2s"
+method = "GET"
+path = "/ready"

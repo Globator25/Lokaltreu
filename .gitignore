@@ -31,3 +31,22 @@ infra/terraform/secrets/*.tfvars
 *decrypted*.tfvars
 # Testartefakte
 infra/terraform/secrets/test.enc.tfvars
+*.tsbuildinfo
+infra/terraform/local.auto.tfvars
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.plan
+tf.plan
+tfplan.json
+.crash
+.terraform/
+.terraform.lock.hcl
+
+# Backups/Temp
+*.bak
+*.broken
+
+# Fly.io local
+fly.toml.local

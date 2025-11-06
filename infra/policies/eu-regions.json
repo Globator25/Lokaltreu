@@ -1,0 +1,6 @@
+{
+  "fly": ["ams","arn","cdg","fra","lhr"],
+  "neon": ["aws-eu-central-1","aws-eu-west-2"],
+  "upstash": ["eu-west-1","eu-west-2","eu-central-1"],
+  "cloudflare_r2_jurisdiction": ["eu"]
+}

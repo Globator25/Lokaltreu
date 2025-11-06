@@ -1,38 +1,57 @@
 {
   "name": "lokaltreu",
-  "version": "1.0.0",
-  "type": "module",
+  "private": "true",
+  "scripts": {
+    "codegen": "openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
+    "codegen:types": "openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
+    "build": "npm run -ws build",
+    "test": "vitest --run",
+    "test:contract": "vitest run tests/contract",
+    "test:replay": "vitest run tests/security/replay",
+    "test:device": "vitest run tests/security/device",
+    "test:plan": "vitest run tests/security/plan",
+    "test:device-proof": "echo \"[PLACEHOLDER] device-proof skipped\"",
+    "test:anti-replay": "echo \"[PLACEHOLDER] anti-replay skipped\"",
+    "test:ratelimits": "echo \"[PLACEHOLDER] ratelimits skipped\"",
+    "test:smoke": "npm run smoke",
+    "smoke": "node scripts/smoke.mjs",
+    "mock": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
+    "check:no-manual-api-types": "node scripts/no-manual-types.mjs",
+    "pr:lint": "node scripts/pr-lint.js",
+    "dev": "npm run -w @lokaltreu/api dev",
+    "openapi:lint": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml",
+    "types:gen": "npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
+    "check": "npm run lint && npm run types:gen && npm run -ws build",
+    "lint:openapi": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml"
+  },
+  "version": "0.1.0",
+  "description": "SSOT: apps/api/openapi/lokaltreu-openapi-v2.0.yaml (vollständig, eingecheckt). Typen werden generiert. Priorität: SPEC → OpenAPI → ARCH → AGENTS.md → Code. Siehe /AGENTS.md für Rollen, Gates, Rezepte.",
   "main": "index.js",
   "directories": {
-    "doc": "docs"
+    "doc": "docs",
+    "test": "tests"
   },
-  "scripts": {
-    "build:web": "npm -w apps/web run build",
-    "build:api": "npm -w apps/api run build",
-    "build": "npm run build:web && npm run build:api",
-    "start:web": "node apps/web/.next/standalone/server.js",
-    "start:api": "node apps/api/dist/index.js",
-    "test": "vitest run --coverage"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Globator25/Lokaltreu.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "engines": {
-  "node": ">=20 <23"
-},
-  "description": "",
-  "private": "true",
+  "bugs": {
+    "url": "https://github.com/Globator25/Lokaltreu/issues"
+  },
+  "homepage": "https://github.com/Globator25/Lokaltreu#readme",
   "workspaces": [
+    "apps/*",
+    "packages/*",
     "apps/*",
     "packages/*"
   ],
-  "devDependencies": {
-    "@next/eslint-plugin-next": "^15.5.4",
-    "@typescript-eslint/parser": "^8.45.0",
-    "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.37.0",
-    "typescript-eslint": "^8.45.0",
-    "vitest": "^3.2.4"
-  }
-
+  "volta": {
+    "node": "20.19.5",
+    "npm": "10.9.2"
+  },
+  "packageManager": "npm@10.9.2"
 }

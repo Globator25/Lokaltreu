@@ -14,3 +14,18 @@
 - [ ] **gdpr-compliance** grün (Art. 11, Retention 180 Tage)
 - [ ] Audit-Artefakte (Logs, Diffs, Reports) verlinkt
 - [ ] Link zur letzten CI-Run-Summary beigefügt
+
+## Risk Assessment
+
+- Blast radius: <!-- describe components/users impacted -->
+- Rollback ready? <!-- yes/no -->
+
+## Links
+
+- ADR IDs: <!-- e.g. ADR-0004 -->
+- Runbooks: <!-- incident/rollback -->
+- Observability Dashboard: <!-- URL -->
+
+## Governance
+
+- [ ] CODEOWNERS sensitive area reviewed (falls zutreffend)

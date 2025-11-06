@@ -1,4 +1,6 @@
-/apps/api/**            @team-api
-/packages/config/**     @team-platform
-/packages/types/**      @team-platform
-/tools/**               @team-security
+AGENTS.md                                           @org/sec-leads
+.github/workflows/**                                @org/platops
+apps/api/src/(mw|middleware|security)/**            @org/backend-core
+apps/api/src/security/**                            @org/backend-core @org/sec-leads
+docs/runbooks/**                                    @org/platops
+compliance/**                                       @org/sec-leads

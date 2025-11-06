@@ -15,6 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Run targeted security suites
+        env:
+          VITEST_COVERAGE: 'false'
+        run: |
+          npx vitest run --pool=threads \
+            tests/parallel/anti-replay.spec.ts \
+            apps/api/tests/mw/idempotency*.spec.ts \
+            apps/api/src/middleware/errors/*.spec.ts
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}

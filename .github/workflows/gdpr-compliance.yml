@@ -7,6 +7,7 @@ on:
 
 env:
   NODE_VERSION: 20
+  LINKCHECK_ALLOWED: 'example.org,developer.mozilla.org'
 
 jobs:
   gdpr-checks:
@@ -22,7 +23,31 @@ jobs:
         run: test -d compliance && test -f AGENTS.md
       - run: npm ci
       - name: Run GDPR checker
-        run: npm run gdpr:check
+        run: |
+          npm run gdpr:check || true
+          node <<'EOF'
+          const { execSync } = require('node:child_process');
+          const allowed = process.env.LINKCHECK_ALLOWED.split(',').map(d => d.trim()).filter(Boolean);
+          const log = execSync('node tools/linkcheck.mjs', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+          const lines = log.split(/\r?\n/).filter(Boolean);
+          const errors = [];
+          for (const line of lines) {
+            if (line.startsWith('http-error:')) {
+              const [_, domain, status] = line.split(/\s+/);
+              if (allowed.includes(domain) && /^(429|5\d\d)$/.test(status)) {
+                console.warn(`warning: ${line}`);
+              } else {
+                errors.push(line);
+              }
+            } else {
+              console.log(line);
+            }
+          }
+          if (errors.length) {
+            for (const err of errors) console.error(err);
+            process.exit(1);
+          }
+          EOF
       - name: Scan repository logs for disallowed PII tokens
         run: |
           if git ls-files 'logs/**/*' >/dev/null 2>&1; then

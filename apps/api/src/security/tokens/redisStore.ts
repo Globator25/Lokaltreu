@@ -17,7 +17,8 @@ export class RedisReplayStore implements ReplayStore {
   }
 
   async firstUse(jti: string, ttlSeconds: number): Promise<boolean> {
-    const created = await this.redis.set(`jti:${jti}`, "1", { nx: true, ex: ttlSeconds });
+    const key = `replay:${jti}`;
+    const created = await this.redis.set(key, "1", { nx: true, ex: ttlSeconds });
     return created === "OK";
   }
 }
@@ -46,3 +47,5 @@ export class InMemoryReplayStore implements ReplayStore {
 }
 
 // Hinweis: Produktion MUSS RedisReplayStore (Upstash EU) nutzen. InMemoryReplayStore ist nur Dev-Fallback.
+
+

@@ -1,116 +1,22 @@
 openapi: 3.1.0
 info:
   title: Lokaltreu HTTP-API
-  version: "2.0"
-  x-guidelines:
-    agentsSpec:
-      version: "v2.2-gold"
-      requiredKpis: { schema_drift: 0, error_conformity: "100%", coverage_min: 80 }
-    agentsAnchors:
-      problemJson: "#/components/schemas/Problem"
-      idempotencyHeader: "#/components/parameters/IdempotencyKey"
-      deviceProof:
-        header: "#/components/parameters/XDeviceProof"
-        tsHeader: "#/components/parameters/XDeviceTimestamp"
-      planGateExample: "#/paths/~1referrals~1link/get/responses/403"
-  x-schema-drift-policy: "0"
-servers: [{ url: https://api.lokaltreu.example }]
-paths:
-  /stamps/tokens:
-    post:
-      summary: Issue QR stamp token
-      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema: { type: object, properties: { token: { type: string } }, required: [token] }
-        "400": { $ref: "#/components/responses/Problem" }
-  /stamps/claim:
-    post:
-      summary: Claim a stamp
-      parameters: [ { $ref: "#/components/parameters/IdempotencyKey" } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties: { qrToken: { type: string } }
-              required: [qrToken]
-      responses:
-        "201":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties: { cardState: { type: object, additionalProperties: true } }
-                required: [cardState]
-        "409": { $ref: "#/components/responses/Problem" }
-        "400": { $ref: "#/components/responses/Problem" }
-  /rewards/redeem:
-    post:
-      summary: Redeem reward (Device-Proof required)
-      parameters:
-        - { $ref: "#/components/parameters/XDeviceProof" }
-        - { $ref: "#/components/parameters/XDeviceTimestamp" }
-      responses:
-        "200":
-          description: OK
-          content: { application/json: { schema: { type: object } } }
-        "401": { $ref: "#/components/responses/Problem" }
-        "403": { $ref: "#/components/responses/Problem" }
-  /referrals/link:
-    get:
-      summary: Create referral link (plan-gated)
-      responses:
-        "403":
-          description: Plan not allowed
-          content:
-            application/problem+json:
-              schema: { $ref: "#/components/schemas/Problem" }
-              examples:
-                plan_gate:
-                  value:
-                    type: https://errors.lokaltreu.example/plan/not-allowed
-                    title: Plan not allowed
-                    status: 403
-                    error_code: PLAN_NOT_ALLOWED
-                    correlation_id: 00000000-0000-0000-0000-000000000000
+  version: '0.0.1-monorepo-bootstrap'
+  description: >
+    Lokaltreu API für Mandanten, Geräte und Audit-Flows. Enthält Device-Proof,
+    Anti-Replay und Plan-Gates nach SPEC v2.2.
+  contact:
+    name: Lokaltreu Platform Team
+    url: https://lokaltreu.example/support
+    email: platform@lokaltreu.example
+  license:
+    name: EUPL-1.2
+    url: https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+servers:
+  - url: https://api.lokaltreu.dev
+    description: Production
+  - url: https://staging-api.lokaltreu.dev
+    description: Staging
+paths: {}
 components:
-  parameters:
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    XDeviceProof:
-      name: X-Device-Proof
-      in: header
-      required: true
-      schema: { type: string }
-    XDeviceTimestamp:
-      name: X-Device-Timestamp
-      in: header
-      required: true
-      schema: { type: string, pattern: "^[0-9]{10,}$" }
-  schemas:
-    Problem:
-      type: object
-      properties:
-        type: { type: string, format: uri }
-        title: { type: string }
-        status: { type: integer }
-        detail: { type: string }
-        instance: { type: string }
-        error_code: { type: string }
-        correlation_id: { type: string }
-      required: [type, title, status, error_code, correlation_id]
-  responses:
-    Problem:
-      description: RFC7807 Problem
-      content:
-        application/problem+json:
-          schema: { $ref: "#/components/schemas/Problem" }
+  schemas: {}

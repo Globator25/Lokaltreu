@@ -1,0 +1,4 @@
+/apps/api/**            @team-api
+/packages/config/**     @team-platform
+/packages/types/**      @team-platform
+/tools/**               @team-security

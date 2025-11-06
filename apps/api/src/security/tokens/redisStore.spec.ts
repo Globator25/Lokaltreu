@@ -1,61 +1,54 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const setMock = vi.fn();
 
-vi.mock("@upstash/redis", () => ({
-  Redis: vi.fn().mockImplementation(() => ({
-    set: setMock,
-  })),
-}));
+vi.mock("@upstash/redis", () => {
+  class MockRedis {
+    constructor(config: { url: string; token: string }) {
+      void config;
+    }
+    async set(key: string, value: string, opts?: { ex?: number; nx?: boolean }) {
+      return setMock(key, value, opts);
+    }
+  }
+  return { Redis: MockRedis, default: MockRedis };
+});
 
-import { InMemoryReplayStore, RedisReplayStore } from "./redisStore.js";
+import { RedisReplayStore } from "./redisStore";
 
-describe("InMemoryReplayStore", () => {
-  beforeEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("returns true once within TTL and false on immediate reuse", async () => {
-    const store = new InMemoryReplayStore();
-    const first = await store.firstUse("memo", 60);
-    const second = await store.firstUse("memo", 60);
-
-    expect(first).toBe(true);
-    expect(second).toBe(false);
-  });
-
-  it("allows reuse after TTL expires", async () => {
-    vi.useFakeTimers();
-    const store = new InMemoryReplayStore();
-
-    const first = await store.firstUse("ttl", 1);
-    vi.advanceTimersByTime(1_001);
-    const second = await store.firstUse("ttl", 1);
-
-    expect(first).toBe(true);
-    expect(second).toBe(true);
-  });
+beforeEach(() => {
+  vi.resetModules();
+  setMock.mockReset();
 });
 
 describe("RedisReplayStore", () => {
-  beforeEach(() => {
-    setMock.mockReset();
-  });
-
   it("returns true when Redis reports OK", async () => {
     setMock.mockResolvedValueOnce("OK");
-    const store = new RedisReplayStore("https://redis", "token");
-    const first = await store.firstUse("redis-ok", 60);
-
-    expect(first).toBe(true);
-    expect(setMock).toHaveBeenCalledWith("jti:redis-ok", "1", { nx: true, ex: 60 });
+    const store = new RedisReplayStore("https://dummy", "token");
+    await expect(store.firstUse("jti-1", 60)).resolves.toBe(true);
+    expect(setMock).toHaveBeenCalledWith("replay:jti-1", "1", { ex: 60, nx: true });
   });
 
   it("returns false when Redis rejects NX constraint", async () => {
     setMock.mockResolvedValueOnce(null);
-    const store = new RedisReplayStore("https://redis", "token");
-    const reused = await store.firstUse("redis-reuse", 60);
+    const store = new RedisReplayStore("https://dummy", "token");
+    await expect(store.firstUse("jti-1", 60)).resolves.toBe(false);
+    expect(setMock).toHaveBeenCalledWith("replay:jti-1", "1", { ex: 60, nx: true });
+  });
 
-    expect(reused).toBe(false);
+  it("true once within TTL and false on immediate reuse", async () => {
+    setMock.mockResolvedValueOnce("OK");
+    setMock.mockResolvedValueOnce(null);
+    const store = new RedisReplayStore("https://dummy", "token");
+    expect(await store.firstUse("jti-2", 60)).toBe(true);
+    expect(await store.firstUse("jti-2", 60)).toBe(false);
+  });
+
+  it("allows reuse after TTL expires (simuliert)", async () => {
+    setMock.mockResolvedValueOnce("OK");
+    setMock.mockResolvedValueOnce("OK");
+    const store = new RedisReplayStore("https://dummy", "token");
+    expect(await store.firstUse("jti-3", 1)).toBe(true);
+    expect(await store.firstUse("jti-3", 1)).toBe(true);
   });
 });

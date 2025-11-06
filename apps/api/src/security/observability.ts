@@ -1,5 +1,5 @@
 import { metrics, type Counter } from "@opentelemetry/api";
-import type { MetricEvent, SecurityMetricName } from "@lokaltreu/types";
+import type { MetricEvent, SecurityMetricName } from "../runtime/contracts.js";
 
 const meter = metrics.getMeter("lokaltreu-security");
 const counters = new Map<SecurityMetricName, Counter>();
@@ -26,3 +26,6 @@ export function emitSecurityMetric(event: MetricEvent): void {
   const counter = getCounter(event.name);
   counter.add(event.value ?? 1, event.attributes);
 }
+
+
+

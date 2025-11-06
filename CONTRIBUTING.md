@@ -1,22 +1,57 @@
-Developer-Checkliste
+## Contributing Leitfaden
 
-- H1 vorhanden.
-- Verzeichnisbaum als Codeblock.
-- Quickstart-Block vorhanden und getestet.
-- CI-Gates in `.github/workflows` vorhanden.
+Danke, dass du zum Lokaltreu-Workspace beitragen möchtest! Bitte lies **AGENTS.md** aufmerksam – dort stehen Rollen, Entscheidungswege und alle verbindlichen Qualitätsregeln. Dieses Dokument fasst die wichtigsten Schritte für Contributors zusammen und verweist auf die relevanten Hilfsmittel.
 
-Typische Stolpersteine & Erste Hilfe
+### 1. Pflichtlektüre & Tools
 
-- Wenn Markdown unten „weiterläuft": prüfe schließende Backticks (```).
-- Wenn der Baum inline erscheint: stelle sicher, dass der Codeblock mit ``` geöffnet und geschlossen ist.
+- [AGENTS.md](./AGENTS.md) – Governance, RACI, CI-Gates, Incident-Flow.
+- [CODEOWNERS](./.github/CODEOWNERS) – wer muss involviert werden.
+- [SECURITY.md](./SECURITY.md) – Meldewege für Sicherheitsvorfälle.
+- ADR-Template unter `docs/adr/_template.md` (falls neue ADR benötigt wird).
 
-Hinweise
+### 2. Vorbereitungen
 
-> Hinweis: Keine Secrets im Repo. `.env*` und Terraform-States sind in `.gitignore`. SOPS-verschlüsselte Dateien dürfen versioniert werden.
+1. Fork oder Feature-Branch von `main` erstellen.
+2. Dependencies installieren: `npm install`.
+3. Husky-Hooks installieren (einmalig): `npm run prepare`.
+4. Optional: `npm run oas:lint` und `npm run gdpr:check`, wenn du an API oder Datenschutz arbeitest.
 
-Contribution workflow (kurz)
+### 3. Entwicklungs-Checkliste
 
-1. Fork oder branch vom `main`/`master`.
-2. Commit nach konventionellem Style (z. B. "docs: ...", "fix: ...").
-3. Öffne PR, verlinke relevante Issues und CI-Checklist.
-4. CI muss grün sein (Lint, Tests, Coverage) bevor Merge.
+- [ ] Conventional Commit Messages verwenden.
+- [ ] OpenAPI-Änderungen dokumentieren (ADR + OAS-Diff).
+- [ ] Typen regenerieren: `npm run codegen`.
+- [ ] Linting: `npm run lint`.
+- [ ] Typecheck: `npm run typecheck`.
+- [ ] Tests: `npm run test -w @lokaltreu/api` (und weitere projektspezifische Tests).
+- [ ] Coverage: `npm run test:coverage -w @lokaltreu/api` (Standards ≥ 80 % Linien/Funktionen/Statements, Branches ≥ 65 %).
+- [ ] GDPR-Gate: `npm run gdpr:check` falls Datenverarbeitung betroffen.
+
+### 4. Pull-Requests
+
+1. Rebase mit aktuellem `main`.
+2. PR-Template ausfüllen und auf die relevanten ADRs/RFCs verlinken.
+3. Mindestens ein Reviewer (zwei bei Breaking/API-Änderungen).
+4. Alle Required Checks müssen grün sein:
+   - `lint`, `typecheck`, `test`, `coverage`
+   - `contract` (OAS + Typ-Diff)
+   - `gdpr`
+   - `secrets`
+   - `build`
+5. Bei Security-/Incident-Fixes Security-Rolle direkt pingen und Nachdokumentation innerhalb von 24 h sicherstellen.
+
+### 5. Typische Stolpersteine
+
+- **Markdown läuft weiter** → schließende ``` prüfen.
+- **Tree wird inline dargestellt** → Codeblock korrekt öffnen/schließen.
+- **Vitest- oder Redis-Mocks** → Dummy-URLs (`https://dummy`) verwenden, Upstash nicht real ansprechen.
+- **Schema Drift** → immer `npm run codegen` + `git diff` vor PR.
+- **GDPR-Konstanten** → `@lokaltreu/config` verwenden (`RETENTION_DAYS = 180`).
+
+### 6. Nach dem Merge
+
+- Changeset hinzufügen (falls Release-relevant): `npx changeset`.
+- Release-Ablauf siehe AGENTS.md (SemVer, Tags `vMAJOR.MINOR.PATCH`).
+- Beobachte CI/Monitoring nach Deployments.
+
+Vielen Dank – stabile CI-Gates, saubere ADRs und gepflegte Contracts halten Lokaltreu auditierbar und compliant!

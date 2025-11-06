@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
+// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 import chai from 'chai';
 import chaiResponseValidator from 'chai-openapi-response-validator';
 chai.use(chaiResponseValidator('apps/api/openapi/lokaltreu-openapi-v2.0.yaml'));
@@ -8,3 +10,5 @@ describe('stamps/claim contract', () => {
     chai.expect(res).to.satisfyApiSpec;
   });
 });
+
+

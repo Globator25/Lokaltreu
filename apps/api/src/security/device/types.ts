@@ -7,3 +7,5 @@ export interface DeviceProof {
   signature: string;  // Signatur (Base64) über Nonce+Method+Path+Body-Hash
   nonce: string;      // Einmalwert zum Schutz vor Replay
 }
+
+

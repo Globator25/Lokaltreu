@@ -1,14 +1,17 @@
 {
   "name": "@lokaltreu/types",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "version": "0.1.1",
+  "private": true,
+  "types": "src/index.d.ts",
   "files": [
-    "dist"
+    "src"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "node -e \"console.log('Generated types validated via schema drift + CI gates.');\""
+    "codegen": "openapi-typescript ../../apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o src/index.d.ts",
+    "types:codegen": "openapi-typescript ../../apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o src/index.d.ts",
+    "test": "echo \"no tests for this workspace\" && exit 0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.10.1"
   }
 }

@@ -1,0 +1,2 @@
+# SOPS Policy Stub – Secrets nur verschlüsselt; EU-Only folgt in Schritt 6/7
+creation_rules: []

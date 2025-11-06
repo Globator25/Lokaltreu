@@ -56,4 +56,48 @@ describe("globalErrorHandler", () => {
 
     consoleSpy.mockRestore();
   });
+
+  it("falls back to request id when correlation header is missing and reads header arrays", () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const status = vi.fn().mockReturnThis();
+    const type = vi.fn().mockReturnThis();
+    const json = vi.fn().mockReturnThis();
+
+    const req = makeRequest({
+      method: "POST",
+      path: "/devices",
+    });
+    req.get = (() => undefined) as typeof req.get;
+    req.headers["x-request-id"] = ["", "req-array"];
+    req.headers["x-correlation-id"] = undefined;
+
+    const res = {
+      status,
+      type,
+      json,
+    } as unknown as Response;
+
+    const next = (() => undefined) as NextFunction;
+
+    globalErrorHandler("boom", req, res, next);
+
+    expect(consoleSpy).toHaveBeenCalledWith("[unhandled-error]", {
+      correlationId: "req-array",
+      path: "/devices",
+      method: "POST",
+      error: "boom",
+    });
+    expect(status).toHaveBeenCalledWith(500);
+    expect(type).toHaveBeenCalledWith("application/problem+json");
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correlation_id: "req-array",
+        requestId: "req-array",
+      }),
+    );
+
+    consoleSpy.mockRestore();
+  });
 });
+
+

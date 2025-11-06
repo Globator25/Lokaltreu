@@ -110,3 +110,5 @@ export async function verifyDeviceProof(ctx: DeviceProofContext, next: DevicePro
   ctx.onVerified?.(deviceId);
   await next();
 }
+
+

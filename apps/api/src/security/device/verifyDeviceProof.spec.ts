@@ -1,3 +1,4 @@
+import { TextDecoder } from "node:util";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Response } from "express";
 
@@ -10,7 +11,7 @@ vi.mock("../observability.js", () => ({
 }));
 
 import { verify } from "@noble/ed25519";
-import { createDeviceProofProblem } from "@lokaltreu/types";
+import { createDeviceProofProblem } from "../../runtime/contracts.js";
 import { makeRequest } from "../../test-utils/http.js";
 import { emitSecurityMetric } from "../observability.js";
 import { registerDevicePublicKey, rejectDeviceProof, verifyDeviceProof } from "./verifyDeviceProof.js";
@@ -48,6 +49,8 @@ function makeRes(): {
 describe("verifyDeviceProof", () => {
   beforeEach(() => {
     vi.mocked(emitSecurityMetric).mockClear();
+    vi.mocked(verify).mockReset();
+    vi.mocked(verify).mockResolvedValue(true);
   });
 
   it("accepts a valid device proof within the ±60s window", async () => {
@@ -123,6 +126,141 @@ describe("verifyDeviceProof", () => {
       attributes: { reason: "INVALID_SIGNATURE" },
     });
   });
+
+  it("rejects when timestamp header is not numeric", async () => {
+    const req = createRequest({
+      "x-device-proof": Buffer.alloc(64, 8).toString("base64"),
+      "x-device-id": "device-nan",
+      "x-device-timestamp": "not-a-number",
+      "x-device-jti": "jti-nan",
+    });
+
+    const result = await verifyDeviceProof(req);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("MISSING_HEADERS");
+    expect(result.deviceId).toBe("device-nan");
+    expect(emitSecurityMetric).toHaveBeenCalledWith({
+      name: "deviceProofFailed",
+      attributes: { reason: "MISSING_HEADERS" },
+    });
+  });
+
+  it("rejects when the device key is unknown", async () => {
+    const req = createRequest({
+      "x-device-proof": Buffer.alloc(64, 6).toString("base64"),
+      "x-device-id": "device-unknown",
+      "x-device-timestamp": Date.now().toString(),
+      "x-device-jti": "jti-unknown",
+    });
+
+    const result = await verifyDeviceProof(req);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("UNKNOWN_DEVICE");
+    expect(result.deviceId).toBe("device-unknown");
+    expect(emitSecurityMetric).toHaveBeenCalledWith({
+      name: "deviceProofFailed",
+      attributes: { reason: "UNKNOWN_DEVICE" },
+    });
+  });
+
+  it("rejects when the stored device key expired", async () => {
+    const deviceId = "device-expired";
+    const ttlMs = 15 * 60 * 1000;
+    const baseline = Date.now();
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValueOnce(baseline).mockImplementation(() => baseline + ttlMs + 1000);
+
+    registerDevicePublicKey(deviceId, Buffer.alloc(32, 7).toString("base64"));
+
+    const req = createRequest({
+      "x-device-proof": Buffer.alloc(64, 7).toString("base64"),
+      "x-device-id": deviceId,
+      "x-device-timestamp": (baseline + ttlMs + 1000).toString(),
+      "x-device-jti": "jti-expired",
+    });
+
+    const result = await verifyDeviceProof(req);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("UNKNOWN_DEVICE");
+    expect(emitSecurityMetric).toHaveBeenCalledWith({
+      name: "deviceProofFailed",
+      attributes: { reason: "UNKNOWN_DEVICE" },
+    });
+
+    nowSpy.mockRestore();
+  });
+
+  it("rejects when the signature length is invalid", async () => {
+    const deviceId = "device-short-signature";
+    registerDevicePublicKey(deviceId, Buffer.alloc(32, 11).toString("base64"));
+
+    const req = createRequest({
+      "x-device-proof": Buffer.alloc(16, 12).toString("base64"),
+      "x-device-id": deviceId,
+      "x-device-timestamp": Date.now().toString(),
+      "x-device-jti": "jti-short",
+    });
+
+    const result = await verifyDeviceProof(req);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("INVALID_SIGNATURE");
+    expect(emitSecurityMetric).toHaveBeenCalledWith({
+      name: "deviceProofFailed",
+      attributes: { reason: "INVALID_SIGNATURE" },
+    });
+  });
+
+  it("records a metric when ed25519 verification throws", async () => {
+    const deviceId = "device-throw";
+    registerDevicePublicKey(deviceId, Buffer.alloc(32, 13).toString("base64"));
+    vi.mocked(verify).mockImplementationOnce(async () => {
+      throw new Error("broken");
+    });
+
+    const req = createRequest({
+      "x-device-proof": Buffer.alloc(64, 13).toString("base64"),
+      "x-device-id": deviceId,
+      "x-device-timestamp": Date.now().toString(),
+      "x-device-jti": "jti-throw",
+    });
+
+    const result = await verifyDeviceProof(req);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("INVALID_SIGNATURE");
+    expect(emitSecurityMetric).toHaveBeenCalledWith({
+      name: "deviceProofFailed",
+      attributes: { reason: "INVALID_SIGNATURE" },
+    });
+  });
+
+  it("falls back to the request id when jti header is missing", async () => {
+    const deviceId = "device-jti-fallback";
+    registerDevicePublicKey(deviceId, Buffer.alloc(32, 14).toString("base64"));
+    const timestamp = Date.now().toString();
+    let capturedMessage: Uint8Array | undefined;
+
+    vi.mocked(verify).mockImplementationOnce(async (signature, message, key) => {
+      void signature;
+      void key;
+      capturedMessage = message;
+      return true;
+    });
+
+    const req = createRequest({
+      "x-device-proof": Buffer.alloc(64, 14).toString("base64"),
+      "x-device-id": deviceId,
+      "x-device-timestamp": timestamp,
+      "x-request-id": "req-fallback",
+    });
+
+    const result = await verifyDeviceProof(req);
+    expect(result.ok).toBe(true);
+    expect(result.deviceId).toBe(deviceId);
+    expect(capturedMessage).toBeDefined();
+    const decoded = new TextDecoder().decode(capturedMessage as Uint8Array);
+    expect(decoded.endsWith("|req-fallback")).toBe(true);
+    expect(emitSecurityMetric).not.toHaveBeenCalled();
+  });
 });
 
 describe("rejectDeviceProof", () => {
@@ -137,3 +275,6 @@ describe("rejectDeviceProof", () => {
     );
   });
 });
+
+
+

@@ -1,52 +1,22 @@
-# Node
-node_modules/
-npm-debug.log*
-
-# Next.js
-.next/
-out/
-
-# Build
+*.log
 dist/
-apps/**/dist/
-
-# Env
-.env.*
-!.env.example
-
-# OS/IDE
-.DS_Store
-.vscode-test
-.terraform/
-infra/terraform/.terraform/
-infra/terraform/terraform.tfstate
-infra/terraform/terraform.tfstate.*
-infra/terraform/.keys/
-infra/terraform/secrets/*.tfvars
-!infra/terraform/secrets/*.enc.tfvars
-# SOPS/AGE
-**/keys.txt
-# Decrypted temps
-*.tfvars.plain
-*decrypted*.tfvars
-# Testartefakte
-infra/terraform/secrets/test.enc.tfvars
-*.tsbuildinfo
-infra/terraform/local.auto.tfvars
+node_modules/
+apps/api/src/**/*.js
+apps/api/src/**/*.d.ts
+*.enc.tfvars
+.env*
 # Terraform
-*.tfstate
-*.tfstate.*
-*.tfvars
-*.plan
-tf.plan
-tfplan.json
-.crash
-.terraform/
-.terraform.lock.hcl
+infra/terraform/.terraform/
+infra/terraform/.keys/
+**/*.tfstate
+**/*.tfstate.*
+**/tf.plan
+**/tfplan.json
+**/*.terraform.lock.hcl
+**/*.exe
 
-# Backups/Temp
+# Coverage
+apps/api/coverage/
+
+# Sonstiges
 *.bak
-*.broken
-
-# Fly.io local
-fly.toml.local

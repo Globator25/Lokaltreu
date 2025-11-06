@@ -1,19 +1,16 @@
-import type { ProblemJson } from "@lokaltreu/types";
+import { problem as throwProblem, type Problem } from '@lokaltreu/config';
 
-type ErrorCode = ProblemJson["error_code"];
+export type ProblemDocument = Problem;
 
-export interface ProblemDocument {
-  type: string;
-  title: string;
-  status: number;
-  error_code: ErrorCode;
-  correlation_id: string;
-  detail?: string;
-  instance?: string;
+export const problem = throwProblem;
+
+export function asProblem<T extends { status: number; title?: string; type?: string }>(
+  doc: T,
+): Problem & T {
+  return {
+    type: doc.type ?? 'about:blank',
+    title: doc.title ?? 'Problem',
+    ...doc,
+    status: doc.status,
+  } as Problem & T;
 }
-
-export const problem = (p: ProblemDocument): Response =>
-  new Response(JSON.stringify(p), {
-    status: p.status,
-    headers: { "content-type": "application/problem+json" },
-  });

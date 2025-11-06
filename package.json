@@ -21,7 +21,11 @@
     "oas:bundle": "redocly bundle apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o artifacts/lokaltreu-openapi.yaml",
     "schema:drift": "git diff --quiet -- packages/types/src/index.d.ts || (echo schema_drift && exit 2)",
     "gdpr:check": "node ./tools/gdpr-check.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "gov:agents": "gh workflow run agents-ci.yml",
+    "gov:protect": "pwsh ./scripts/protect-default-branch.ps1",
+    "gov:links": "node ./tools/linkcheck.mjs",
+    "gov:sec": "vitest run tests/parallel/anti-replay.spec.ts apps/api/tests/mw/idempotency*.spec.ts apps/api/src/middleware/errors/*.spec.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.8",
@@ -48,5 +52,4 @@
   "lint-staged": {
     "*.{js,jsx,ts,tsx,cjs,mjs,json,yml,yaml,md}": "prettier -w"
   }
-
 }

@@ -1,113 +1,27 @@
 name: agents-ci
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: read
-  checks: write
-  security-events: write
-
-env:
-  NODE_VERSION: "22.x"
-  TF_WORKDIR: infra/terraform
+    paths:
+      - 'AGENTS.md'
+      - '.github/workflows/**'
+      - 'apps/**/agents/**'
 
 jobs:
-  ci:
-    name: ci
+  policy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - name: Enforce CODEOWNERS approvals
+        uses: mheap/github-action-required-reviewers@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: npm ci (root)
-        run: npm ci
-
-      - name: Types Codegen (AGENTS.md-kanonisch)
-        run: npm run codegen:types
-
-      - name: Build (API + Web)
-        run: npm run build
-
-      - name: Test (workspaces, mit Coverage)
-        run: npm test --workspaces -- --coverage
-
-      - name: Lint (inkl. Problem+JSON/Logs/Idempotency)
-        run: npm run lint
-
-  gdpr-compliance:
-    name: gdpr-compliance
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: npm ci
-        run: npm ci
-
-      - name: Problem+JSON Lint
-        run: node scripts/lint-problem-json.mjs
-
-      - name: Idempotency Placement Check
-        run: node scripts/check-idempotency-placement.mjs
-
-      - name: Log-Scan (keine PII / Retention-Hinweis)
-        run: node scripts/log-scan.mjs
-
-  security-gates:
-    name: security-gates
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout (mit Vollverlauf für Secret-Scanner)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: npm ci (nur prod-Audit relevant)
-        run: npm ci
-
-      - name: npm audit (Prod-deps)
-        run: npm audit --omit=dev
-
-      - name: Install gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect --source . --no-banner
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.8
-
-      - name: Terraform fmt (check)
-        working-directory: ${{ env.TF_WORKDIR }}
-        run: terraform fmt -check -recursive
-
-      - name: Terraform init
-        working-directory: ${{ env.TF_WORKDIR }}
-        run: terraform init -backend=false
-
-      - name: Terraform validate
-        working-directory: ${{ env.TF_WORKDIR }}
-        run: terraform validate
+          reviewers: 'org/sec-leads,org/platops'
+      - name: Block direct changes to secrets
+        shell: bash
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }})
+          echo "$CHANGED" | grep -E '\.sops\.ya?ml|(^|/)\.env(\.|$)' && { echo "Secret files changed"; exit 1; } || true

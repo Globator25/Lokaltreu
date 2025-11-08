@@ -7,6 +7,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
+    "prestart:test": "npm run build",
+    "start:test": "cross-env NODE_ENV=test PORT=3001 node dist/server.js",
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --max-warnings=0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -14,7 +16,10 @@
     "test:parallel": "vitest run tests/parallel",
     "test:parallel:ci": "cross-env VITEST_COVERAGE=false vitest run tests/parallel",
     "test:device-proof:ci": "cross-env VITEST_COVERAGE=false vitest run src/security/device/verifyDeviceProof.spec.ts",
-    "test:problem-json:ci": "cross-env VITEST_COVERAGE=false vitest run src/middleware/errors/globalErrorHandler.spec.ts"
+    "test:problem-json:ci": "cross-env VITEST_COVERAGE=false vitest run src/middleware/errors/globalErrorHandler.spec.ts",
+    "test:security:replay": "cross-env VITEST_COVERAGE=false vitest run \"src/security/replay/**/*.spec.ts\"",
+    "test:security:device-proof": "npm run test:device-proof:ci",
+    "test:security:plan-gate": "cross-env VITEST_COVERAGE=false vitest run \"src/security/plan/**/*.(spec|test).ts\""
   },
   "dependencies": {
     "@lokaltreu/config": "^0.1.0",

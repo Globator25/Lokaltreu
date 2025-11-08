@@ -1,81 +1,100 @@
-# AGENTS.md — Gold v2.2
+# Lokaltreu AGENTS.md — v2.2-gold
 
-status: authoritative  
-ci-required: true
+## 0) Metadaten
 
-required-checks:
+Owner: Tech Lead  
+Geltung: Verbindlich für menschliche Beiträge und KI-Aktionen  
+Letzte Prüfung: <TT.MM.JJJJ>
 
-- ci / build
-- ci / openapi-lint-and-codegen
-- ci / unit-and-contract
-- ci / coverage (>=80%)
-- gdpr-compliance / gdpr-checks
-- security-gates / anti-replay
-- security-gates / device-proof
-- security-gates / rfc7807-and-plan-gates
-- security-gates / terraform-validate-eu-only
-- security-gates / secrets-scan
+## 1) Referenzen
 
-policy:
+SPEC v2.0, ARCH, ROADMAP 2.2, OpenAPI 3.1 (SSOT)
 
-- retention_days: 180
-- x-schema-drift-policy: "0"
+## 2) Projektfakten
 
-Priorität: `SPEC → OpenAPI → ARCH → AGENTS.md → Code`.
+[SENTINEL] SECTION: Projektfakten
+Architektur: Modularer Monolith (TypeScript), Next.js PWA, Node.js API  
+Standards: OpenAPI 3.1, RFC 7807, Idempotency-Key  
+Security: Ed25519 Device-Proof, Anti-Replay, WORM-Audit, Retention 180 Tage  
+Environments: dev, stage, prod (EU-Region)
 
----
+## 3) KPI-Ziele (MUSS)
 
-## Rollen & RACI
+- schema_drift = 0
+- coverage ≥ 80 %
+- replay_blocks = 100 %
+- proof_failures_caught = 100 %
+- audit_gaps = 0
 
-| Change-Typ        | Responsible  | Accountable | Consulted    | Informed     |
-| ----------------- | ------------ | ----------- | ------------ | ------------ |
-| Code              | Backend-Core | Maintainer  | PlatOps      | Sec-Leads    |
-| Prompts/Policies  | Sec-Leads    | Maintainer  | Backend-Core | PlatOps      |
-| Secrets           | PlatOps      | Sec-Leads   | Maintainer   | Backend-Core |
-| Workflows (CI/CD) | PlatOps      | Maintainer  | Sec-Leads    | Backend-Core |
+## 4) CI-Gates (MUSS) + KPIs
 
-## Entscheidungsrechte
+- Coverage: lines, functions, branches, statements ≥ 80 %
+- Contract: OpenAPI-Validierung grün; schema_drift = 0
+- Fehlerformat: error_conformity = 100 % (RFC 7807)
+- Anti-Replay: Paralleltest grün; replay_blocks = 100 %
+- Device-Proof: Positiv/Negativ-Fälle grün
+- Plan-Gates: Starter → 403 PLAN_NOT_ALLOWED getestet
+- OpenAPI-Lint: pass
+- Terraform: fmt + validate grün (EU-Region erzwungen)
+- GDPR: Checks grün (Art. 11, Retention 180 Tage)
+- Merge-Block: required checks aktiv
+  [SENTINEL] SECTION: CI-Gates (MUSS)
 
-- **Maintainer:** can ship ✓ · can block ✓ · can revert ✓
-- **Sec-Leads:** can ship ✗ · can block ✓ (Security) · can revert ✓
-- **PlatOps:** can ship (infra) ✓ · can block ✗ · can revert ✓ (runtime)
-- **Backend-Core:** can ship ✓ · can block ✓ (code quality) · can revert ✓
+## 5) Workflow-Trennung und Zweck
 
-## Change-Pfad
+- ci.yml: Kernqualität (Lint, Codegen, Build, Tests, Contract, Coverage)
+- gdpr-compliance.yml: Art. 11, Retention, Log-PII-Checks, Terraform EU-Only
+- security-gates.yml: Device-Proof, Anti-Replay, Rate-Limits
+  Begründung: rechtlich und sicherheitsrelevante Prüfungen getrennt skalieren und reviewen.
 
-1. RFC/ADR dokumentieren (`docs/adr/`).
-2. CODEOWNERS-Review (Security + Maintainer + betroffene Teams).
-3. Merge-Strategie: Squash-Merge, `main` linear, keine Force-Pushes.
-4. Rollback gemäß `docs/runbooks/rollback.md`.
+## 6) Aufgabenrezepte (CLI/IDE)
 
-## Notfallpfad
+[SENTINEL] SECTION: Aufgabenrezepte
 
-- Break-glass nur via 2FA-Hardware.
-- Max. 2 Maintainer besitzen Break-glass-Tokens.
-- Pflicht-Post-Mortem innerhalb 24 h (`docs/runbooks/incident.md`).
-- Nach-Deploy RFC/ADR ergänzen.
+1. OpenAPI → Types
+   codex exec "Generiere @lokaltreu/types aus OpenAPI und fixe Imports" --role Contract-Sheriff --context @apps/api/openapi/lokaltreu-openapi-v2.0.yaml @packages/types/\*\*
+2. RFC7807-Fehlerkonsistenz
+   codex exec "Validiere RFC7807-Fehler und ergänze fehlende error_code Enums" --role ProblemJSON-Arbiter --context @apps/api/openapi/** @apps/api/src/**
+3. Parallel-Anti-Replay
+   codex exec "Erstelle Anti-Replay-Test (10 parallel) für Idempotency-Key" --role Idempotency-Guardian,Test-Pilot --context @apps/api/src/mw/idempotency.ts @tests/security/\*\*
+4. Plan-Gate
+   codex exec "Schreibe Tests: Starter→403 PLAN_NOT_ALLOWED; Plus/Premium→OK" --role ProblemJSON-Arbiter,Test-Pilot --context @apps/api/src/handlers/referrals.ts @apps/api/openapi/\*\*
+5. Device-Proof
+   codex exec "Schreibe Positiv/Negativ-Fälle für X-Device-Proof (Ed25519)" --role Device-Proof-Engineer --context @apps/api/src/middleware/device-auth.ts
 
-## SLOs
+## 7) Security & DSGVO Leitplanken
 
-- Code-Review ≤ 24 h (Business).
-- Security-Fix-Review ≤ 4 h (On-Call).
-- Revert bei Incident ≤ 1 h (Business).
-- On-Call: Maintainer & Sec-Leads rotierend (Kalender im Team-Drive).
-- Workflow-Fixes (CI) ≤ 8 h.
+- Keine PII in Logs; erlaubt: tenant_id, device_id, card_id
+- Secrets nur via SOPS (\*.enc.tfvars)
+- EU-Region erzwingen
+- Art. 11 DSR ohne Zusatzidentifizierung
+- Retention 180 Tage; WORM-Audit; signierte Exporte (R2)
 
-## Audit-Anker
+## 8) Zentrale PR-Checkliste
 
-- `docs/ADR/`
-- `docs/runbooks/incident.md`
-- `docs/runbooks/rollback.md`
-- `observability/README.md`
-- `SECURITY.md`
+[SENTINEL] SECTION: ZENTRALE PR-CHECKLISTE
 
-## Verbote für Agents
+- Lint grün
+- Build grün
+- Tests grün + Coverage ≥ 80 %
+- Contract-Tests grün, schema_drift = 0
+- Fehler 100 % RFC 7807 konform
+- Parallel-Anti-Replay grün (1×201, 9×409)
+- Device-Proof-Fälle grün
+- Plan-Gate-Cases grün (Starter → 403 PLAN_NOT_ALLOWED)
+- OpenAPI-Lint pass
+- Terraform fmt + validate grün (EU-Only)
+- GDPR-Checks grün (Art. 11, Retention 180 Tage)
+- Audit-Artefakte erzeugt
 
-- Keine Produktions-Terraform-Ausführung.
-- Keine Secrets auslesen/rotieren.
-- Keine Änderungen an `.sops.yaml`.
-- Keine Key-Rotation, keine Break-glass-Aktivierung.
-- Keine manuellen Deploys oder Änderungen außerhalb der definierten Workflows.
-  Test line
+## 9) Audit-Trail
+
+[SENTINEL] SECTION: Audit-Trail
+
+- Jeden "codex exec"-Run per tee als Artefakt ablegen: ... | tee -a artifacts/codex-$(date +%Y%m%d-%H%M%S).log
+
+## 10) Pflege & Versionierung
+
+- Änderungen an AGENTS.md nur via PR; Reviewer: Owner + betroffene Rolle
+- Quartalsreview: Rollen, KPIs, Gates
+- Changelog-Eintrag in docs/CHANGELOG.md unter "Governance"

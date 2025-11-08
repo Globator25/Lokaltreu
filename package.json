@@ -34,7 +34,7 @@
     "test:plan-gate:live": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001/health \"cross-env API_BASE=http://127.0.0.1:3001 vitest run tests/security/plan/plan.spec.ts\"",
     "test:contract:live": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001/health \"cross-env BASE_URL=http://127.0.0.1:3001 vitest run --config tests/contract/vitest.config.ts\"",
     "test:sec:live": "npm run test:anti-replay:live && npm run test:device-proof:live && npm run test:plan-gate:live && npm run test:contract:live",
-    "test:security:suites": "cross-env API_BASE=http://127.0.0.1:3001 vitest run tests/security/plan/plan.spec.ts && cross-env API_BASE=http://127.0.0.1:3001 vitest run tests/security/device/device.spec.ts && cross-env API_BASE=http://127.0.0.1:3001 node tests/security/run-anti-replay.mjs",
+    "test:security:suites": "cross-env API_BASE=http://127.0.0.1:3001 vitest run tests/security/plan/plan.spec.ts && cross-env API_BASE=http://127.0.0.1:3001 vitest run tests/security/device/device.spec.ts && cross-env API_BASE=http://127.0.0.1:3001 vitest run tests/security/replay/replay.spec.ts",
     "test:security:all": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001/health \"npm run test:security:suites\"",
     "gdpr:docs:present": "node ./scripts/gdpr-docs-present.mjs",
     "gdpr:dsr": "bash ./scripts/check-dsr-endpoints.sh",

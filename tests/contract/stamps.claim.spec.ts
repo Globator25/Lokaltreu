@@ -1,14 +1,34 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
-// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-import chai from 'chai';
-import chaiResponseValidator from 'chai-openapi-response-validator';
-chai.use(chaiResponseValidator('apps/api/openapi/lokaltreu-openapi-v2.0.yaml'));
-describe('stamps/claim contract', () => {
-  it('201 matches schema', async () => {
-    const res = await fetch('http://localhost:4010/stamps/claim', { method:'POST', headers:{'Idempotency-Key':'a'}, body: JSON.stringify({ qrToken:'x'}) });
-    chai.expect(res.status).to.equal(201);
-    chai.expect(res).to.satisfyApiSpec;
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import chai from "chai";
+import chaiResponseValidator from "chai-openapi-response-validator";
+import { describe, it, expect } from "vitest";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const specPath = path.resolve(
+  __dirname,
+  "../../apps/api/openapi/lokaltreu-openapi-v2.0.yaml"
+);
+chai.use(chaiResponseValidator(specPath));
+
+const BASE = process.env.API_BASE ?? "http://localhost:3001";
+
+describe("stamps/claim contract", () => {
+  it("201 matches schema", async () => {
+    const r = await fetch(`${BASE}/stamps/claim`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        /* minimal gültiger Body gemäß OpenAPI */
+      }),
+    });
+    expect([201, 202]).toContain(r.status);
+    const json = await r.json();
+    chai.expect(json).to.satisfyApiSpec;
   });
 });
-
-

@@ -14,16 +14,16 @@ jobs:
         with: { node-version: 20, cache: npm }
 
       - name: Install
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Docs present
-        run: npm run gdpr:docs:present
+        run: npm run -w . gdpr:docs:present
 
       - name: Art.11 DSR flow
-        run: npm run gdpr:dsr
+        run: npm run -w . gdpr:dsr
 
       - name: Log PII + retention
-        run: npm run gdpr:logs
+        run: npm run -w . gdpr:logs
 
       - name: Terraform EU-only fmt+validate
-        run: npm run terraform:ci
+        run: npm run -w . terraform:ci

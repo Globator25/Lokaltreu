@@ -95,3 +95,4 @@ Environments: dev, stage, prod (EU-Region)
 - Änderungen an AGENTS.md nur via PR; Reviewer: Owner + betroffene Rolle
 - Quartalsreview: Rollen, KPIs, Gates
 - Changelog-Eintrag in docs/CHANGELOG.md unter "Governance"
+[SENTINEL:ENABLED]

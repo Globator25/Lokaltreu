@@ -25,6 +25,9 @@
     "test:anti-replay": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001 \"cross-env BASE_URL=http://127.0.0.1:3001 node tests/security/run-anti-replay.mjs\"",
     "test:device-proof": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001 \"cross-env BASE_URL=http://127.0.0.1:3001 vitest run --config tests/device-proof/vitest.config.ts\"",
     "test:plan-gate": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001 \"cross-env BASE_URL=http://127.0.0.1:3001 vitest run --config tests/plan/vitest.config.ts\"",
+    "test:security:replay": "npm run test:anti-replay",
+    "test:security:device-proof": "npm run test:device-proof",
+    "test:security:plan-gate": "npm run test:plan-gate",
     "test:contract": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001 \"cross-env BASE_URL=http://127.0.0.1:3001 vitest run --config tests/contract/vitest.config.ts\"",
     "test:anti-replay:live": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001 \"cross-env BASE_URL=http://127.0.0.1:3001 node tests/security/run-anti-replay.mjs\"",
     "test:device-proof:live": "start-server-and-test dev:stub:3001 http://127.0.0.1:3001 \"cross-env BASE_URL=http://127.0.0.1:3001 vitest run --config tests/device-proof/vitest.config.ts\"",
@@ -38,10 +41,13 @@
     "gov:protect": "pwsh ./scripts/protect-default-branch.ps1",
     "gov:links": "node ./tools/linkcheck.mjs",
     "gov:sec": "vitest run tests/parallel/anti-replay.spec.ts apps/api/tests/mw/idempotency*.spec.ts apps/api/src/middleware/errors/*.spec.ts",
-    "agents:sentinels": "pwsh -File scripts/agents-sentinel-check.ps1"
+    "agents:sentinels": "pwsh -File scripts/agents-sentinel-check.ps1",
+    "changeset": "changeset",
+    "release:ci": "changeset publish",
+    "version:ci": "changeset version && npm install && git add -A && git commit -m \"chore: version packages\""
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.8",
+    "@changesets/cli": "^2.29.7",
     "@commitlint/cli": "^19.7.1",
     "@commitlint/config-conventional": "^19.7.1",
     "@next/eslint-plugin-next": "^16.0.1",

@@ -33,3 +33,6 @@ import type { components } from '@lokaltreu/types';
 ```
 
 Begründung: Contracts & Standards (AGENTS.md) verlangen dokumentierten Typen-Flow aus der OpenAPI-SSOT.
+
+## Governance
+Siehe [AGENTS.md](./AGENTS.md) für Rollen, Gates und PR-Checkliste.

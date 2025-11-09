@@ -1,2 +1,4 @@
 #!/usr/bin/env sh
-npm run -s agents:sentinels
+set -e
+root="$(git rev-parse --show-toplevel)"
+npm --prefix "$root" run -s agents:sentinels

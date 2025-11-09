@@ -1,21 +1,21 @@
 # scripts/Fix-Workflows.ps1
 # Windows 11 + PowerShell 7
-# - patched '${{ runner.temp }}' korrekt (literal $ via $$)
-# - fügt workflow_dispatch: {} hinzu, wenn fehlt
-# - YAML-Validierung mit powershell-yaml (Fallback ohne Validierung)
-# - idempotent, Backups *.bak
+# - Fügt workflow_dispatch in EXISTIERENDEN on-Block ein (kein Duplikat)
+# - Repariert literal '${{ runner.temp }}' via '$$'
+# - YAML-Validierung via powershell-yaml
+# - Idempotent; erstellt *.bak
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# YAML-Validator laden (fallback, falls Install scheitert)
 if (-not (Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue)) {
   try {
     Install-Module -Name powershell-yaml -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
     Import-Module powershell-yaml -ErrorAction Stop
   } catch {
-    Write-Warning 'powershell-yaml nicht verfügbar. YAML-Validierung wird übersprungen.'
-    function ConvertFrom-Yaml { param([string]$s) return $null }
+    Write-Warning "YAML module not available. Validation will be skipped."
+    function ConvertFrom-Yaml { param($x) return $null }
+    function ConvertTo-Yaml { param([Parameter(ValueFromPipeline=$true)]$Data) return $Data }
   }
 } else {
   Import-Module powershell-yaml -ErrorAction Stop
@@ -24,52 +24,66 @@ if (-not (Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue)) {
 $workflowPath = '.github/workflows'
 $targets = @('iac-validate.yml','ci.yml','security-gates.yml','gdpr-compliance.yml')
 
-function Add-Or-Normalize-Dispatch([string]$content) {
-  if ($content -notmatch '(?m)^\s*workflow_dispatch:\s*\{\s*\}\s*$') {
-    if ($content -match '(?s)^\s*on:\s*\n') {
-      $block = @"
-on:
-  pull_request:
-    branches: [ main ]
-  push:
-    branches: [ main ]
-  workflow_dispatch: {}
-"@
-      return ($content -replace '(?s)^\s*on:\s*\n', $block)
-    } else {
-      return "on:`n  workflow_dispatch: {}`n$content"
-    }
+function Ensure-WorkflowDispatch([string]$yamlText) {
+  $doc = ConvertFrom-Yaml -Yaml $yamlText
+  if (-not $doc) { throw "Leeres/ungültiges YAML" }
+
+  # Top-Level 'on' initialisieren, falls fehlt
+  if (-not ($doc.PSObject.Properties.Name -contains 'on')) {
+    $doc | Add-Member -NotePropertyName 'on' -NotePropertyValue (@{}) -Force
   }
-  return $content
+
+  # 'on' in Hashtable konvertieren, falls PSCustomObject
+  if ($doc.on -isnot [hashtable]) {
+    $onHash = @{}
+    foreach ($p in $doc.on.PSObject.Properties) { $onHash[$p.Name] = $p.Value }
+    $doc.on = $onHash
+  }
+
+  # workflow_dispatch hinzufügen, wenn fehlt
+  if (-not $doc.on.ContainsKey('workflow_dispatch')) {
+    $doc.on['workflow_dispatch'] = @{}
+  }
+
+  # Standard-Trigger ergänzen, wenn gar keine existieren
+  if ($doc.on.Count -eq 1 -and $doc.on.ContainsKey('workflow_dispatch')) {
+    if (-not $doc.on.ContainsKey('pull_request')) { $doc.on['pull_request'] = @{ branches = @('main') } }
+    if (-not $doc.on.ContainsKey('push'))         { $doc.on['push']         = @{ branches = @('main') } }
+  }
+
+  return ConvertTo-Yaml -Data $doc
 }
 
-foreach ($file in $targets) {
-  $full = Join-Path $workflowPath $file
-  if (-not (Test-Path $full)) { Write-Warning ("missing: {0}" -f $file); continue }
+foreach ($name in $targets) {
+  $path = Join-Path $workflowPath $name
+  if (-not (Test-Path $path)) { Write-Warning "missing: $name"; continue }
 
-  Write-Host ("`n--- {0} ---" -f $file)
-  Copy-Item $full "$full.bak" -Force
+  Write-Host "`n--- $name ---"
+  Copy-Item $path "$path.bak" -Force
+  $raw = Get-Content $path -Raw
 
-  $c = Get-Content $full -Raw
-
-  # Fix: literal '${{ runner.temp }}'
-  # Ersetze nur nackte 'runner.temp' Vorkommen, die nicht schon korrekt templated sind
-  if ($c -match 'runner\.temp' -and $c -notmatch '\$\{\{\s*runner\.temp\s*\}\}') {
-    $c = $c -replace 'runner\.temp', '$${{ runner.temp }}'
+  # runner.temp literal fix, nur wenn nicht schon templated
+  if ($raw -match 'runner\.temp') {
+    Write-Host "Fixing runner.temp usage..." -ForegroundColor Yellow
+    $raw = $raw -replace 'runner\.temp', '$${{ runner.temp }}'
   }
 
-  # Trigger sicherstellen
-  $c = Add-Or-Normalize-Dispatch $c
-
-  # Schreiben
-  Set-Content -Path $full -Value $c -Encoding UTF8
-
-  # YAML prüfen
+  # on-block korrigieren/ergänzen
   try {
-    $null = $c | ConvertFrom-Yaml
-    Write-Host ("OK {0}: validated" -f $file) -ForegroundColor Green
+    $out = Ensure-WorkflowDispatch $raw
   } catch {
-    Write-Host ("FAIL {0}: {1}" -f $file, $_.Exception.Message) -ForegroundColor Red
+    Write-Host "FAIL $name: $($_.Exception.Message)" -ForegroundColor Red
+    continue
+  }
+
+  Set-Content -Path $path -Value $out -Encoding UTF8
+
+  # Validierung – erneut parsen
+  try {
+    $null = ConvertFrom-Yaml -Yaml (Get-Content $path -Raw)
+    Write-Host "OK $name: validated" -ForegroundColor Green
+  } catch {
+    Write-Host "FAIL $name: $($_.Exception.Message)" -ForegroundColor Red
   }
 }
 

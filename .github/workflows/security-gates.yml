@@ -16,16 +16,5 @@ jobs:
       - name: Install
         run: npm ci --include=dev
 
-      - name: Start API (test profile)
-        run: npm run -w apps/api start:test &
-      - name: Wait for API
-        run: npx wait-on http://localhost:3001/health
-
-      - name: Anti-Replay
-        run: npm run -w apps/api test:security:replay
-
-      - name: Device-Proof
-        run: npm run -w apps/api test:security:device-proof
-
-      - name: Plan-Gate
-        run: npm run -w apps/api test:security:plan-gate
+      - name: Security tests
+        run: npm run -s test:security:with-stub

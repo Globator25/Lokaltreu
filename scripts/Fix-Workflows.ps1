@@ -1,51 +1,39 @@
 # scripts/Fix-Workflows.ps1
-# Windows 11 + PowerShell 7
-# - Fügt workflow_dispatch in EXISTIERENDEN on-Block ein (kein Duplikat)
-# - Repariert literal '${{ runner.temp }}' via '$$'
-# - YAML-Validierung via powershell-yaml
-# - Idempotent; erstellt *.bak
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if (-not (Get-Command ConvertFrom-Yaml -ErrorAction SilentlyContinue)) {
   try {
     Install-Module -Name powershell-yaml -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
-    Import-Module powershell-yaml -ErrorAction Stop
   } catch {
-    Write-Warning "YAML module not available. Validation will be skipped."
-    function ConvertFrom-Yaml { param($x) return $null }
-    function ConvertTo-Yaml { param([Parameter(ValueFromPipeline=$true)]$Data) return $Data }
+    Write-Warning 'powershell-yaml nicht verfügbar. YAML-Validierung wird übersprungen.'
+    function ConvertFrom-Yaml { param([string]$Yaml) return $null }
+    function ConvertTo-Yaml   { param([Parameter(ValueFromRemainingArguments)]$Data) return $Yaml }
   }
-} else {
-  Import-Module powershell-yaml -ErrorAction Stop
 }
+Import-Module powershell-yaml -ErrorAction SilentlyContinue
 
 $workflowPath = '.github/workflows'
 $targets = @('iac-validate.yml','ci.yml','security-gates.yml','gdpr-compliance.yml')
 
 function Ensure-WorkflowDispatch([string]$yamlText) {
   $doc = ConvertFrom-Yaml -Yaml $yamlText
-  if (-not $doc) { throw "Leeres/ungültiges YAML" }
+  if (-not $doc) { throw 'leeres/ungültiges YAML' }
 
-  # Top-Level 'on' initialisieren, falls fehlt
   if (-not ($doc.PSObject.Properties.Name -contains 'on')) {
     $doc | Add-Member -NotePropertyName 'on' -NotePropertyValue (@{}) -Force
   }
 
-  # 'on' in Hashtable konvertieren, falls PSCustomObject
   if ($doc.on -isnot [hashtable]) {
-    $onHash = @{}
-    foreach ($p in $doc.on.PSObject.Properties) { $onHash[$p.Name] = $p.Value }
-    $doc.on = $onHash
+    $h = @{}
+    foreach ($p in $doc.on.PSObject.Properties) { $h[$p.Name] = $p.Value }
+    $doc.on = $h
   }
 
-  # workflow_dispatch hinzufügen, wenn fehlt
   if (-not $doc.on.ContainsKey('workflow_dispatch')) {
     $doc.on['workflow_dispatch'] = @{}
   }
 
-  # Standard-Trigger ergänzen, wenn gar keine existieren
   if ($doc.on.Count -eq 1 -and $doc.on.ContainsKey('workflow_dispatch')) {
     if (-not $doc.on.ContainsKey('pull_request')) { $doc.on['pull_request'] = @{ branches = @('main') } }
     if (-not $doc.on.ContainsKey('push'))         { $doc.on['push']         = @{ branches = @('main') } }
@@ -56,34 +44,30 @@ function Ensure-WorkflowDispatch([string]$yamlText) {
 
 foreach ($name in $targets) {
   $path = Join-Path $workflowPath $name
-  if (-not (Test-Path $path)) { Write-Warning "missing: $name"; continue }
+  if (-not (Test-Path $path)) { Write-Warning ("missing: {0}" -f $name); continue }
 
-  Write-Host "`n--- $name ---"
+  Write-Host ("`n--- {0} ---" -f $name)
   Copy-Item $path "$path.bak" -Force
   $raw = Get-Content $path -Raw
 
-  # runner.temp literal fix, nur wenn nicht schon templated
-  if ($raw -match 'runner\.temp') {
-    Write-Host "Fixing runner.temp usage..." -ForegroundColor Yellow
+  if ($raw -match 'runner\.temp' -and $raw -notmatch '\$\{\{\s*runner\.temp\s*\}\}') {
     $raw = $raw -replace 'runner\.temp', '$${{ runner.temp }}'
   }
 
-  # on-block korrigieren/ergänzen
   try {
     $out = Ensure-WorkflowDispatch $raw
   } catch {
-    Write-Host "FAIL $name: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host ("FAIL {0}: {1}" -f $name, $_.Exception.Message) -ForegroundColor Red
     continue
   }
 
   Set-Content -Path $path -Value $out -Encoding UTF8
 
-  # Validierung – erneut parsen
   try {
     $null = ConvertFrom-Yaml -Yaml (Get-Content $path -Raw)
-    Write-Host "OK $name: validated" -ForegroundColor Green
+    Write-Host ("OK {0}: validated" -f $name) -ForegroundColor Green
   } catch {
-    Write-Host "FAIL $name: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host ("FAIL {0}: {1}" -f $name, $_.Exception.Message) -ForegroundColor Red
   }
 }
 

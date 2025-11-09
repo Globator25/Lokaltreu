@@ -12,14 +12,19 @@
     "build": "npm run build:web && npm run build:api",
     "start:web": "node apps/web/.next/standalone/server.js",
     "start:api": "node apps/api/dist/index.js",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "agents:sentinel:node": "node scripts/agents-sentinel-check.mjs",
+    "agents:sentinels": "npm run -s agents:sentinel:node",
+    "contract:check": "node scripts/contract-check.mjs",
+    "test:with-stub": "cross-env STUB=1 vitest run --coverage",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "engines": {
-  "node": ">=20 <23"
-},
+    "node": ">=20 <23"
+  },
   "description": "",
   "private": "true",
   "workspaces": [
@@ -30,9 +35,10 @@
     "@next/eslint-plugin-next": "^15.5.4",
     "@typescript-eslint/parser": "^8.45.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
+    "husky": "^9.1.7",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
   }
-
 }

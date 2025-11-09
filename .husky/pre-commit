@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+set -e
+npm run -s agents:sentinel:node
+npm run -s contract:check

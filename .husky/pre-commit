@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 set -e
-root="$(git rev-parse --show-toplevel)"
-npm --prefix "$root" run -s agents:sentinels
+ROOT="$(git rev-parse --show-toplevel)"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/agents-sentinel-check.ps1"

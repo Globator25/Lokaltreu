@@ -1,96 +1,77 @@
-// CJS-Stub für Port 3001 mit Health-Check
 const http = require("http");
-const { URL } = require("url");
 
-const PORT = Number(process.env.PORT || 3001);
-const HOST = process.env.HOST || "127.0.0.1";
-const store = new Map(); // Idempotency-Keys
+const seen = new Set(); // für einfache Anti-Replay/Idempotency
 
-function send(res, status, body, headers = {}) {
-  const h = { "content-type": "application/problem+json", ...headers };
-  res.writeHead(status, h);
-  res.end(typeof body === "string" ? body : JSON.stringify(body));
-}
+const server = http.createServer(async (req, res) => {
+  const u = new URL(req.url, "http://127.0.0.1:3001");
+  const path = u.pathname.toLowerCase();
 
-const server = http.createServer((req, res) => {
-  const u = new URL(req.url, `http://${req.headers.host}`);
-  const { method } = req;
-
-  // Health 200
-  if (u.pathname === "/" && method === "GET") {
-    res.writeHead(200, { "content-type": "text/plain" });
+  // Health
+  if (path === "/health") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
     return res.end("ok");
   }
-  if (u.pathname === "/health" && method === "GET") {
-    res.writeHead(200, { "content-type": "application/json" });
-    return res.end(JSON.stringify({ ok: true }));
+
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  const body = Buffer.concat(chunks).toString("utf8");
+  let json;
+  try {
+    json = body ? JSON.parse(body) : undefined;
+  } catch {
+    json = undefined;
   }
 
-  // 401 ohne Device-Proof
-  if (u.pathname === "/rewards/redeem" && method === "POST") {
-    const proof = req.headers["x-device-proof"];
-    if (!proof) {
-      return send(res, 401, {
-        type: "about:blank",
-        title: "Unauthorized",
-        status: 401,
-        error_code: "DEVICE_PROOF_MISSING",
-        correlation_id: "stub-401",
-      });
-    }
-    return send(res, 200, { ok: true }, { "content-type": "application/json" });
+  if (req.method === "POST" && path.includes("/rewards/redeem")) {
+    const problem = {
+      type: "UNAUTHORIZED",
+      title: "Unauthorized",
+      status: 401,
+      detail: "Missing or invalid proof",
+    };
+    res.writeHead(401, { "Content-Type": "application/problem+json" });
+    return res.end(JSON.stringify(problem));
   }
 
-  // 403 Plan-Gate
-  if (u.pathname === "/referrals/link" && method === "GET") {
-    return send(res, 403, {
-      type: "about:blank",
-      title: "Forbidden",
+  if (req.method === "GET" && path.includes("/referrals/link")) {
+    const problem = {
+      type: "PLAN_NOT_ALLOWED",
+      title: "Plan not allowed",
       status: 403,
-      error_code: "PLAN_NOT_ALLOWED",
-      correlation_id: "stub-403",
-    });
+      detail: "Starter plan not allowed for this action",
+    };
+    res.writeHead(403, { "Content-Type": "application/problem+json" });
+    return res.end(JSON.stringify(problem));
   }
 
-  // Idempotency: 1x201, dann 409
-  if (u.pathname === "/stamps/claim" && method === "POST") {
-    const key = req.headers["idempotency-key"] || "default-key";
-    if (!store.has(key)) {
-      store.set(key, true);
-      return send(res, 201, {
-        type: "about:blank",
-        title: "Created",
-        status: 201,
-        error_code: "CREATED",
-        correlation_id: "stub-201",
-      });
+  const key =
+    req.headers["idempotency-key"] ||
+    req.headers["x-idempotency-key"] ||
+    req.headers["x-replay-key"] ||
+    `${req.method} ${path}`;
+
+  if (
+    req.method === "POST" &&
+    (path.includes("replay") ||
+      req.headers["idempotency-key"] ||
+      req.headers["x-idempotency-key"] ||
+      req.headers["x-replay-key"])
+  ) {
+    if (seen.has(key)) {
+      res.writeHead(409, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ ok: false, conflict: true }));
     }
-    return send(res, 409, {
-      type: "about:blank",
-      title: "Conflict",
-      status: 409,
-      error_code: "IDEMPOTENT_REPLAY",
-      correlation_id: "stub-409",
-    });
+    seen.add(key);
+    res.writeHead(201, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ ok: true, created: true }));
   }
 
-  // 404
-  return send(res, 404, {
-    type: "about:blank",
-    title: "Not Found",
-    status: 404,
-    error_code: "NOT_FOUND",
-    correlation_id: "stub-404",
-  });
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ ok: true, echo: json ?? null }));
 });
 
-server.on("error", (e) => {
-  // eslint-disable-next-line no-console
-  console.error("Stub-Server-Fehler:", e.message);
-  process.exit(1);
-});
-
-server.listen(PORT, HOST, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Stub listening on http://${HOST}:${PORT} (health: /health)`);
+const host = "127.0.0.1";
+const port = 3001;
+server.listen(port, host, () => {
+  console.log(`Stub listening on http://${host}:${port} (health: /health)`);
 });

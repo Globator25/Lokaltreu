@@ -1,0 +1,66 @@
+{
+  "name": "lokaltreu",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ]
+  },
+  "scripts": {
+    "build": "npm run build -w @lokaltreu/api && npm run build -w @lokaltreu/web",
+    "codegen": "npm run codegen -w @lokaltreu/types",
+    "openapi:types": "openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
+    "lint": "eslint apps/api packages tests --ext .ts,.tsx,.js --max-warnings 0 && npm run -w @lokaltreu/web lint",
+    "typecheck": "tsc -b --pretty false",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "contract": "npm run -w packages/types types:codegen && npm run -w apps/api test:contract",
+    "contract:mock": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
+    "oas:lint": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml",
+    "oas:bundle": "redocly bundle apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o artifacts/lokaltreu-openapi.yaml",
+    "schema:drift": "git diff --quiet -- packages/types/src/index.d.ts || (echo schema_drift && exit 2)",
+    "gdpr:check": "node ./tools/gdpr-check.mjs",
+    "enforce:coverage": "node ./scripts/enforce-coverage.js 80",
+    "test:anti-replay": "node tests/security/run-anti-replay.js",
+    "test:device-proof": "vitest run --config tests/device-proof/vitest.config.ts",
+    "test:plan-gate": "vitest run --config tests/plan/vitest.config.ts",
+    "prepare": "husky",
+    "gov:agents": "gh workflow run agents-ci.yml",
+    "gov:protect": "pwsh ./scripts/protect-default-branch.ps1",
+    "gov:links": "node ./tools/linkcheck.mjs",
+    "gov:sec": "vitest run tests/parallel/anti-replay.spec.ts apps/api/tests/mw/idempotency*.spec.ts apps/api/src/middleware/errors/*.spec.ts"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.8",
+    "@commitlint/cli": "^19.7.1",
+    "@commitlint/config-conventional": "^19.7.1",
+    "@next/eslint-plugin-next": "^16.0.1",
+    "@redocly/cli": "^1.25.0",
+    "@redocly/openapi-core": "^2.11.0",
+    "@stoplight/prism-cli": "^5.14.2",
+    "@stoplight/spectral-cli": "^6.15.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitest/coverage-v8": "^4.0.7",
+    "chai-openapi-response-validator": "^0.14.2",
+    "esbuild": "^0.25.12",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.13",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "next": "^14.2.13",
+    "node-fetch": "^3.3.2",
+    "openapi-typescript": "^7.10.1",
+    "p-limit": "^5.0.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.7"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,cjs,mjs,json,yml,yaml,md}": "prettier -w"
+  }
+}

@@ -38,6 +38,7 @@
     "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
     "husky": "^9.1.7",
+    "rollup": "^4.53.1",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
   }

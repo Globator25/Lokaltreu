@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --config ../../vitest.config.api.cjs --coverage",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint ."
@@ -18,3 +18,6 @@
     "vitest": "^3.2.4"
   }
 }
+
+
+

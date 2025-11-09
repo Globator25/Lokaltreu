@@ -1,0 +1,9 @@
+# Governance and Security CODEOWNERS
+# Sensitive files require dedicated reviewers and maintainers
+/docs/AGENTS.md          @tech-lead @maintainers
+/.github/workflows/*     @sec-lead  @ci-maintainers
+/apps/api/openapi/**     @contract-sheriff @api-lead
+/infra/terraform/**      @platform-lead
+
+# Default fallback (optional)
+*                      @maintainers

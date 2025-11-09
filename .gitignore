@@ -20,3 +20,5 @@ apps/api/coverage/
 
 # Sonstiges
 *.bak
+
+coverage/

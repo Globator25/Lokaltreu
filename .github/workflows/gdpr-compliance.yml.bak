@@ -1,5 +1,3 @@
-on:
-  workflow_dispatch: {}
 name: gdpr-compliance
 on:
   pull_request:
@@ -29,4 +27,3 @@ jobs:
 
       - name: Terraform EU-only fmt+validate
         run: npm run terraform:ci
-

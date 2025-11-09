@@ -1,5 +1,3 @@
-on:
-  workflow_dispatch: {}
 name: security-gates
 on:
   pull_request:
@@ -31,4 +29,3 @@ jobs:
 
       - name: Plan-Gate
         run: npm run test:security:plan-gate
-

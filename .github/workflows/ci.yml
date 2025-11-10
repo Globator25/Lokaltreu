@@ -10,19 +10,30 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      NPM_CONFIG_ENGINE_STRICT: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/**/package-lock.json
+
+      - name: Node diagnostics
+        run: node -v && npm -v && npm config get engine-strict || true
 
       - name: AGENTS.md sentinels
         shell: pwsh
         run: ./scripts/agents-sentinel-check.ps1
 
       - name: Install
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Lint
         run: npm run lint

@@ -7,12 +7,26 @@ on:
 jobs:
   gdpr:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      NPM_CONFIG_ENGINE_STRICT: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/**/package-lock.json
+
+      - name: Node diagnostics
+        run: node -v && npm -v && npm config get engine-strict || true
+
+      - name: Install
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Docs present
         run: node scripts/check-docs-present.mjs compliance

@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: 'npm'
 
       - name: Docs present
         run: node scripts/check-docs-present.mjs compliance
@@ -22,3 +26,4 @@ jobs:
       - name: Terraform EU-only
         if: hashFiles('infra/terraform/**') != ''
         run: node scripts/terraform-enforce-eu.mjs infra/terraform
+

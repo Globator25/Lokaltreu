@@ -14,8 +14,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: '20.19.0'
+          cache: 'npm'
 
       - name: AGENTS.md sentinels
         shell: pwsh
@@ -47,3 +47,4 @@ jobs:
 
       - name: RFC7807 conformity checks
         run: npm run problemjson:check
+

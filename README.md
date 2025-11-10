@@ -101,3 +101,10 @@ npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 - Verfügbarkeit Kernrouten: 99,90 %
 - Performance: p50 ≤ 500 ms, p95 ≤ 3000 ms, p99 ≤ 6000 ms
 - Resilienz: RPO 15 min, RTO 60 min
+
+## Governance & CI-Gates
+Dieses Repository erzwingt qualitätssichernde Gates bei Pull Requests.
+- **Governance:** siehe [docs/AGENTS.md](docs/AGENTS.md)
+- **CI-Workflows:** [.github/workflows/ci.yml](.github/workflows/ci.yml), [.github/workflows/security-gates.yml](.github/workflows/security-gates.yml), [.github/workflows/gdpr-compliance.yml](.github/workflows/gdpr-compliance.yml)
+- **Required Checks (Branch Protection):** `ci`, `security-gates`, `gdpr-compliance`
+- **Nachweise:** siehe [docs/evidence/INDEX.md](docs/evidence/INDEX.md)

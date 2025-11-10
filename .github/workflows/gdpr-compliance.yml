@@ -1,0 +1,24 @@
+name: gdpr-compliance
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  gdpr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docs present
+        run: node scripts/check-docs-present.mjs compliance
+
+      - name: Retention policy (180d)
+        run: node scripts/check-retention.mjs 180
+
+      - name: PII log scan
+        run: npm run scan:logs:no-pii
+
+      - name: Terraform EU-only
+        if: hashFiles('infra/terraform/**') != ''
+        run: node scripts/terraform-enforce-eu.mjs infra/terraform

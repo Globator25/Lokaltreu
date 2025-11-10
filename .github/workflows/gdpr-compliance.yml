@@ -1,32 +1,24 @@
-on:
-  workflow_dispatch: {}
 name: gdpr-compliance
 on:
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main ]
+  workflow_dispatch: {}
 
 jobs:
   gdpr:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-
-      - name: Install
-        run: npm ci
 
       - name: Docs present
-        run: npm run gdpr:docs:present
+        run: node scripts/check-docs-present.mjs compliance
 
-      - name: Art.11 DSR flow
-        run: npm run gdpr:dsr
+      - name: Retention policy (180d)
+        run: node scripts/check-retention.mjs 180
 
-      - name: Log PII + retention
-        run: npm run gdpr:logs
+      - name: PII log scan
+        run: npm run scan:logs:no-pii
 
-      - name: Terraform EU-only fmt+validate
-        run: npm run terraform:ci
-
+      - name: Terraform EU-only
+        if: hashFiles('infra/terraform/**') != ''
+        run: node scripts/terraform-enforce-eu.mjs infra/terraform

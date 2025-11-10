@@ -24,7 +24,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             apps/**/package-lock.json
-            .github/workflows/cache-version-1   # Cache bust marker
+            .github/workflows/cache-version-2   # Cache bust marker
 
       - name: Node diagnostics
         run: node -v && npm -v && npm config get engine-strict || true
@@ -129,7 +129,7 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             apps/**/package-lock.json
-            .github/workflows/cache-version-1   # Cache bust marker
+            .github/workflows/cache-version-2   # Cache bust marker
 
       - name: Node diagnostics
         run: node -v && npm -v && npm config get engine-strict || true
@@ -222,7 +222,213 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             apps/**/package-lock.json
-            .github/workflows/cache-version-1   # Cache bust marker
+            .github/workflows/cache-version-2   # Cache bust marker
+
+      - name: Node diagnostics
+        run: node -v && npm -v && npm config get engine-strict || true
+      - name: Install
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Install workspaces
+        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
+      - name: Start API (test profile)
+        run: |
+          nohup npm run security:api:start > security-api.log 2>&1 &
+          echo $! > api.pid
+      - name: Wait for API
+        run: |
+          for i in {1..90}; do
+            if curl -fsS "${API_BASE}/health" >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          echo "API not healthy in time"; cat security-api.log || true; exit 1
+      - name: Anti-Replay
+        run: npm run test:security:anti-replay
+      - name: Device-Proof
+        run: npm run test:security:device-proof
+      - name: Plan-Gate
+        run: npm run test:security:plan-gate
+      - name: Dump API log on failure
+        if: failure()
+        run: |
+          echo "--- security-api.log ---"
+          [[ -f security-api.log ]] && tail -n +1 security-api.log || true
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-gates-logs
+          path: |
+            security-api.log
+            *.json
+            scripts/security/*.mjs
+
+
+name: smoke
+on: { workflow_dispatch: {} }
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsSL https://lokaltreu-dev.fly.dev/ >/dev/null
+
+
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        options: [dev]
+        default: dev
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # nur vom main-Branch aus manuell starten
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.env || 'dev' }}
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV || secrets.FLY_API_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Secret smoke test
+        run: test -n "$FLY_API_TOKEN"
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy -a lokaltreu-dev --config fly.dev.toml --remote-only
+
+name: gdpr-compliance
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  gdpr:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      NPM_CONFIG_ENGINE_STRICT: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/**/package-lock.json
+            .github/workflows/cache-version-2   # Cache bust marker
+
+      - name: Node diagnostics
+        run: node -v && npm -v && npm config get engine-strict || true
+
+      - name: Install
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Install workspaces
+        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
+
+      - name: Docs present
+        run: node scripts/check-docs-present.mjs compliance
+
+      - name: Retention policy (180d)
+        run: node scripts/check-retention.mjs 180
+
+      - name: PII log scan
+        run: npm run scan:logs:no-pii
+
+      - name: Terraform EU-only
+        if: hashFiles('infra/terraform/**') != ''
+        run: node scripts/terraform-enforce-eu.mjs infra/terraform
+
+
+name: iac-validate
+on:
+  workflow_call: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform validate
+        if: hashFiles('infra/terraform/**') != ''
+        run: |
+          terraform -chdir=infra/terraform fmt -check
+          terraform -chdir=infra/terraform validate
+
+name: rollback
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "registry.fly.io/lokaltreu-dev:<tag>"
+        required: true
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV || secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy -a lokaltreu-dev --image "${{ inputs.image }}"
+
+name: secret-smoke
+on: { workflow_dispatch: {} }
+jobs:
+  chk:
+    runs-on: ubuntu-latest
+    steps:
+      - run: test -n "${{ secrets.FLY_API_TOKEN_DEV || secrets.FLY_API_TOKEN }}"
+
+name: security-gates
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      API_BASE: ${{ secrets.API_BASE || 'http://localhost:4010' }}
+      AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+      STARTER_TOKEN: ${{ secrets.STARTER_TOKEN }}
+      DP_PRIV: ${{ secrets.DP_PRIV }}
+      DP_PUB: ${{ secrets.DP_PUB }}
+      NPM_CONFIG_ENGINE_STRICT: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.0'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/**/package-lock.json
+            .github/workflows/cache-version-2   # Cache bust marker
 
       - name: Node diagnostics
         run: node -v && npm -v && npm config get engine-strict || true

@@ -25,11 +25,15 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             apps/**/package-lock.json
+            .github/workflows/cache-version-1   # Cache bust marker
 
       - name: Node diagnostics
         run: node -v && npm -v && npm config get engine-strict || true
       - name: Install
         run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Install workspaces
+        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
       - name: Start API (test profile)
         run: |
           nohup npm run security:api:start > security-api.log 2>&1 &

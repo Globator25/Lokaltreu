@@ -30,11 +30,8 @@ jobs:
       - name: Relax engine strict (CI only)
         run: echo "engine-strict=false" >> .npmrc
 
-      - name: Install
-        run: npm ci --prefer-offline --no-audit --no-fund
-
-      - name: Install workspaces
-        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
+      - name: Install all workspaces + root
+        run: npm ci --workspaces --include-workspace-root --prefer-offline --no-audit --no-fund
 
       - name: Docs present
         run: node scripts/check-docs-present.mjs compliance

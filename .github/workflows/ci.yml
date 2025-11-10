@@ -139,9 +139,6 @@ jobs:
       - name: Install
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Install workspaces
-        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
-
       - name: Docs present
         run: node scripts/check-docs-present.mjs compliance
 
@@ -235,8 +232,6 @@ jobs:
       - name: Install
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Install workspaces
-        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
       - name: Start API (test profile)
         run: |
           nohup npm run security:api:start > security-api.log 2>&1 &
@@ -348,9 +343,6 @@ jobs:
       - name: Install
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Install workspaces
-        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
-
       - name: Docs present
         run: node scripts/check-docs-present.mjs compliance
 
@@ -440,8 +432,6 @@ jobs:
       - name: Install
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Install workspaces
-        run: npm ci -w apps/web -w apps/api --prefer-offline --no-audit --no-fund
       - name: Start API (test profile)
         run: |
           nohup npm run security:api:start > security-api.log 2>&1 &
@@ -482,6 +472,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: curl -fsSL https://lokaltreu-dev.fly.dev/ >/dev/null
+
 
 
 

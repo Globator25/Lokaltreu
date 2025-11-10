@@ -17,7 +17,12 @@
     "agents:sentinels": "npm run -s agents:sentinel:node",
     "contract:check": "node scripts/contract-check.mjs",
     "test:with-stub": "cross-env STUB=1 vitest run --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "security:api:start": "node apps/api/src/dev-server.js --port=4010 --profile=test",
+    "security:api:wait": "node -e \"(async()=>{const u=process.env.API_BASE||'http://localhost:4010/health';for(let i=0;i<60;i++){try{const r=await fetch(u);if(r.ok){process.exit(0)}}catch{};await new Promise(r=>setTimeout(r,1000));}process.exit(1)})()\"",
+    "test:security:anti-replay": "node scripts/security/anti-replay.mjs",
+    "test:security:device-proof": "node scripts/security/device-proof.mjs",
+    "test:security:plan-gate": "node scripts/security/plan-gate.mjs"
   },
   "keywords": [],
   "author": "",

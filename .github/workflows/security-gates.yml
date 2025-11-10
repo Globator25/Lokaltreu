@@ -1,31 +1,51 @@
 name: security-gates
 on:
   pull_request:
-    branches: [main]
-  workflow_dispatch:
-
+    branches: [ main ]
+  workflow_dispatch: {}
 jobs:
   security:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    env:
+      API_BASE: ${{ secrets.API_BASE || 'http://localhost:4010' }}
+      AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+      STARTER_TOKEN: ${{ secrets.STARTER_TOKEN }}
+      DP_PRIV: ${{ secrets.DP_PRIV }}
+      DP_PUB: ${{ secrets.DP_PUB }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-
+        with: { node-version: '20', cache: 'npm' }
       - name: Install
         run: npm ci
-
       - name: Start API (test profile)
-        run: npm run -w apps/api start:test &
+        run: |
+          nohup npm run security:api:start > security-api.log 2>&1 &
+          echo $! > api.pid
       - name: Wait for API
-        run: npx wait-on http://localhost:3001/health
-
+        run: |
+          for i in {1..90}; do
+            if curl -fsS "${API_BASE}/health" >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          echo "API not healthy in time"; cat security-api.log || true; exit 1
       - name: Anti-Replay
-        run: npm run test:security:replay
-
+        run: npm run test:security:anti-replay
       - name: Device-Proof
         run: npm run test:security:device-proof
-
       - name: Plan-Gate
         run: npm run test:security:plan-gate
+      - name: Dump API log on failure
+        if: failure()
+        run: |
+          echo "--- security-api.log ---"
+          [[ -f security-api.log ]] && tail -n +1 security-api.log || true
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-gates-logs
+          path: |
+            security-api.log
+            *.json
+            scripts/security/*.mjs

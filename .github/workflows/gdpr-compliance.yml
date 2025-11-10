@@ -12,19 +12,23 @@ jobs:
         shell: bash
     env:
       NPM_CONFIG_ENGINE_STRICT: 'false'
+      HUSKY: '0'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20.19.0'
+          node-version: '22.12.0'
           cache: npm
           cache-dependency-path: |
             package-lock.json
             apps/**/package-lock.json
-            .github/workflows/cache-version-1   # Cache bust marker
+            .github/workflows/cache-version-3
 
       - name: Node diagnostics
         run: node -v && npm -v && npm config get engine-strict || true
+
+      - name: Relax engine strict (CI only)
+        run: echo "engine-strict=false" >> .npmrc
 
       - name: Install
         run: npm ci --prefer-offline --no-audit --no-fund

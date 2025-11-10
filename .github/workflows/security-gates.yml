@@ -50,6 +50,11 @@ jobs:
         run: npm run test:security:anti-replay
       - name: Device-Proof
         run: npm run test:security:device-proof
+      - name: Debug keys header only
+        if: ${{ always() }}
+        run: |
+          echo "${DP_PRIV}" | head -n1
+          echo "${DP_PUB}"  | head -n1
       - name: Plan-Gate
         run: npm run test:security:plan-gate
       - name: Dump API log on failure

@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
-import { createPrivateKey, randomUUID, sign } from 'node:crypto';
+import crypto from 'node:crypto';
 
 const API_BASE = (process.env.API_BASE ?? 'http://localhost:4010').replace(/\/$/, '');
 const AUTH_TOKEN = process.env.AUTH_TOKEN ?? '';
 const DEVICE_ID = process.env.DEVICE_ID ?? 'demo-device';
-const DEFAULT_DER_PRIV = 'MC4CAQAwBQYDK2VwBCIEIDLcTpPhxvJ7x+ad/q3N7PIqblgwgtcoW5sfaUmVgNND';
 const endpointPath = '/secure-device';
 const endpoint = new URL(endpointPath, API_BASE).toString();
 
@@ -18,10 +17,13 @@ function toBearer(token) {
 
 const AUTH_HEADER = toBearer(AUTH_TOKEN);
 
-function loadSigningKey() {
-  const source = process.env.DP_PRIV ?? DEFAULT_DER_PRIV;
+export function loadSigningKey() {
+  const raw = process.env.DP_PRIV ?? '';
+  if (!raw.trim()) {
+    throw new Error('DP_PRIV is empty');
+  }
   try {
-    return createPrivateKey({ key: Buffer.from(source, 'base64'), format: 'der', type: 'pkcs8' });
+    return crypto.createPrivateKey({ key: raw, format: 'pem' });
   } catch (error) {
     throw new Error(`Unable to load DP_PRIV: ${error.message}`);
   }
@@ -57,9 +59,9 @@ async function send(headers) {
 }
 
 function buildProofHeaders(timestamp = Date.now()) {
-  const jti = randomUUID();
+  const jti = crypto.randomUUID();
   const payload = Buffer.from(`POST|${endpointPath}|${timestamp}|${jti}`);
-  const signature = sign(null, payload, signingKey).toString('base64');
+  const signature = crypto.sign(null, payload, signingKey).toString('base64');
   return {
     'Content-Type': 'application/json',
     'X-Device-Id': DEVICE_ID,
@@ -105,4 +107,3 @@ main().catch((error) => {
   console.error('[device-proof] FAILED', error.message);
   process.exitCode = 1;
 });
-

@@ -40,14 +40,27 @@ jobs:
         shell: pwsh
         run: ./scripts/agents-sentinel-check.ps1
 
+      - name: Prepare lint/contract artifact folders
+        run: |
+          mkdir -p artifacts/${{ github.run_id }}/contracts
+          mkdir -p artifacts/${{ github.run_id }}/lint
+
       - name: Lint
-        run: npm run lint
+        run: |
+          set -o pipefail
+          npm run lint | tee artifacts/${{ github.run_id }}/lint/eslint.log
 
       - name: OpenAPI Lint
-        run: npx @stoplight/spectral-cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+        run: |
+          set -o pipefail
+          npx @stoplight/spectral-cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml --format junit \
+            | tee artifacts/${{ github.run_id }}/contracts/spectral-junit.xml
 
       - name: Contract types
-        run: npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts
+        run: |
+          set -o pipefail
+          npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts \
+            | tee artifacts/${{ github.run_id }}/contracts/openapi-typescript.log
 
       - name: Build
         run: npm run build
@@ -59,10 +72,47 @@ jobs:
         run: npm run enforce:coverage
 
       - name: Enforce schema_drift = 0
-        run: npm run contract:drift:check
+        run: |
+          set -o pipefail
+          npm run contract:drift:check | tee artifacts/${{ github.run_id }}/contracts/schema-drift.log
 
       - name: RFC7807 conformity checks
-        run: npm run problemjson:check
+        run: |
+          set -o pipefail
+          npm run problemjson:check | tee artifacts/${{ github.run_id }}/contracts/problemjson.log
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ github.run_id }}
+          path: |
+            coverage/**
+            packages/**/coverage/**
+            apps/**/coverage/**
+          retention-days: 30
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-${{ github.run_id }}
+          path: |
+            **/junit*.xml
+            **/test-results/**/*.xml
+            artifacts/${{ github.run_id }}/tests/**
+          retention-days: 30
+
+      - name: Upload contract & lint reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: contracts-lint-${{ github.run_id }}
+          path: |
+            artifacts/${{ github.run_id }}/contracts/**
+            artifacts/${{ github.run_id }}/lint/**
+            ./.spectral-report/**
+          retention-days: 30
 
 
 name: deploy

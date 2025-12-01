@@ -15,6 +15,8 @@ jobs:
       STARTER_TOKEN: ${{ secrets.STARTER_TOKEN }}
       DP_PRIV: ${{ secrets.DP_PRIV }}
       DP_PUB: ${{ secrets.DP_PUB }}
+      DP_PRIV_B64: ${{ secrets.DP_PRIV_B64 }}
+      DP_PUB_B64: ${{ secrets.DP_PUB_B64 }}
       NPM_CONFIG_ENGINE_STRICT: 'false'
       HUSKY: '0'
     steps:
@@ -48,13 +50,26 @@ jobs:
           echo "API not healthy in time"; cat security-api.log || true; exit 1
       - name: Anti-Replay
         run: npm run test:security:anti-replay
+      - name: Decode device-proof keys
+        run: |
+          set -e
+          echo "$DP_PRIV_B64" | base64 -d > dp_priv.pem
+          echo "$DP_PUB_B64"  | base64 -d > dp_pub.pem
+          {
+            echo "DP_PRIV<<EOF"
+            cat dp_priv.pem
+            echo "EOF"
+            echo "DP_PUB<<EOF"
+            cat dp_pub.pem
+            echo "EOF"
+          } >> "$GITHUB_ENV"
       - name: Device-Proof
         run: npm run test:security:device-proof
       - name: Debug keys header only
         if: ${{ always() }}
         run: |
-          echo "${DP_PRIV}" | head -n1
-          echo "${DP_PUB}"  | head -n1
+          head -n1 dp_priv.pem || true
+          head -n1 dp_pub.pem || true
       - name: Plan-Gate
         run: npm run test:security:plan-gate
       - name: Dump API log on failure

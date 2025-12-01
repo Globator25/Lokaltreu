@@ -1,5 +1,9 @@
 # Lokaltreu
 
+![CI](https://github.com/Globator25/Lokaltreu/actions/workflows/ci.yml/badge.svg?branch=main)
+[![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen)](#)
+[CI Runs](https://github.com/Globator25/Lokaltreu/actions)
+
 Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Regionen auf PaaS, CDN mit „Regional Services“. Deployments: Blue‑Green / Canary. Environments: **dev**, **stage**, **prod**.
 
 ## Inhalt

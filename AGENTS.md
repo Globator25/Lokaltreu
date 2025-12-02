@@ -21,16 +21,16 @@ Environments: dev, stage, prod (EU-Region)
 ### KPI-Ziele
 
 - schema_drift = 0  
-- coverage ≥ 80 %  
-- replay_blocks = 100 %  
-- proof_failures_caught = 100 %  
+- coverage ≥ 80 %  
+- replay_blocks = 100 %  
+- proof_failures_caught = 100 %  
 - audit_gaps = 0
 
 [SENTINEL] SECTION: CI-Gates (MUSS)  
-- Coverage: lines, functions, branches, statements ≥ 80 %  
+- Coverage: lines, functions, branches, statements ≥ 80 %  
 - Contract: OpenAPI-Validierung grün; schema_drift = 0  
-- Fehlerformat: error_conformity = 100 % (RFC 7807)  
-- Anti-Replay: Paralleltest grün; replay_blocks = 100 %  
+- Fehlerformat: error_conformity = 100 % (RFC 7807)  
+- Anti-Replay: Paralleltest grün; replay_blocks = 100 %  
 - Device-Proof: Positiv/Negativ-Fälle grün  
 - Plan-Gates: Starter → 403 PLAN_NOT_ALLOWED getestet  
 - OpenAPI-Lint: pass  
@@ -47,19 +47,19 @@ Environments: dev, stage, prod (EU-Region)
 
 ### Rollen & Verantwortlichkeiten
 
-- **ProblemJSON-Arbiter** – kuratiert sämtliche RFC 7807-Fehler, sorgt für eindeutige `type`/`error_code`-Zuordnung und blockt Releases ohne vollständige Mapping-Tabelle.  
+- **ProblemJSON-Arbiter** – kuratiert sämtliche RFC 7807-Fehler, sorgt für eindeutige `type`/`error_code`-Zuordnung und blockt Releases ohne vollständige Mapping-Tabelle.  
 - **Idempotency-Guardian** – verantwortet Anti-Replay-Flows, stellt deterministische Schlüsselvergabe sicher und verweigert Deployments mit driftenden Redis- oder TTL-Parametern.  
 - **Device-Proof-Engineer** – pflegt den Ed25519-Device-Proof, ergänzt Negativpfade und stoppt Merge-Requests bei fehlenden Proof-Validierungen.  
-- **Audit-Officer** – überwacht WORM-Audit und Retention 180 Tage, fordert fehlende Artefakte ein und genehmigt Exporte nur nach Signaturprüfung.  
+- **Audit-Officer** – überwacht WORM-Audit und Retention 180 Tage, fordert fehlende Artefakte ein und genehmigt Exporte nur nach Signaturprüfung.  
 - **Test-Pilot** – betreibt Regression- und Paralleltests (Plan-Gate, Anti-Replay), priorisiert Flakes und lässt Builds ohne reproduzierbare Ergebnisse nicht durch.  
 - **Docs-Keeper** – synchronisiert SPEC/ARCH/ROADMAP und AGENTS.md, pflegt die Governance-Change-Logs und schlägt Reviewer:innen aus den betroffenen Rollen vor.
 
 [SENTINEL] SECTION: ZENTRALE PR-CHECKLISTE  
 - Lint grün  
 - Build grün  
-- Tests grün + Coverage ≥ 80 %  
+- Tests grün + Coverage ≥ 80 %  
 - Contract-Tests grün, schema_drift = 0  
-- Fehler 100 % RFC 7807 konform  
+- Fehler 100 % RFC 7807 konform  
 - Parallel-Anti-Replay grün (1×201, 9×409)  
 - Device-Proof-Fälle grün  
 - Plan-Gate-Cases grün (Starter → 403 PLAN_NOT_ALLOWED)  
@@ -78,14 +78,21 @@ Environments: dev, stage, prod (EU-Region)
 
 1. OpenAPI → Types  
    `codex exec "Generiere @lokaltreu/types aus OpenAPI und fixe Imports" --role Contract-Sheriff --context @apps/api/openapi/lokaltreu-openapi-v2.0.yaml @packages/types/**`
+
 2. RFC7807-Fehlerkonsistenz  
    `codex exec "Validiere RFC7807-Fehler und ergänze fehlende error_code Enums" --role ProblemJSON-Arbiter --context @apps/api/openapi/** @apps/api/src/**`
+
 3. Parallel-Anti-Replay  
    `codex exec "Erstelle Anti-Replay-Test (10 parallel) für Idempotency-Key" --role Idempotency-Guardian,Test-Pilot --context @apps/api/src/mw/idempotency.ts @tests/security/**`
+
 4. Plan-Gate  
    `codex exec "Schreibe Tests: Starter→403 PLAN_NOT_ALLOWED; Plus/Premium→OK" --role ProblemJSON-Arbiter,Test-Pilot --context @apps/api/src/handlers/referrals.ts @apps/api/openapi/**`
+
 5. Device-Proof  
    `codex exec "Schreibe Positiv/Negativ-Fälle für X-Device-Proof (Ed25519)" --role Device-Proof-Engineer --context @apps/api/src/middleware/device-auth.ts`
+
+6. Compliance-Skeleton (GDPR)  
+   `codex exec "Erstelle und aktualisiere AVV, TOMs, RoPA, DPIA, Infos-DE und Retention-Policy als Skeletons für das Lokaltreu SaaS. Berücksichtige: Art. 6 Abs. 1 lit. f DSGVO, Logs als personenbezogene Daten mit 180 Tagen Retention, Art.-11-DSR-Pfad ohne zusätzliche Identifizierung, Tombstone-Liste deleted_subjects für Backups (Backups werden nicht selektiv editiert)." --role Audit-Officer,Docs-Keeper --context @compliance/** @docs/runbooks/**`
 
 ### Security & DSGVO Leitplanken
 

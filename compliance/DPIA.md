@@ -2,39 +2,45 @@
 
 ## 1. Beschreibung der Verarbeitung
 
-<!-- TODO: Kurzbeschreibung digitale Stempelkarte, Rollen, Flows -->
+- SaaS „digitale Stempelkarte“ (Merchant-Portal, Mitarbeiter-UI, PWA für Endkunden ohne Login)
+- Rollen grob: Betreiber Lokaltreu SaaS (Verantwortlicher für Betriebs-/Sicherheitsverarbeitung), Infrastruktur-/Support-Dienstleister (Auftragsverarbeiter), Händler als Mandanten/Nutzer
+- Datenflüsse: Card-ID ↔ Stempel-/Prämien-API, Device-ID ↔ Mitarbeiter-Geräte und Security-Logs, Audit-Events mit tenant_id, action, result, ip, ua, jti
 
 ## 2. Bewertung Notwendigkeit und Verhältnismäßigkeit
 
-- Endkunden ohne Login, pseudonyme Card-IDs
-- Minimierte Daten in Logs (keine Namen, nur IDs/IP/UA)
+- Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (Betrieb, Sicherheit, Fraud-Prevention)
+- Endkunden ohne Login, Nutzung pseudonymer Card-IDs und technischer Kennungen (tenant_id, device_id)
+- Logs als personenbezogene Daten, 180 Tage Aufbewahrung für Audit, Incident-Response und Missbrauchserkennung
+- Datenminimierung: Logs enthalten nur notwendige IDs + technische Metadaten (z. B. IP, User-Agent); keine Freitextfelder, keine Namen, E-Mail-Adressen o. Ä.
 
 ## 3. Risikobewertung
 
-<!-- TODO: Risiken (Account-Übernahme, Missbrauch, Datenpannen) grob skizzieren -->
+- Risiken: Kontoübernahme von Händler-Admins, Missbrauch von Mitarbeiter-Geräten, Token-/Device-Key-Leaks
+- Risiken: Fraud/Sammeln von Stempeln ohne Berechtigung (Replay, Brute-Force, Umgehung von Rate-Limits)
+- Risiken: Datenpannen im Log-/Backup-Bereich (unberechtigter Zugriff, Restore ohne erneute Löschung)
+- Risiken: Unvollständige DSR-Erfüllung bei pseudonymen Endkunden (Art.-11-Szenarien)
 
 ## 4. Maßnahmen zur Risikominimierung
 
-- WORM-Audit, 180 Tage Aufbewahrung
-- Rate-Limits, Anti-Replay, Device-Proof
-- Backups & Restore nach definierter Strategie
+- WORM-Audit-Logs mit 180 Tagen Retention, regelmäßige signierte Exporte in EU-Object-Storage; Zugriff nur für Audit-Officer nach „least privilege“
+- Sicherheitsmechanismen: Rate-Limits pro Tenant/IP/Card/Device, Anti-Replay (z. B. Idempotency-Key, Redis SETNX), Device-Proof (Ed25519-Signatur)
+- Einheitliches Fehlerformat nach RFC 7807 inkl. technischer `error_code`, um Fehlerszenarien nachvollziehbar und auditierbar zu halten
+- Standardisierte Runbooks (Incident/Breach, Restore, Replay-Verdacht) inkl. Eskalationspfaden und Dokumentationspflichten
 
 ## 5. Backups & DSR
 
-- Backups (DB, Storage) werden aus Integritäts- und Nachvollziehbarkeitsgründen **nicht selektiv editiert**.
+- Backups (DB, Storage) werden aus Integritäts- und Nachvollziehbarkeitsgründen **nicht selektiv editiert**
 - Für Lösch-DSR wird eine Tombstone-Liste `deleted_subjects` geführt:
-  - Felder u. a.: subject_identifier, reason, deleted_at.
-  - Jede erfolgreiche Lösch-DSR erzeugt einen Tombstone-Eintrag.
+  - Felder u. a.: `subject_identifier`, `reason`, `deleted_at`
+  - Jede erfolgreiche Lösch-DSR erzeugt einen Tombstone-Eintrag
 - Im Restore-Fall wird die Tombstone-Liste erneut auf die restaurierten Daten angewendet:
-  - Betroffene Subjekte werden nach Restore erneut gelöscht oder pseudonymisiert.
-- Dieses Verhalten ist in AVV, RoPA und Retention-Policy konsistent beschrieben.
+  - Betroffene Subjekte werden nach Restore erneut gelöscht oder pseudonymisiert
+- Logs bleiben während der 180 Tage Retention nur für Betriebs-/Sicherheitszwecke verfügbar; danach automatische Löschung gemäß Retention-Policy
+- Verhalten und Zuständigkeiten sind konsistent in AVV, RoPA, Retention-Policy und TOMs beschrieben
 
 ## 6. Art.-11-DSR-Pfad (grobe Beschreibung)
 
-- Keine zusätzliche Identifizierung der betroffenen Person
-- Matching auf vorhandene Kontexte (z. B. Card-ID, Device-ID)
-- Auskunft/Löschung soweit möglich
-- Falls keine Identifizierung möglich: Antwort nach Art. 11 Abs. 2 DSGVO
-
-
-
+- Keine zusätzliche Identifizierung der betroffenen Person (kein Sammeln zusätzlicher PII, keine Ausweiskopien etc.)
+- Eingang der Anfragen typischerweise über DSR-UI/Support mit vorhandenen Kontexten (z. B. Card-ID, Device-ID, ggf. Referenz auf Request-Logs)
+- Ablauf: Eingang → Matching auf bestehende Kontexte → Auskunft/Löschung soweit möglich → Tombstone-Eintrag bei Löschung → Bestätigung an die betroffene Person
+- Falls keine hinreichende Identifizierung möglich: Antwort nach Art. 11 Abs. 2 DSGVO mit Erklärung der eingeschränkten Rechte-Erfüllung und Hinweis auf Log-/Backup-Strategie

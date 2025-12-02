@@ -29,14 +29,14 @@
 
 ## 5. Backups & DSR
 
-- Backups (DB, Storage) werden aus Integritäts- und Nachvollziehbarkeitsgründen **nicht selektiv editiert**
-- Für Lösch-DSR wird eine Tombstone-Liste `deleted_subjects` geführt:
-  - Felder u. a.: `subject_identifier`, `reason`, `deleted_at`
-  - Jede erfolgreiche Lösch-DSR erzeugt einen Tombstone-Eintrag
+- Backups (DB, Storage) werden aus Integritäts- und Nachvollziehbarkeitsgründen **nicht selektiv editiert**.
+- Lösch-DSR erfolgt über eine Tombstone-Liste `deleted_subjects`:
+  - Felder u. a.: `subject_identifier`, `reason`, `deleted_at`.
+  - Jede erfolgreiche Lösch-DSR erzeugt einen Tombstone-Eintrag.
 - Im Restore-Fall wird die Tombstone-Liste erneut auf die restaurierten Daten angewendet:
-  - Betroffene Subjekte werden nach Restore erneut gelöscht oder pseudonymisiert
-- Logs bleiben während der 180 Tage Retention nur für Betriebs-/Sicherheitszwecke verfügbar; danach automatische Löschung gemäß Retention-Policy
-- Verhalten und Zuständigkeiten sind konsistent in AVV, RoPA, Retention-Policy und TOMs beschrieben
+  - Betroffene Subjekte werden nach Restore erneut gelöscht oder pseudonymisiert.
+- Logs bleiben während der 180 Tage Retention nur für Betriebs-/Sicherheitszwecke verfügbar; danach automatische Löschung gemäß Retention-Policy.
+- Verhalten und Zuständigkeiten sind konsistent in AVV, RoPA, Retention-Policy und Infos-DE beschrieben.
 
 ## 6. Art.-11-DSR-Pfad (grobe Beschreibung)
 

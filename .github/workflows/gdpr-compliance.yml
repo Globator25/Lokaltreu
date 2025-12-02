@@ -8,7 +8,7 @@ on:
 jobs:
   gdpr-compliance:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +33,10 @@ jobs:
 
       - name: Check basic structure / sentinels
         run: |
-          set -e
-          grep -q "Backups & DSR" compliance/DPIA.md
-          grep -q "Backups & DSR" compliance/Retention-Policy.md
+          set -euo pipefail
+          for file in compliance/DPIA.md compliance/Retention-Policy.md; do
+            if ! grep -q "^## \+Backups & DSR" "$file"; then
+              echo "::error ::Missing '## Backups & DSR' section in $file"
+              exit 1
+            fi
+          done

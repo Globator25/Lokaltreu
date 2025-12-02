@@ -27,7 +27,14 @@
 - Einheitliches Fehlerformat nach RFC 7807 inkl. technischer `error_code`, um Fehlerszenarien nachvollziehbar und auditierbar zu halten
 - Standardisierte Runbooks (Incident/Breach, Restore, Replay-Verdacht) inkl. Eskalationspfaden und Dokumentationspflichten
 
-## 5. Backups & DSR
+## 6. Art.-11-DSR-Pfad (grobe Beschreibung)
+
+- Keine zusätzliche Identifizierung der betroffenen Person (kein Sammeln zusätzlicher PII, keine Ausweiskopien etc.)
+- Eingang der Anfragen typischerweise über DSR-UI/Support mit vorhandenen Kontexten (z. B. Card-ID, Device-ID, ggf. Referenz auf Request-Logs)
+- Ablauf: Eingang → Matching auf bestehende Kontexte → Auskunft/Löschung soweit möglich → Tombstone-Eintrag bei Löschung → Bestätigung an die betroffene Person
+- Falls keine hinreichende Identifizierung möglich: Antwort nach Art. 11 Abs. 2 DSGVO mit Erklärung der eingeschränkten Rechte-Erfüllung und Hinweis auf Log-/Backup-Strategie
+
+## Backups & DSR
 
 - Backups (DB, Storage) werden aus Integritäts- und Nachvollziehbarkeitsgründen **nicht selektiv editiert**.
 - Lösch-DSR erfolgt über eine Tombstone-Liste `deleted_subjects`:
@@ -37,10 +44,3 @@
   - Betroffene Subjekte werden nach Restore erneut gelöscht oder pseudonymisiert.
 - Logs bleiben während der 180 Tage Retention nur für Betriebs-/Sicherheitszwecke verfügbar; danach automatische Löschung gemäß Retention-Policy.
 - Verhalten und Zuständigkeiten sind konsistent in AVV, RoPA, Retention-Policy und Infos-DE beschrieben.
-
-## 6. Art.-11-DSR-Pfad (grobe Beschreibung)
-
-- Keine zusätzliche Identifizierung der betroffenen Person (kein Sammeln zusätzlicher PII, keine Ausweiskopien etc.)
-- Eingang der Anfragen typischerweise über DSR-UI/Support mit vorhandenen Kontexten (z. B. Card-ID, Device-ID, ggf. Referenz auf Request-Logs)
-- Ablauf: Eingang → Matching auf bestehende Kontexte → Auskunft/Löschung soweit möglich → Tombstone-Eintrag bei Löschung → Bestätigung an die betroffene Person
-- Falls keine hinreichende Identifizierung möglich: Antwort nach Art. 11 Abs. 2 DSGVO mit Erklärung der eingeschränkten Rechte-Erfüllung und Hinweis auf Log-/Backup-Strategie

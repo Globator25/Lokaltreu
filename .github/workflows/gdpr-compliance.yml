@@ -1,0 +1,48 @@
+name: GDPR Compliance
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  docs-check:
+    name: Compliance docs present
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify compliance documents exist and are non-empty
+        run: |
+          set -euo pipefail
+          files=(
+            "AVV.md"
+            "TOMs.md"
+            "RoPA.md"
+            "DPIA.md"
+            "Infos-DE.md"
+            "Retention-Policy.md"
+          )
+          missing=0
+          for file in "${files[@]}"; do
+            path="compliance/${file}"
+            if [ ! -s "$path" ]; then
+              echo "::error title=Missing or empty compliance file::${path} fehlt oder ist leer."
+              missing=1
+            else
+              echo "✅ ${path} vorhanden."
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "❌ Mindestens eine Compliance-Datei fehlt oder ist leer."
+            exit 1
+          fi
+          echo "All required compliance documents exist and contain content."

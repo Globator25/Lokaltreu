@@ -31,3 +31,8 @@ infra/terraform/secrets/*.tfvars
 *decrypted*.tfvars
 # Testartefakte
 infra/terraform/secrets/test.enc.tfvars
+apps/api/test-results/
+apps/web/test-results/
+apps/api/coverage/lcov-report/
+apps/api/coverage/lcov.info
+secrets/

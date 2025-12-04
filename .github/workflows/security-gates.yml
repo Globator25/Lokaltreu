@@ -1,0 +1,50 @@
+name: Security Gates
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  security-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security test suite (tests/security)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d "tests/security" ]; then
+            files=$(find tests/security -type f \( -name "*.test.ts" -o -name "*.spec.ts" \))
+            if [ -n "$files" ]; then
+              echo "Running Vitest over tests/security …"
+              npm exec vitest run tests/security
+            else
+              echo "No Vitest specs in tests/security yet; skipping run."
+            fi
+          else
+            echo "tests/security directory missing. Create it to enable security gates."
+            exit 1
+          fi
+
+      # Platzhalter – wird später mit echten Vitest-Suiten gefüllt
+      # - name: Anti-Replay Tests (placeholder)
+      #   run: npm exec vitest run tests/security/anti-replay.test.ts
+      #
+      # - name: Device-Proof Tests (placeholder)
+      #   run: npm exec vitest run tests/security/device-proof.test.ts
+      #
+      # - name: Plan-Gate Tests (placeholder)
+      #   run: npm exec vitest run tests/security/plan-gate.test.ts

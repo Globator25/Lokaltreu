@@ -1,5 +1,9 @@
 # Lokaltreu
 
+![CI](https://github.com/Globator25/Lokaltreu/actions/workflows/ci.yml/badge.svg?branch=main)
+[![Coverage](https://img.shields.io/badge/coverage-80%25%2B-brightgreen)](#)
+[CI Runs](https://github.com/Globator25/Lokaltreu/actions)
+
 Modularer Monolith für QR‑Treueprogramme. Betrieb ausschließlich in EU‑Regionen auf PaaS, CDN mit „Regional Services“. Deployments: Blue‑Green / Canary. Environments: **dev**, **stage**, **prod**.
 
 ## Inhalt
@@ -101,3 +105,10 @@ npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 - Verfügbarkeit Kernrouten: 99,90 %
 - Performance: p50 ≤ 500 ms, p95 ≤ 3000 ms, p99 ≤ 6000 ms
 - Resilienz: RPO 15 min, RTO 60 min
+
+## Governance & CI-Gates
+Dieses Repository erzwingt qualitätssichernde Gates bei Pull Requests.
+- **Governance:** siehe [docs/AGENTS.md](docs/AGENTS.md)
+- **CI-Workflows:** [.github/workflows/ci.yml](.github/workflows/ci.yml), [.github/workflows/security-gates.yml](.github/workflows/security-gates.yml), [.github/workflows/gdpr-compliance.yml](.github/workflows/gdpr-compliance.yml)
+- **Required Checks (Branch Protection):** `ci`, `security-gates`, `gdpr-compliance`
+- **Nachweise:** siehe [docs/evidence/INDEX.md](docs/evidence/INDEX.md)

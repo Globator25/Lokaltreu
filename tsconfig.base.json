@@ -1,12 +1,25 @@
-﻿{
+{
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
+    "allowJs": false,
+    "baseUrl": ".",
     "esModuleInterop": true,
-    "lib": ["ES2022", "DOM"]
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "paths": {
+      "@apps/*": ["apps/*/src"],
+      "@apps/api/*": ["apps/api/src/*"],
+      "@apps/web/*": ["apps/web/src/*"],
+      "@packages/*": ["packages/*/src"],
+      "@packages/types/*": ["packages/types/src/*"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2020",
+    "types": ["node"]
   }
 }

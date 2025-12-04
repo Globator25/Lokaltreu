@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { CoverageOptions } from "vitest";
-import { defineConfig, defineProject } from "vitest/config";
+import { defineConfig } from "vitest/config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,10 +17,7 @@ const coverageConfig: CoverageOptions = {
     "**/coverage/**",
     "**/*.d.ts",
   ],
-  include: [
-    "apps/**/*.{ts,tsx}",
-    "packages/**/*.{ts,tsx}",
-  ],
+  include: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
 };
 
 export default defineConfig({
@@ -35,8 +32,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
+
+    // erzeugt zwar eine Deprecation-Warnung, funktioniert aber technisch
     cache: {
-      // erzeugt zwar eine Deprecation-Warnung, funktioniert aber technisch
       dir: path.resolve(__dirname, "node_modules/.vitest"),
     },
 
@@ -53,37 +51,39 @@ export default defineConfig({
         ]
       : "default",
 
+    // Drei Projekte im Monorepo: API, Web, Packages
     projects: [
       // API-Projekt
-      defineProject({
+      {
         test: {
           name: "api",
           root: path.resolve(__dirname, "apps/api"),
           environment: "node",
           include: ["src/**/*.{spec,test}.ts"],
         },
-      }),
+      },
 
-      // Web-Projekt
-      defineProject({
+      // Web-Projekt (Next.js + React)
+      {
         test: {
           name: "web",
           root: path.resolve(__dirname, "apps/web"),
           environment: "jsdom",
+          // falls vorhanden: apps/web/vitest.setup.ts
           setupFiles: ["vitest.setup.ts"],
           include: ["src/**/*.{spec,test}.{ts,tsx}"],
         },
-      }),
+      },
 
-      // Packages (z. B. types)
-      defineProject({
+      // Packages (z. B. @lokaltreu/types)
+      {
         test: {
           name: "packages",
           root: path.resolve(__dirname, "packages"),
           environment: "node",
           include: ["**/*.{spec,test}.{ts,tsx}"],
         },
-      }),
+      },
     ],
   },
 });

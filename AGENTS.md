@@ -109,3 +109,13 @@ Environments: dev, stage, prod (EU-Region)
 - Änderungen an AGENTS.md nur via PR; Reviewer: Owner + betroffene Rolle  
 - Quartalsreview: Rollen, KPIs, Gates  
 - Changelog-Eintrag in docs/CHANGELOG.md unter „Governance“
+
+## 5) Notfallprozesse
+
+[SENTINEL] SECTION: Emergency Break-Glass Deployment  
+- Zulässige Gründe MUSS auf kritische Security-Lücken oder massive Incidents mit bestätigtem SLO-Bruch beschränkt bleiben; Komfort- oder Feature-Druck gilt nicht.  
+- Ein Break-Glass-Einsatz MUSS von mindestens zwei Maintainer:innen simultan genehmigt und begleitet werden; ohne zweite Bestätigung findet kein Deployment statt.  
+- Ablauf MUSS: Ticket im Incident-Tracker anlegen, Break-Glass-Entscheidung inkl. Ownern und Laufzeit loggen, `codex exec`-Runs weiter im Audit-Trail archivieren und sämtliche deaktivierten Gates unmittelbar nach Abschluss wieder aktivieren.  
+- Jede Abweichung MUSS in Release-Notes sowie Audit-Log vermerkt werden; zusätzlich SOLL der Plan für Gate-Wiederherstellung in Slack/On-Call dokumentiert werden.  
+- Pflicht-Nacharbeiten MUSS: Technical-Debt-Ticket für aufgeschobene Checks erstellen, Tests und Dokumentation nachziehen sowie Nachweise an Docs-Keeper melden.  
+- Bis alle Nacharbeiten erledigt sind, SOLL kein weiterer Break-Glass gestartet werden; Eskalationen laufen an Owner + betroffene Gate-Rollen.

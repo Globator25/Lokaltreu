@@ -1,10 +1,15 @@
+
 import http from "node:http";
-import type { AddressInfo } from "node:net";
 import { fileURLToPath } from "node:url";
+
+import type { AddressInfo } from "node:net";
 
 const DEFAULT_PORT = Number.parseInt(process.env.PORT ?? "", 10) || 4010;
 
-export type ApiServer = http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>;
+export type ApiServer = http.Server<
+  typeof http.IncomingMessage,
+  typeof http.ServerResponse
+>;
 
 export const healthPayload = {
   status: "ok",
@@ -62,6 +67,7 @@ if (isMainModule(import.meta)) {
   startServer()
     .then((server) => {
       const address = server.address();
+      // eslint-disable-next-line no-console
       console.log(`API ready on ${describeAddress(address)}`);
     })
     .catch((error) => {

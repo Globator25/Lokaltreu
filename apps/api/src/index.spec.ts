@@ -1,8 +1,10 @@
-import type http from "node:http";
-import type { AddressInfo } from "node:net";
+
 import { afterAll, beforeAll, expect, test } from "vitest";
 
-import { startServer, healthPayload } from "./index";
+import { healthPayload, startServer } from "./index";
+
+import type http from "node:http";
+import type { AddressInfo } from "node:net";
 
 let server: http.Server;
 let baseUrl: string;

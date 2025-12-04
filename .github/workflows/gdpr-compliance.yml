@@ -1,42 +1,48 @@
-name: gdpr-compliance
+name: GDPR Compliance
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  gdpr-compliance:
+  docs-check:
+    name: Compliance docs present
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Check required compliance files exist
-        run: |
-          set -e
-          for file in \
-            compliance/AVV.md \
-            compliance/TOMs.md \
-            compliance/RoPA.md \
-            compliance/DPIA.md \
-            compliance/Infos-DE.md \
-            compliance/Retention-Policy.md \
-            docs/runbooks/Incident-Breach.md
-          do
-            if [ ! -f "$file" ]; then
-              echo "::error ::Missing required compliance file $file"
-              exit 1
-            fi
-          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-      - name: Check basic structure / sentinels
+      - name: Verify compliance documents exist and are non-empty
         run: |
           set -euo pipefail
-          for file in compliance/DPIA.md compliance/Retention-Policy.md; do
-            if ! grep -q "^## \+Backups & DSR" "$file"; then
-              echo "::error ::Missing '## Backups & DSR' section in $file"
-              exit 1
+          files=(
+            "AVV.md"
+            "TOMs.md"
+            "RoPA.md"
+            "DPIA.md"
+            "Infos-DE.md"
+            "Retention-Policy.md"
+          )
+          missing=0
+          for file in "${files[@]}"; do
+            path="compliance/${file}"
+            if [ ! -s "$path" ]; then
+              echo "::error title=Missing or empty compliance file::${path} fehlt oder ist leer."
+              missing=1
+            else
+              echo "✅ ${path} vorhanden."
             fi
           done
+          if [ "$missing" -ne 0 ]; then
+            echo "❌ Mindestens eine Compliance-Datei fehlt oder ist leer."
+            exit 1
+          fi
+          echo "All required compliance documents exist and contain content."

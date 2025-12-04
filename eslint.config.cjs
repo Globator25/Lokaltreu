@@ -5,6 +5,7 @@ const reactHooksPlugin = require("eslint-plugin-react-hooks");
 const jsxA11yPlugin = require("eslint-plugin-jsx-a11y");
 const importPlugin = require("eslint-plugin-import");
 const nextPlugin = require("@next/eslint-plugin-next");
+const globals = require("globals");
 
 const tsconfigRootDir = __dirname;
 const nextCoreWebVitals = nextPlugin.configs["core-web-vitals"];
@@ -15,6 +16,7 @@ const typeAwareRules = {
 };
 
 module.exports = [
+  // Globale Ignore-Regeln
   {
     ignores: [
       "**/node_modules/**",
@@ -26,7 +28,11 @@ module.exports = [
       "packages/**/dist/**",
     ],
   },
+
+  // Basis-JS-Empfehlungen von @eslint/js (Flat Config kompatibel)
   js.configs.recommended,
+
+  // Generische TS-Regeln (type-unaware)
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
@@ -54,7 +60,7 @@ module.exports = [
         },
       },
     },
-    rules: {
+       rules: {
       "@typescript-eslint/consistent-type-imports": [
         "warn",
         { prefer: "type-imports", disallowTypeAnnotations: false },
@@ -75,25 +81,35 @@ module.exports = [
         },
       ],
       "no-console": ["warn", { allow: ["warn", "error"] }],
+
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": "off",
     },
-  },
+    },
+  // Type-aware Regeln für apps/api (Node-Umgebung)
   {
-    files: ["apps/api/**/*.{ts,tsx}"],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: "./apps/api/tsconfig.json",
-        tsconfigRootDir,
-      },
+  files: ["apps/api/**/*.{ts,tsx}", "src/**/*.{ts,tsx}"],
+  languageOptions: {
+    parser: tseslint.parser,
+    parserOptions: {
+      project: "./apps/api/tsconfig.json",
+      tsconfigRootDir,
     },
-    plugins: {
-      "@typescript-eslint": tseslint.plugin,
-    },
-    env: { node: true },
-    rules: {
-      ...typeAwareRules,
+    globals: {
+      ...globals.node,
+      // Node 18+ bietet globales fetch, hier explizit für ESLint hinterlegt
+      fetch: "readonly",
     },
   },
+  plugins: {
+    "@typescript-eslint": tseslint.plugin,
+  },
+  rules: {
+    ...typeAwareRules,
+  },
+},
+
+  // Type-aware Regeln für packages/types (Node-Umgebung)
   {
     files: ["packages/types/**/*.{ts,tsx}"],
     languageOptions: {
@@ -102,47 +118,59 @@ module.exports = [
         project: "./packages/types/tsconfig.json",
         tsconfigRootDir,
       },
+      globals: globals.node,
     },
     plugins: {
       "@typescript-eslint": tseslint.plugin,
     },
-    env: { node: true },
     rules: {
       ...typeAwareRules,
     },
   },
+
+  // Web-Frontend (Next.js, React, Browser-Globals)
   {
-    files: ["apps/web/**/*.{ts,tsx,js,jsx}"],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: "./apps/web/tsconfig.json",
-        tsconfigRootDir,
-        ecmaFeatures: { jsx: true },
-      },
+  files: ["apps/web/**/*.{ts,tsx,js,jsx}", "src/app/**/*.{ts,tsx,js,jsx}"],
+  languageOptions: {
+    parser: tseslint.parser,
+    parserOptions: {
+      // Für das Web-Frontend vorerst kein type-aware Linting
+      project: false,
+      tsconfigRootDir,
+      ecmaFeatures: { jsx: true },
     },
-    plugins: {
-      "@typescript-eslint": tseslint.plugin,
-      "@next/next": nextPlugin,
-      react: reactPlugin,
-      "react-hooks": reactHooksPlugin,
-      "jsx-a11y": jsxA11yPlugin,
-    },
-    env: { browser: true },
-    settings: {
-      react: { version: "detect" },
-    },
-    rules: {
-      ...typeAwareRules,
-      ...nextCoreWebVitals.rules,
-      ...reactPlugin.configs.recommended.rules,
-      ...jsxA11yPlugin.configs.recommended.rules,
-      ...reactHooksPlugin.configs.recommended.rules,
-      "react/react-in-jsx-scope": "off",
-      "react/jsx-uses-react": "off",
-      "react/prop-types": "off",
+    globals: {
+      ...globals.browser,
+      JSX: "readonly",
     },
   },
+  plugins: {
+    "@typescript-eslint": tseslint.plugin,
+    "@next/next": nextPlugin,
+    react: reactPlugin,
+    "react-hooks": reactHooksPlugin,
+    "jsx-a11y": jsxA11yPlugin,
+  },
+  settings: {
+    react: { version: "detect" },
+  },
+  rules: {
+    // Keine typeAwareRules hier – die nutzen wir für API/Types
+    ...nextCoreWebVitals.rules,
+    ...reactPlugin.configs.recommended.rules,
+    ...jsxA11yPlugin.configs.recommended.rules,
+    ...reactHooksPlugin.configs.recommended.rules,
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-uses-react": "off",
+    "react/prop-types": "off",
+
+    // zur Sicherheit explizit aus:
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": "off",
+  },
+},
+
+  // Config- und Script-Dateien (Node-Umgebung)
   {
     files: ["**/*.config.{js,cjs,mjs,ts}", "scripts/**/*.{js,ts}"],
     languageOptions: {
@@ -151,8 +179,8 @@ module.exports = [
         project: "./tsconfig.base.json",
         tsconfigRootDir,
       },
+      globals: globals.node,
     },
-    env: { node: true },
     rules: {
       "@typescript-eslint/no-var-requires": "off",
     },

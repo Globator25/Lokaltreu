@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test": "node -e \"fs=require('fs');fs.mkdirSync('test-results/web',{recursive:true});\" && vitest run --config ../../vitest.config.web.cjs --coverage --reporter=default --reporter=junit --outputFile test-results/web/vitest-junit.xml --coverage.reporter=lcov --coverage.reporter=html"
+    "lint": "eslint --config ../../eslint.config.cjs \"{src,pages,app,components}/**/*.{ts,tsx,js,jsx}\" --max-warnings=0",
+    "test": "vitest run --config ../../vitest.config.ts --project web"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
@@ -34,5 +34,4 @@
     "vitest": "^3.2.4"
   }
 }
-
 

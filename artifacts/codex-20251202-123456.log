@@ -1,0 +1,263 @@
+**Status**
+- Workspace is mounted read-only (policy `never`), so I could only inspect `compliance/*.md` and `docs/runbooks/*.md`. Direct edits, `apply_patch`, and the mandated `tee` audit log are all blocked.  
+- Below are ready-to-paste skeletons for each compliance document, aligned with Art. 6(1)(f), 180-day log retention, WORM audit requirements, Art. 11 DSR handling, Tombstone lists, and cross-references into the existing runbooks (e.g., `docs/runbooks/Incident-Breach.md`, `docs/runbooks/restore-db.md`). Please drop them into the respective files and commit once write access is available.
+
+`compliance/AVV.md`
+```markdown
+# Auftragsverarbeitungsvertrag (AVV) ÔÇô Lokaltreu SaaS
+
+## 1. Parteien und Gegenstand
+- Verantwortlicher: <Merchant/Partner> (Mandant, Sitz in EU)
+- Auftragsverarbeiter: Lokaltreu GmbH, EU-Rechenzentren
+- Gegenstand: Betrieb der modularen Monolith-PWA, Security- und Support-Leistungen laut SPEC v2.0
+
+## 2. Art und Zweck der Verarbeitung
+- Betriebs- und Sicherheitslogs, Device-Proof, Anti-Replay, Fraud-Prevention
+- Bereitstellung der H├ñndler- und Mitarbeiter-UIs inkl. Support-Workflows
+- Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (betriebliches Interesse, Sicherheit)
+
+## 3. Kategorien betroffener Personen und Daten
+- H├ñndler-Admins, Mitarbeiterger├ñte, Supportkontakte
+- Pseudonyme Endkunden mit Card-ID
+- Datenfelder: tenant_id, device_id, card_id, IP, User-Agent, Audit-Events, Idempotency-Key-Metadaten
+
+## 4. Unterauftragsverarbeiter & EU-Region
+- PaaS (App, DB, Redis, Storage, Queue) ausschlie├ƒlich EU-Region
+- Providerliste inkl. Zweck, Datenkategorien, TOM-Referenz (siehe Anhang)
+- Wechsel nur nach vorheriger Anzeige und schriftlicher Zustimmung
+
+## 5. Technische und organisatorische Ma├ƒnahmen
+- Vollst├ñndige Beschreibung siehe `compliance/TOMs.md`
+- Security-Gates laut `security-gates.yml`; Device-Proof (Ed25519) Pflicht
+- Anti-Replay-Tests (10 parallel) und Idempotency-Key-Policies dokumentiert
+
+## 6. Pflichten des Auftragsverarbeiters
+- Verarbeitung nur nach dokumentierter Weisung
+- Unterst├╝tzung bei DSR (inkl. Art. 11 Pfade) und Datenschutz-Folgenabsch├ñtzung
+- Audit-Officer stellt WORM-Logs und signierte Exporte bereit
+- Keine PII in Logs, nur tenant_id/device_id/card_id
+
+## 7. L├Âschung, R├╝ckgabe, Aufbewahrung
+- Logs: 180 Tage, WORM, automatische L├Âschung
+- Backups: nicht selektiv editierbar; Tombstone-Liste `deleted_subjects`
+- R├╝ckgabe/L├Âschung sechs Wochen nach Vertragsende, au├ƒer gesetzliche Aufbewahrung
+- Details siehe `compliance/Retention-Policy.md`
+
+## 8. Kontrollrechte & Incident-Kommunikation
+- Verantwortlicher darf Audits ank├╝ndigen (mind. 14 Tage) oder externe Auditoren einsetzen
+- Security-/Breach-Handling laut `docs/runbooks/Incident-Breach.md`
+- Pflicht zur unverz├╝glichen Meldung bei Policy-Verst├Â├ƒen
+
+## 9. Nachweisf├╝hrung
+- CI-Gates und Pr├╝fberichte (OpenAPI, GDPR, Terraform EU-only) werden 180 Tage bereitgehalten
+- Audit-Artefakte: signierte R2-Exports inkl. Hashes
+
+## 10. Ansprechpartner
+- Audit-Officer: audit@lokaltreu.eu
+- DPO/Privacy: privacy@lokaltreu.eu
+- Support/DSR: dsr@lokaltreu.eu (Art.11-Workflows)
+```
+
+`compliance/TOMs.md`
+```markdown
+# Technische und organisatorische Ma├ƒnahmen (TOMs) ÔÇô Lokaltreu SaaS
+
+## 1. Zutritts- und Zugangskontrolle
+- Rechenzentren ausschlie├ƒlich EU; Zutritt per Badge + Video├╝berwachung (Provider)
+- Lokaltreu-Belegschaft nutzt SSO + FIDO2; Admin-Zugriff nur via bastion
+- Secrets verwaltet via SOPS (*.enc.tfvars); kein Klartext in Repos
+
+## 2. Zugriffskontrolle und Rollen
+- RBAC: Audit-Officer, ProblemJSON-Arbiter, Idempotency-Guardian, Device-Proof-Engineer, Docs-Keeper
+- Least-Privilege auf Services/DBs; Break-glass dokumentiert im Incident-Runbook
+- Zugriff auf Logs/Audit-Exports nur nach 4-Augen-Prinzip
+
+## 3. Verschl├╝sselung & Transport
+- TLS 1.3 erzwingt Perfect Forward Secrecy
+- Daten-at-rest Verschl├╝sselung (PaaS-managed Keys, KMS-EU)
+- Device-Proof (Ed25519) f├╝r API-Aufrufe ├╝ber Mitarbeiterger├ñte
+
+## 4. Protokollierung und Monitoring
+- Logs enthalten nur tenant_id, device_id, card_id, jti, error_code
+- Retention 180 Tage, WORM-Speicher, signierte Exports nach R2-EU
+- Monitoring deckt Replay- und Device-Proof-Fehler ab (replay_blocks=100%, proof_failures_caught=100%)
+
+## 5. Backup & Restore
+- T├ñgliche Snapshots DB/Storage; Retention 35 Tage
+- Backups nicht selektiv editierbar; Tombstones l├Âschen nach Restore nach
+- Restore-Prozess siehe `docs/runbooks/restore-db.md`
+
+## 6. Datenschutz durch Technikgestaltung
+- Pseudonyme Card-ID, kein Endkunden-Login
+- Art.11 DSR-Pfad: Anfragen ohne zus├ñtzliche Identifizierung (siehe Infos-DE)
+- Idempotency-Key und Anti-Replay Middleware verhindern Mehrfachverarbeitung
+
+## 7. Organisationspflichten
+- Schulungen j├ñhrlich; Rollenvergabe dokumentiert
+- Tests laut `ci.yml`, `gdpr-compliance.yml`, `security-gates.yml`
+- GDPR-Checks f├╝r Art.11, Retention 180 Tage, Log-PII-Scans automatisiert
+```
+
+`compliance/RoPA.md`
+```markdown
+# Verzeichnis von Verarbeitungst├ñtigkeiten (RoPA) ÔÇô Lokaltreu SaaS
+
+## Verarbeitung: Betriebs- und Sicherheitslogs
+- Verantwortlicher: Lokaltreu (betrieblich) im Auftrag der Mandanten
+- Zweck: Betrugsvermeidung, Sicherheits├╝berwachung, Incident-Response
+- Kategorien: H├ñndler-Admins, Mitarbeiterger├ñte, pseudonyme Endkunden
+- Daten: tenant_id, device_id, card_id, IP, UA, error_code, Idempotency-Key-Metadaten
+- Empf├ñnger: Audit-Officer, Security-Team, Mandanten (Reports)
+- ├£bermittlungen: keine Drittland├╝bermittlung
+- L├Âschfristen: 180 Tage, siehe Retention-Policy
+- TOM-Referenz: Abschnitte 1ÔÇô4 in `TOMs.md`
+
+## Verarbeitung: Vertragliche Kommunikation & Support
+- Zweck: Vertragsabwicklung, Rechnungsstellung, Supportkontakte
+- Daten: Firmenstammdaten, Ansprechpartner, Kommunikationshistorie
+- Rechtsgrundlage: Art.6(1)(b) + (f)
+- Empf├ñnger: Billing, Support
+- L├Âschfristen: 10 Jahre handelsrechtliche Aufbewahrung (aggregierte Abrechnung)
+
+## Verarbeitung: DSR-Handling (Art. 11)
+- Zweck: Erf├╝llung von Betroffenenrechten ohne zus├ñtzliche Identifizierung
+- Daten: Card-ID, Device-ID, Request-Metadaten, Tombstone-Liste `deleted_subjects`
+- Rechtsgrundlage: Art.6(1)(c) + Art.11 DSGVO
+- Empf├ñnger: Docs-Keeper, Audit-Officer
+- L├Âschfristen: Tombstones dauerhaft, Logs 180 Tage, Tickets 3 Jahre
+- Prozesse siehe `compliance/Infos-DE.md` & `docs/runbooks/Incident-Breach.md`
+
+## Gemeinsame Ma├ƒnahmen
+- Audit-Trail via WORM + signierte Exports
+- Anti-Replay + Device-Proof Tests verpflichtend
+- Backup/Restore inklusive nachtr├ñglicher Tombstone-L├Âschung
+```
+
+`compliance/DPIA.md`
+```markdown
+# Datenschutz-Folgenabsch├ñtzung (DPIA) ÔÇô Lokaltreu SaaS
+
+## 1. Beschreibung der Verarbeitung
+- Digitale Stempelkarte (Next.js PWA, Node API, Modularer Monolith)
+- Datenfl├╝sse: Card-ID ÔåÆ Rewards, Device-ID ÔåÆ Mitarbeiterger├ñte, tenant_id ÔåÆ Adminaktionen
+- Logs und Audit-Events als personenbezogene Daten, gespeichert 180 Tage
+
+## 2. Notwendigkeit und Verh├ñltnism├ñ├ƒigkeit
+- Art.6(1)(f) legitimiert Verarbeitung f├╝r Betrieb/Sicherheit
+- Minimierung: keine Namen oder Freitexte, nur IDs plus technische Metadaten
+- Art.11 DSR-Pfad erlaubt Anfragen ohne zus├ñtzliche PII
+
+## 3. Risikobewertung
+- Konto-/Ger├ñte├╝bernahme, Replay-Angriffe, Device-Key-Leaks
+- Datenabfluss aus Logs/Backups, fehlende DSR-Erf├╝llung
+- Audit-Gaps bei manuellen Exporten
+
+## 4. Ma├ƒnahmen zur Risikominimierung
+- Anti-Replay mit Idempotency-Key + Redis TTL, Tests (1x201, 9x409)
+- Device-Proof (Ed25519) Positiv/Negativ-F├ñlle, Negative Tests blockieren Deploys
+- WORM-Audit, signierte Exports (R2, EU-only), Hash-Listen
+- GDPR-Pipeline pr├╝ft Art.11, Retention, Log-PII
+- Runbooks f├╝r Incident/Breach und Restore koppeln Eskalation + Dokumentation
+
+## 5. Backups & Tombstone-Konzept
+- Backups unver├ñnderlich, keine selektive Editierung
+- Liste `deleted_subjects`: subject_identifier, scope, deleted_at, operator
+- Restore wiederholt Tombstone-Anwendung, dokumentiert im Restore-Runbook
+- Logs bleiben 180 Tage, danach automatische L├Âschung, Audit-Officer ├╝berwacht
+
+## 6. Art.11 DSR-Ablauf
+1. Eingang ├╝ber DSR-UI oder Support (Card-ID/Device-ID/Request-ID)
+2. Matching auf vorhandene Kontexte ohne neue Daten zu erheben
+3. Ergebnisdokumentation + Tombstone-Eintrag bei L├Âschung
+4. Falls Identifizierung nicht m├Âglich ÔåÆ Art.11 Abs.2 Antwortvorlage (Infos-DE Anhang)
+
+## 7. Beteiligte Rollen & Review
+- Audit-Officer, Docs-Keeper, Device-Proof-Engineer, Idempotency-Guardian
+- Re-Assessment j├ñhrlich oder bei Architektur├ñnderung
+- Nachweise in Audit-Artefakten (CI-Gates, GDPR-Checks)
+
+## 8. Restrestrisiko
+- Eingestuft als niedrig-mittel nach Umsetzung, akzeptiert durch Tech Lead & DPO
+```
+
+`compliance/Infos-DE.md`
+```markdown
+# Datenschutzinformationen ÔÇô Lokaltreu SaaS (DE)
+
+## 1. Verantwortlicher & Kontakt
+- Lokaltreu GmbH, <Adresse>, privacy@lokaltreu.eu
+- Datenschutzkontakt / DPO: privacy@lokaltreu.eu
+- Audit-Officer: audit@lokaltreu.eu
+
+## 2. Zwecke und Rechtsgrundlagen
+- Betrieb der digitalen Stempelkarte, H├ñndler-Portal, Sicherheit (Art.6(1)(f))
+- Vertragserf├╝llung f├╝r H├ñndler (Art.6(1)(b))
+- Erf├╝llung gesetzlicher Pflichten (Art.6(1)(c))
+
+## 3. Kategorien personenbezogener Daten
+- Mandantenstammdaten, Ansprechpartner (Name, Mail, Telefon)
+- Pseudonyme Endkundenkennungen (Card-ID), Device-ID, tenant_id
+- Betriebs- und Sicherheitslogs (IP, User-Agent, error_code, Idempotency-Key-Metadaten)
+
+## 4. Empf├ñnger und Drittlandtransfer
+- Infrastruktur-Provider innerhalb EU
+- Keine ├£bermittlung in Drittstaaten ohne Angemessenheitsbeschluss
+- Audit-Exports (R2-EU) nur f├╝r Audit-Officer
+
+## 5. Speicherfristen
+- Logs: 180 Tage WORM
+- Backups: 35 Tage, kein selektives Editieren
+- Vertr├ñge/Abrechnung: 10 Jahre
+- Tombstone-Liste `deleted_subjects`: dauerhaft zur Durchsetzung von L├Âschungen
+
+## 6. Rechte der betroffenen Personen
+- Auskunft, Berichtigung, L├Âschung, Einschr├ñnkung, Widerspruch, Daten├╝bertragbarkeit
+- Art.11: Falls keine zus├ñtzliche Identifizierung m├Âglich, Hinweis auf eingeschr├ñnkte Rechte
+- Beschwerden bei zust├ñndiger Aufsichtsbeh├Ârde
+
+## 7. Art.11 DSR-Verfahren
+- Anfrage mit Card-ID/Device-ID/Request-ID einreichen (dsr@lokaltreu.eu)
+- Kein Upload zus├ñtzlicher Ausweise oder PII erforderlich
+- Ablauf dokumentiert im DSR-Runbook; Ergebnis + Tombstone-Buchung
+
+## 8. Sicherheitsma├ƒnahmen
+- Device-Proof, Anti-Replay, WORM-Audit, RBAC gem├ñ├ƒ `TOMs.md`
+- Sicherheitsvorf├ñlle werden laut `docs/runbooks/Incident-Breach.md` behandelt
+
+## 9. Aktualisierungen
+- Versionierung im Repo, Governance-├änderungen in `docs/CHANGELOG.md`
+- Wesentliche ├änderungen werden per Admin-Portal und Mail kommuniziert
+```
+
+`compliance/Retention-Policy.md`
+```markdown
+# Retention Policy ÔÇô Lokaltreu SaaS
+
+| Datensatz / Artefakt                       | Zweck                              | Rechtsgrundlage         | Speicherort (EU) | Dauer / L├Âschung                                                |
+|-------------------------------------------|------------------------------------|-------------------------|------------------|-----------------------------------------------------------------|
+| Betriebs- & Sicherheitslogs               | Betrieb, Sicherheit, Fraud         | Art.6(1)(f)             | WORM-Store (R2)  | 180 Tage, automatische L├Âschung via Scheduler                   |
+| Audit-Artefakte (CI, GDPR, Security)      | Nachweis der KPIs/Gates            | Art.6(1)(f), Art.5(2)   | R2 + Git (EU)    | 180 Tage; Hash-Listen archiviert                                |
+| Anti-Replay / Device-Proof Testreports    | Sicherheitsnachweis                | Art.6(1)(f)             | R2 (EU)          | 180 Tage                                                       |
+| Merchant-Vertrag / Abrechnung             | Vertragserf├╝llung, Pflichtaufbew.  | Art.6(1)(b), HGB/GoBD   | Encrypted DB     | 10 Jahre (aggregierte Daten)                                   |
+| Support-/Incident-Tickets                 | Support, Incident-Response         | Art.6(1)(f)             | Ticket-System EU | 3 Jahre nach Schlie├ƒung                                        |
+| Backups (DB, Storage)                     | Restore, Incident-Response         | Art.6(1)(f)             | Provider EU      | 35 Tage, Rolling Snapshots, kein selektives Editieren          |
+| Tombstone-Liste `deleted_subjects`        | Durchsetzung von L├Âsch-DSR         | Art.6(1)(c), Art.11     | Encrypted DB     | Dauerhaft, nur technische IDs                                  |
+
+## L├Âsch- und Review-Prozess
+1. Scheduler l├Âscht Logs nach 180 Tagen, Nachweis via Audit-Officer
+2. Backups werden nach Ablauf automatisch ├╝berschrieben; Restore erzwingt erneute Tombstone-Anwendung
+3. DSR/Support-Tickets werden nach 3 Jahren anonymisiert
+4. Review jedes Quartal (Docs-Keeper + Audit-Officer), Festhalten in Governance-Change-Log
+
+## Dokumentation & Nachweise
+- L├Âschreports abgelegt im Audit-Store (Signiert)
+- Runbook-Verweise: `docs/runbooks/Incident-Breach.md`, `docs/runbooks/restore-db.md`
+- KPI-├£berwachung (schema_drift, coverage, replay_blocks) dokumentiert in CI-Artefakten
+```
+
+**Next Steps**
+1. Apply the snippets above to the respective files once write access is granted, ensuring encoding stays ASCII.
+2. Update `docs/runbooks` only if additional cross-references are desired; no changes required based on current review.
+3. Re-run the CI + GDPR + security workflows and capture the mandated `tee` artifact log once edits are in place.
+
+Let me know when the workspace is writable again and I can push the changes directly.

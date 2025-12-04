@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+
+    // Für Projekt-Referenzen (optional, aber sinnvoll im Monorepo)
+    "composite": true,
+
+    // Nur .d.ts-Dateien erzeugen
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+
+    // WICHTIG: Node-Typen aus der Basis-Konfiguration überschreiben
+    // Für Tests können wir Vitest-Globals aktivieren, Node ist hier nicht nötig
+    "types": ["vitest/globals"]
+  },
+  "include": ["src"]
+}

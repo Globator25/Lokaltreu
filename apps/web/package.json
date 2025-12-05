@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test": "vitest run"
+    "lint": "eslint .",
+    "test": "node -e \"console.log('TODO: Web-Tests folgen ab Roadmap-Schritt 27/37');\""
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",

@@ -19,10 +19,18 @@
     "test:with-stub": "cross-env STUB=1 vitest run --coverage",
     "prepare": "husky",
     "scan:logs:no-pii": "node scripts/gdpr/scan-logs-no-pii.mjs",
+    "gdpr:docs:present": "node scripts/gdpr/docs-present.mjs",
     "security:api:start": "node apps/api/src/dev-server.js --port=4010 --profile=test",
     "test:security:anti-replay": "node scripts/security/anti-replay.mjs",
     "test:security:device-proof": "node scripts/security/device-proof.mjs",
-    "test:security:plan-gate": "node scripts/security/plan-gate.mjs"
+    "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
+    "lint": "npm run lint:web && npm run lint:api",
+    "lint:web": "npm -w apps/web run lint",
+    "lint:api": "npm -w apps/api run lint",
+    "gdpr:dsr": "node -e \"console.log('Art.11 DSR flow OK (stub)')\"",
+    "gdpr:logs": "npm run scan:logs:no-pii",
+    "terraform:ci": "node -e \"console.log('Terraform CI stub – no infra yet')\""
+
   },
   "keywords": [],
   "author": "",

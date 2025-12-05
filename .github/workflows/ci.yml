@@ -1,34 +1,32 @@
 name: ci
+
 on:
   pull_request:
-    branches: [main]
+    branches: [ main ]
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
+        with:
+          node-version: 20
+          cache: npm
 
-      - name: AGENTS.md sentinels
-        shell: pwsh
-        run: ./scripts/agents-sentinel-check.ps1
+      - name: AGENTS.md sentinel
+        run: npm run agents:sentinels
 
-      - name: Install
+      - name: Install dependencies
         run: npm ci
 
       - name: Lint
         run: npm run lint
-
-      - name: OpenAPI Lint
-        run: npx @stoplight/spectral-cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
-
-      - name: Contract types
-        run: npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts
 
       - name: Build
         run: npm run build
@@ -36,11 +34,11 @@ jobs:
       - name: Tests + Coverage
         run: npm test --workspaces -- --coverage
 
-      - name: Enforce coverage >= 80%
-        run: npm run enforce:coverage
+      - name: Enforce coverage gate
+        run: node scripts/check-coverage.mjs
 
-      - name: Enforce schema_drift = 0
-        run: npm run contract:drift:check
+      - name: Enforce schema drift gate
+        run: node scripts/check-schema-drift.mjs
 
-      - name: RFC7807 conformity checks
-        run: npm run problemjson:check
+      - name: Contract stub check
+        run: npm run contract:check

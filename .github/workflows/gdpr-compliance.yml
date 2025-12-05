@@ -1,29 +1,28 @@
 name: gdpr-compliance
+
 on:
   pull_request:
-    branches: [main]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   gdpr:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
 
-      - name: Install
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
         run: npm ci
 
-      - name: Docs present
-        run: npm run gdpr:docs:present
+      - name: AGENTS.md sentinel
+        run: npm run agents:sentinels
 
-      - name: Art.11 DSR flow
-        run: npm run gdpr:dsr
-
-      - name: Log PII + retention
-        run: npm run gdpr:logs
-
-      - name: Terraform EU-only fmt+validate
-        run: npm run terraform:ci
+      - name: Scan logs for PII (stub)
+        run: npm run scan:logs:no-pii

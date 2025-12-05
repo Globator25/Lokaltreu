@@ -6,7 +6,7 @@
     "test": "vitest run",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint ."
+    "lint": "eslint src --ext .ts,.js"
   },
   "keywords": [],
   "author": "",

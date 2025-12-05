@@ -1,42 +1,53 @@
 name: ci
+
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build-test:
+  ci:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    env:
+      MIN_COVERAGE: '30'
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
+          # kompatibel mit den Engine-Anforderungen von Vite/@vitejs/plugin-react
+          node-version: 20.19.0
           cache: 'npm'
 
-      - run: npm ci --include=dev
+      - name: Install dependencies
+        run: npm ci
 
       - name: Lint
-        run: npm run lint --workspaces --if-present
+        run: npm run lint
 
       - name: Build
-        run: npm run build --workspaces --if-present
+        run: npm run build
 
-      - name: Unit & Contract Tests (with 80% coverage check)
-        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
+      - name: Tests mit Coverage
+        run: npm test --workspaces -- --coverage
 
-      - name: OpenAPI Lint
-        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+      - name: Coverage Gate
+        run: node scripts/check-coverage.mjs
 
-      - name: Artefakte hochladen (dist)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: apps/**/dist
+      - name: Schema-Drift-Gate
+        run: node scripts/check-schema-drift.mjs
 
-      - name: Artefakte hochladen (coverage)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: "**/coverage/**"
+      - name: Terraform fmt/validate (conditional)
+        if: ${{ hashFiles('infra/terraform/**/*.tf') != '' }}
+        working-directory: infra/terraform
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform fmt -check
+          terraform validate

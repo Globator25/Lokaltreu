@@ -1,0 +1,1 @@
+# DPIA – Datenschutz-Folgenabschätzung (Skeleton)

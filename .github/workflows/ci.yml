@@ -25,8 +25,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint web
+        run: npm -w apps/web run lint
+
+      - name: Lint api
+        run: npm -w apps/api run lint
+
 
       - name: Build
         run: npm run build

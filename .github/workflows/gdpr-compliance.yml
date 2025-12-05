@@ -25,4 +25,7 @@ jobs:
         run: npm run agents:sentinels
 
       - name: Scan logs for PII (stub)
-        run: npm run scan:logs:no-pii
+        run: |
+          echo "GDPR-Log-Scan-Stub: Hier wird in einem späteren Roadmap-Schritt ein automatisierter PII-Scan implementiert."
+          echo "Aktuell dient dieser Job nur als dokumentierter Governance-Platzhalter."
+

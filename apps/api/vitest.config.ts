@@ -15,12 +15,12 @@ export default defineConfig({
       'src/**/*.test.ts',
     ],
 
-    // Coverage-Konfiguration – wichtig für dein check-coverage.mjs
+    // Coverage-Konfiguration – wichtig für scripts/check-coverage.mjs
     coverage: {
       enabled: true,
-      provider: 'v8',               // Standard bei Vitest
-      reporter: ['text', 'json-summary', 'html'],
-      reportsDirectory: 'coverage', // => apps/api/coverage/...
+      provider: 'v8',                       // Standard bei Vitest
+      reporter: ['text', 'json-summary'],   // json-summary => coverage-summary.json
+      reportsDirectory: './coverage',       // => apps/api/coverage/...
     },
   },
 });

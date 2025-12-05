@@ -12,7 +12,8 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     env:
-      MIN_COVERAGE: "30"
+      MIN_COVERAGE: '30'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,8 +21,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          # kompatibel mit den Engine-Anforderungen von Vite/@vitejs/plugin-react
+          node-version: 20.19.0
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -38,18 +40,14 @@ jobs:
       - name: Coverage Gate
         run: node scripts/check-coverage.mjs
 
-      - name: schema_drift Stub
+      - name: Schema-Drift-Gate
         run: node scripts/check-schema-drift.mjs
 
       - name: Terraform fmt/validate (conditional)
+        if: ${{ hashFiles('infra/terraform/**/*.tf') != '' }}
+        working-directory: infra/terraform
         shell: bash
         run: |
           set -euo pipefail
-          if ls infra/terraform/**/*.tf >/dev/null 2>&1; then
-            pushd infra/terraform >/dev/null
-            terraform fmt -check
-            terraform validate
-            popd >/dev/null
-          else
-            echo "Keine Terraform-Dateien gefunden, Schritt übersprungen."
-          fi
+          terraform fmt -check
+          terraform validate

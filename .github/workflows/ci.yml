@@ -15,8 +15,7 @@ jobs:
         with: { node-version: 20, cache: npm }
 
       - name: AGENTS.md sentinels
-        shell: pwsh
-        run: ./scripts/agents-sentinel-check.ps1
+        run: npm run agents:sentinels
 
       - name: Install
         run: npm ci

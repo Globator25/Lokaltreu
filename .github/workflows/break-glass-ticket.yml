@@ -7,8 +7,11 @@ on:
 
 jobs:
   break-glass-ticket:
-    # Nur ausführen, wenn mindestens ein Commit [BREAK-GLASS] trägt
-    if: ${{ contains(join(github.event.commits.*.message, ' '), '[BREAK-GLASS]') }}
+    if: >-
+      ${{
+        github.event.head_commit &&
+        contains(github.event.head_commit.message, '[BREAK-GLASS]')
+      }}
     runs-on: ubuntu-latest
 
     steps:
@@ -21,62 +24,38 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const core = require('@actions/core');
-            const repo = context.repo;
-            const commits = (context.payload.commits || []).filter(
-              (commit) => commit.message && commit.message.includes('[BREAK-GLASS]')
-            );
-
-            if (commits.length === 0) {
-              core.info('Keine Break-Glass-Kommit gefunden; Workflow beendet.');
+            const headCommit = context.payload.head_commit;
+            if (!headCommit) {
+              core.info('Kein head_commit im Payload gefunden.');
               return;
             }
 
-            for (const commit of commits) {
-              const commitMessage = commit.message || '';
-              const commitSha = commit.id;
-              const actor =
-                commit.author?.username ||
-                commit.author?.name ||
-                context.actor;
+            const message = headCommit.message ?? '[ohne Commit-Message]';
+            const sha = headCommit.id ?? context.sha;
+            const timestamp = headCommit.timestamp
+              ? new Date(headCommit.timestamp).toISOString()
+              : new Date().toISOString();
 
-              const cleanedMessage = commitMessage.replace('[BREAK-GLASS]', '').trim();
-              const shortSha = commitSha.substring(0, 7);
-              const title = cleanedMessage
-                ? `Break-Glass-Folgearbeit: ${cleanedMessage}`
-                : `Break-Glass-Folgearbeit: Commit ${shortSha}`;
+            const title = `Break-Glass-Folgearbeit: ${message}`;
+            const body = [
+              '⚠️ Break-Glass Deployment erkannt – Nacharbeiten erforderlich.',
+              '',
+              `- Commit-SHA: \`${sha}\``,
+              `- Zeitpunkt: ${timestamp}`,
+              '',
+              '## Checkliste',
+              '- [ ] Grund dokumentieren (kritische Security-Lücke oder massiver Incident mit SLO-Bruch)',
+              '- [ ] Alle deaktivierten Gates wieder aktivieren (Lint/Build/Tests, Coverage ≥ 80 %, schema_drift, Security-Gates, GDPR, Terraform EU-only)',
+              '- [ ] Technische Schulden erfassen und beseitigen',
+              '- [ ] Tests & Dokumentation nachziehen, Evidenz beim Docs-Keeper ablegen',
+              '- [ ] Post-Incident-Review inkl. Lessons Learned veröffentlichen',
+            ].join('\n');
 
-              const body = [
-                '⚠️ Break-Glass Deployment erkannt',
-                '',
-                '**Commit**',
-                `- SHA: \`${commitSha}\``,
-                `- Autor (GitHub-User): @${actor}`,
-                `- Commit-Message: \`${commitMessage}\``,
-                '',
-                '**Pflicht-Nacharbeiten (gemäß AGENTS.md / Break-Glass-Regelung)**',
-                '',
-                '- [ ] Break-Glass-Reason dokumentieren (kritische Security-Lücke oder massiver Incident mit SLO-Bruch) inkl. Ticket-Link',
-                '- [ ] Alle temporär ignorierten oder umgangenen CI-/Security-/GDPR-Gates unverzüglich wieder aktivieren',
-                '  - [ ] Lint/Build/Tests',
-                '  - [ ] Coverage-Schranke ≥ 80 %',
-                '  - [ ] schema_drift / Contract',
-                '  - [ ] Anti-Replay / Device-Proof / Plan-Gate',
-                '  - [ ] GDPR + Terraform EU-only (falls betroffen)',
-                '- [ ] Technische Schulden erfassen (Technical-Debt-Ticket) und beheben',
-                '- [ ] Tests & Dokumentation nachziehen, Evidenz beim Docs-Keeper ablegen',
-                '- [ ] Post-Incident-Review mit Lessons Learned veröffentlichen',
-                '',
-                'Bitte diesen Issue schließen, sobald alle Punkte abgearbeitet und dokumentiert sind.',
-              ].join('\n');
-
-              const labels = ['break-glass-followup'];
-
-              await github.rest.issues.create({
-                owner: repo.owner,
-                repo: repo.repo,
-                title,
-                body,
-                labels,
-                assignees: actor ? [actor] : undefined,
-              });
-            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['break-glass-followup'],
+              assignees: [context.actor],
+            });

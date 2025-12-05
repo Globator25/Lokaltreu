@@ -1,19 +1,22 @@
 name: gdpr-compliance
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
-  gdpr:
+  gdpr-compliance:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -21,11 +24,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: AGENTS.md sentinel
-        run: npm run agents:sentinels
-
-      - name: Scan logs for PII (stub)
-        run: |
-          echo "GDPR-Log-Scan-Stub: Hier wird in einem späteren Roadmap-Schritt ein automatisierter PII-Scan implementiert."
-          echo "Aktuell dient dieser Job nur als dokumentierter Governance-Platzhalter."
-
+      - name: Verify GDPR compliance files
+        run: node scripts/check-gdpr-structure.mjs

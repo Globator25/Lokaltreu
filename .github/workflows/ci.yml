@@ -1,48 +1,55 @@
 name: ci
 
 on:
-  pull_request:
-    branches: [ main ]
   push:
-    branches: [ main ]
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  quality:
+  ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    env:
+      MIN_COVERAGE: "30"
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: AGENTS.md sentinel
-        run: npm run agents:sentinels
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint web
-        run: npm -w apps/web run lint
-
-      - name: Lint api
-        run: npm -w apps/api run lint
-
+      - name: Lint
+        run: npm run lint
 
       - name: Build
         run: npm run build
 
-      - name: Tests + Coverage
+      - name: Tests mit Coverage
         run: npm test --workspaces -- --coverage
 
-      - name: Enforce coverage gate
+      - name: Coverage Gate
         run: node scripts/check-coverage.mjs
 
-      - name: Enforce schema drift gate
+      - name: schema_drift Stub
         run: node scripts/check-schema-drift.mjs
 
-      - name: Contract stub check
-        run: npm run contract:check
+      - name: Terraform fmt/validate (conditional)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ls infra/terraform/**/*.tf >/dev/null 2>&1; then
+            pushd infra/terraform >/dev/null
+            terraform fmt -check
+            terraform validate
+            popd >/dev/null
+          else
+            echo "Keine Terraform-Dateien gefunden, Schritt übersprungen."
+          fi

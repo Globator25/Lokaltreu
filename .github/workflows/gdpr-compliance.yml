@@ -1,0 +1,43 @@
+name: gdpr-compliance
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/*'
+  pull_request:
+    branches:
+      - main
+      - 'feature/*'
+
+jobs:
+  gdpr-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify GDPR files
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            "compliance/AVV.md"
+            "compliance/TOMs.md"
+            "compliance/RoPA.md"
+            "compliance/DPIA.md"
+            "compliance/Infos-DE.md"
+            "compliance/Retention-Policy.md"
+          )
+          missing=0
+          for file in "${files[@]}"; do
+            if [[ ! -s "$file" ]]; then
+              echo "::error title=Missing compliance file::$file fehlt oder ist leer"
+              missing=1
+            else
+              echo "✅ $file OK"
+            fi
+          done
+          if [[ $missing -ne 0 ]]; then
+            exit 1
+          fi

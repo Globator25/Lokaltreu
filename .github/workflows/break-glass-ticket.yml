@@ -1,0 +1,61 @@
+name: Break-Glass Follow-Up Ticket
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  break-glass-ticket:
+    if: >-
+      ${{
+        github.event.head_commit &&
+        contains(github.event.head_commit.message, '[BREAK-GLASS]')
+      }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Break-Glass follow-up issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const core = require('@actions/core');
+            const headCommit = context.payload.head_commit;
+            if (!headCommit) {
+              core.info('Kein head_commit im Payload gefunden.');
+              return;
+            }
+
+            const message = headCommit.message ?? '[ohne Commit-Message]';
+            const sha = headCommit.id ?? context.sha;
+            const timestamp = headCommit.timestamp
+              ? new Date(headCommit.timestamp).toISOString()
+              : new Date().toISOString();
+
+            const title = `Break-Glass-Folgearbeit: ${message}`;
+            const body = [
+              '⚠️ Break-Glass Deployment erkannt – Nacharbeiten erforderlich.',
+              '',
+              `- Commit-SHA: \`${sha}\``,
+              `- Zeitpunkt: ${timestamp}`,
+              '',
+              '## Checkliste',
+              '- [ ] Grund dokumentieren (kritische Security-Lücke oder massiver Incident mit SLO-Bruch)',
+              '- [ ] Alle deaktivierten Gates wieder aktivieren (Lint/Build/Tests, Coverage ≥ 80 %, schema_drift, Security-Gates, GDPR, Terraform EU-only)',
+              '- [ ] Technische Schulden erfassen und beseitigen',
+              '- [ ] Tests & Dokumentation nachziehen, Evidenz beim Docs-Keeper ablegen',
+              '- [ ] Post-Incident-Review inkl. Lessons Learned veröffentlichen',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['break-glass-followup'],
+              assignees: [context.actor],
+            });

@@ -39,7 +39,6 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     needs: quality-gates
-    if: ${{ hashFiles('infra/terraform/**/*.tf') != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

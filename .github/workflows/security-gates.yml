@@ -22,4 +22,6 @@ jobs:
         run: npm ci
 
       - name: Run security tests
-        run: npm test --workspaces -- --runInBand --testPathPattern=security
+        run: npm test --workspaces
+
+

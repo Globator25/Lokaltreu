@@ -5,7 +5,8 @@ on:
     paths:
       - 'infra/terraform/**'
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
       - 'infra/terraform/**'
 
@@ -43,9 +44,7 @@ jobs:
       - name: terraform validate
         run: terraform validate
 
-      - name: terraform plan (dev, no backend)
-        run: |
-          terraform plan \
-            -var-file="env/dev.tfvars" \
-            -compact-warnings \
-            -no-color
+      # Placeholder für terraform plan im Governance-Schritt 4.
+      # Der echte Plan (mit Provider-Zugriff) wird erst in den späteren IaC-Bootstrap-Schritten aktiviert.
+      - name: terraform plan placeholder (dev, no backend)
+        run: echo "terraform plan (dev, no backend) placeholder – echter Plan folgt ab IaC-Bootstrap in späteren Roadmap-Schritten"

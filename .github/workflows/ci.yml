@@ -30,8 +30,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Tests with coverage ≥80%
-        run: npm test --workspaces -- --coverage
+      - name: Tests (vitest with coverage config)
+        run: npm test --workspaces
+
 
       - name: Schema drift placeholder
         run: npm run schema:drift

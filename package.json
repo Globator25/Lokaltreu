@@ -25,7 +25,8 @@
     "test:security:device-proof": "node scripts/security/device-proof.mjs",
     "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
     "lint": "npm -w apps/web run lint && npm -w apps/api run lint",
-    "test:security:placeholder": "vitest run tests/security/placeholder.test.ts"
+    "test:security:placeholder": "vitest run tests/security/placeholder.test.ts",
+    "schema:drift": "node scripts/schema-drift-placeholder.mjs"
   },
   "keywords": [],
   "author": "",

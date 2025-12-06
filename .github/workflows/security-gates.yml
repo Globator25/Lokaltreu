@@ -1,17 +1,12 @@
 name: security-gates
 
 on:
-  push:
-    branches:
-      - main
-      - 'feature/*'
   pull_request:
     branches:
       - main
-      - 'feature/*'
 
 jobs:
-  security-gates:
+  security-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,5 +21,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run placeholder security tests
-        run: npm run test:security:placeholder
+      - name: Run security tests
+        run: npm test --workspaces -- --runInBand --testPathPattern=security

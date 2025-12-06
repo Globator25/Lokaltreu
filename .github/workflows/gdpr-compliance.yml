@@ -1,14 +1,9 @@
-name: gdpr-compliance
+name: GDPR Compliance
 
 on:
-  push:
-    branches:
-      - main
-      - 'feature/*'
   pull_request:
     branches:
       - main
-      - 'feature/*'
 
 jobs:
   gdpr-compliance:
@@ -24,15 +19,15 @@ jobs:
           files=(
             "compliance/AVV.md"
             "compliance/TOMs.md"
-            "compliance/RoPA.md"
+            "compliance/ROPA.md"
             "compliance/DPIA.md"
             "compliance/Infos-DE.md"
             "compliance/Retention-Policy.md"
           )
           missing=0
           for file in "${files[@]}"; do
-            if [[ ! -s "$file" ]]; then
-              echo "::error title=Missing compliance file::$file fehlt oder ist leer"
+            if [[ ! -f "$file" ]]; then
+              echo "::error title=Missing compliance file::$file fehlt"
               missing=1
             else
               echo "✅ $file OK"

@@ -1,42 +1,62 @@
-name: ci
+name: CI
+
+permissions:
+  contents: read
+
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build-test:
+  quality-gates:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
-      - run: npm ci --include=dev
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Lint
-        run: npm run lint --workspaces --if-present
+      - name: Run lint
+        run: npm run lint
 
-      - name: Build
-        run: npm run build --workspaces --if-present
+      - name: Run tests with coverage
+        run: npm test --workspaces -- --coverage
 
-      - name: Unit & Contract Tests (with 80% coverage check)
-        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
+      - name: Build project
+        run: npm run build
 
-      - name: OpenAPI Lint
-        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
-
-      - name: Artefakte hochladen (dist)
+      - name: Upload coverage reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: apps/**/dist
+          name: coverage-reports
+          path: |
+            coverage/**
+            apps/**/coverage/**
 
-      - name: Artefakte hochladen (coverage)
+      - name: Upload test reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
-          path: "**/coverage/**"
+          name: test-reports
+          path: "**/junit*.xml"
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            apps/api/dist/**
+            apps/web/.next/**

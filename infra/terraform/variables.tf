@@ -16,7 +16,7 @@ variable "r2_bucket" {
 variable "mail_provider" {
   type = string
   validation {
-    condition     = contains(["mailjet","brevo"], var.mail_provider)
+    condition     = contains(["mailjet", "brevo"], var.mail_provider)
     error_message = "mail_provider muss 'mailjet' oder 'brevo' sein."
   }
 }

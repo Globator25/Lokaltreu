@@ -1,56 +1,66 @@
-# Runbook: Restore Database
+# Runbook: Restore Database (Neon/PostgreSQL EU)
 
-**Scope:** Wiederherstellung der Produktionsdatenbank aus Backup (PITR/Snapshot).
+Scope: Wiederherstellung der Produktionsdatenbank aus Backup (PITR/Snapshot) mit RPO ≤ 15 Min und RTO ≤ 60 Min. Quelle: SPEC §6, ROADMAP Schritt 48, docs/05-Compliance.md.
 
-## Vorbedingungen (alle erfüllt)
-- Backups verfügbar (R2/S3 oder Provider-Snapshots) + Restore-Credentials.
-- **RPO ≤ 15 min**, **RTO ≤ 60 min** bestätigt.
-- Wartungsfenster kommuniziert, Oncall/Stakeholder informiert.
-- Rollen benannt: Owner (führt), Scribe (loggt), Reviewer (freigibt).
-- Aktuelle Migrationsversion bekannt (z. B. via `prisma migrate status`).
+---
+
+## Vorbedingungen
+- Backups/Snapshots vorhanden (Cloudflare R2 + Neon PITR); Zugriffe/Keys geprüft.  
+- Wartungsfenster kommuniziert, Oncall & Stakeholder informiert.  
+- Rollen benannt: Owner (führt), Scribe (loggt), Reviewer (freigibt).  
+- Aktuelle Schema-Version bekannt (z. B. `pnpm prisma migrate status`).  
+- `deleted_subjects` Tombstone-Liste aktuell (für späteres Re-Apply).  
+- Incident-/Change-Ticket angelegt (dokumentiert RPO/RTO-Ziel).
+
+---
 
 ## Schritte
-1. **T0 festhalten** (UTC-Timestamp) und Incident/Change-Ticket öffnen.
-2. **Schreibzugriff sperren**: App in Wartungsmodus, Worker/Jobs pausieren, DB ggf. read-only.
-3. **Pre-Restore-Sicherung**: ad-hoc Dump/Branch des IST-Stands erstellen (Notfall-Rollback).
-4. **Zielzeitpunkt wählen**: Snapshot/Time ≤ RPO bestimmen (z. B. `2025-10-05T12:34:00Z`).
-5. **Restore ausführen** (Provider-Workflow, z. B. Neon PITR/Snapshot → neue DB/Branch):
-	- Auf isolierte Instanz/Branch restoren.
-	- Verbindungen/Secrets **nicht** auf Prod schalten.
-6. **Migrationsstand angleichen**: Schema auf Zielversion bringen (Up/Down je nach Bedarf).
-7. **Integrität prüfen** (alle müssen grün):
-	- Checksums/Counts kritischer Tabellen (z. B. `users`, `stamps`, `rewards`).
-	- Sanity-Queries (z. B. jüngste Events, FK-Violations = 0).
-	- `SELECT now()` ~ Zielzeit; `SELECT pg_is_in_recovery()` = false.
-8. **Canary-Check**:
-	- App gegen Restore-DB im Staging oder kurzzeitig in Prod per Read-Only-Probe.
-	- Kernrouten Dry-Run (claim/redeem Testpfad).
-9. **Umschalten**:
-	- Connection-Strings/Secrets auf Restore-DB rotieren.
-	- Wartungsmodus aufheben, Worker/Jobs stufenweise reaktivieren.
-10. **Überwachen** (mind. 30–60 min):
-	 - p95/p99, 5xx, Deadlocks, Slow Queries; Fehlerbudgets im Rahmen.
-11. **Audit & Abschluss**:
-	 - Ticket mit Run-Links, Snapshot-ID, Dauer, RPO/RTO-Einhaltung aktualisieren.
+
+1. **T0 dokumentieren** (UTC) und Ticket/Incident updaten.  
+2. **Write-Zugriff sperren:** Wartungsmodus aktiv (API/Workers), DB ggf. read-only, Blue-Green Runbook referenzieren.  
+3. **Pre-Restore Sicherung:** Ad-hoc Dump oder Neon Branch vom IST-Zustand (Rollback-Option).  
+4. **Zielzeitpunkt wählen:** snapshot/time ≤ RPO (z. B. ISO-Zeit).  
+5. **Restore ausführen:**  
+   - Neon: PITR zu neuem Branch/DB (z. B. `restore-2025-10-05T1234Z`).  
+   - Secrets/Connections noch nicht auf Prod zeigen.  
+6. **Migration angleichen:** Schema auf Zielversion (Migrationen up/down).  
+7. **Integrität prüfen:**  
+   - Tabellen-Counts (`tenants`, `campaigns`, `stamps`, `rewards`, `referrals`).  
+   - FK/Constraint-Checks, `SELECT now()` nahe Zielzeit, `pg_is_in_recovery()` = false.  
+8. **Tombstone erneut anwenden:** `deleted_subjects` Einträge auf Restore-DB ausführen (Art. 17).  
+9. **Canary-Check:**  
+   - App gegen Restore-DB in Stage/Read-Only testen (claim/redeem dummy).  
+   - Observability (p95/p99, error rate) prüfen.  
+10. **Umschalten:**  
+    - Secrets/Connection-Strings rotieren, Wartungsmodus deaktivieren, Worker/Jobs stufenweise reaktivieren.  
+11. **Überwachen (≥60 Min):** p95/p99, 5xx, Deadlocks, queue depth, cost_per_tenant.  
+12. **Audit & Abschluss:** Ticket mit Snapshot-ID, Dauer, RPO/RTO-Einhaltung, Links zu Logs/metrics aktualisieren.
+
+---
 
 ## Abbruch-/Rollback-Kriterien
-- Integritäts- oder Canary-Checks fehlschlagen.
-- 5xx-Rate/Latency außerhalb SLO.
-→ Sofort **Rollback** auf Pre-Restore-Sicherung, Wartungsmodus aktiv, Incident eskalieren.
+- Integritäts-/Canary-Checks schlagen fehl.  
+- Fehler-/Latenzraten außerhalb SLO.  
+→ Sofort Rollback auf Pre-Restore-Sicherung, Wartungsmodus aktivieren, Incident eskalieren (Runbook Incident Response).
+
+---
 
 ## Hinweise
-- Restore-Prozedur regelmäßig in **stage** testen und Messergebnisse dokumentieren.
-- Keine personenbezogenen Daten in Tickets/Chats posten.
+- Restore-Prozedur regelmäßig in Stage testen (Dokumentation in docs/evidence/).  
+- Keine PII in Tickets/Chats; Audit-Exports WORM-konform sichern.  
+- Prompt-Log aktualisieren, falls KI genutzt wurde.
 
-## Beispielkommandos (PostgreSQL, anpassen)
+---
+
+## Beispielkommandos (PostgreSQL)
 ```bash
-# Pre-Restore-Sicherung
+# Pre-Restore Dump
 pg_dump --no-owner --format=custom "$DATABASE_URL" -f pre_restore.dump
 
-# Tabellen zählen (Beispiel)
-psql "$RESTORE_DATABASE_URL" -c "SELECT 'users', count(*) FROM users;"
+# Tabellen zählen
+psql "$RESTORE_DATABASE_URL" -c "SELECT 'tenants', count(*) FROM tenants;"
 psql "$RESTORE_DATABASE_URL" -c "SELECT 'stamps', count(*) FROM stamps;"
 
 # Recovery-Status
-psql "$RESTORE_DATABASE_URL" -c "SELECT pg_is_in_recovery();"
+psql "$RESTORE_DATABASE_URL" -c "SELECT now(), pg_is_in_recovery();"
 ```

@@ -12,14 +12,28 @@
     "build": "npm run build:web && npm run build:api",
     "start:web": "node apps/web/.next/standalone/server.js",
     "start:api": "node apps/api/dist/index.js",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "agents:sentinel:node": "node scripts/agents-sentinel-check.mjs",
+    "agents:sentinels": "npm run -s agents:sentinel:node",
+    "contract:check": "node scripts/contract-check.mjs",
+    "test:with-stub": "cross-env STUB=1 vitest run --coverage",
+    "prepare": "husky",
+    "scan:logs:no-pii": "node scripts/gdpr/scan-logs-no-pii.mjs",
+    "security:api:start": "node apps/api/src/dev-server.js --port=4010 --profile=test",
+    "test:security": "node scripts/test-security.mjs",
+    "test:security:anti-replay": "node scripts/security/anti-replay.mjs",
+    "test:security:device-proof": "node scripts/security/device-proof.mjs",
+    "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
+    "lint": "npm -w apps/web run lint && npm -w apps/api run lint",
+    "test:security:placeholder": "vitest run tests/security/placeholder.test.ts",
+    "schema:drift": "node scripts/schema-drift-placeholder.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "engines": {
-  "node": ">=20 <23"
-},
+    "node": ">=20 <23"
+  },
   "description": "",
   "private": "true",
   "workspaces": [
@@ -28,11 +42,15 @@
   ],
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.5.4",
-    "@typescript-eslint/parser": "^8.45.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@typescript-eslint/parser": "^8.48.1",
     "@vitest/coverage-v8": "^3.2.4",
+    "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
+    "glob": "^10.4.5",
+    "happy-dom": "^20.0.11",
+    "husky": "^9.1.7",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
   }
-
 }

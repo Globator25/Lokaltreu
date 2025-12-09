@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node -e \"console.log('TODO: Web-Tests folgen ab Roadmap-Schritt 27/37');\""
+    "test": "node ./scripts/ci-web-test-placeholder.cjs"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",

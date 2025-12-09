@@ -1,29 +1,20 @@
-# Providers (EU)
-Quelle: SPEC/ARCH/ROADMAP. Verarbeitung ausschließlich EU.
+# Providers (EU Only)
 
-## Fly.io (App-Hosting)
-Region: eu-central (Multi-AZ vorgesehen). Einsatz: API-Monolith, Worker. Blue-Green/Canary vorbereitet.
-Kernpfade: /stamps/claim, /rewards/redeem
-Nachweis: App(s) angelegt, EU-Region protokolliert.
+Quelle: SPEC/ARCH/ROADMAP. Alle Daten und Logs werden ausschließlich in EU-Regionen verarbeitet. Terraform/CI erzwingen dies (vgl. `docs/CI-Gates.md`).
 
-## Neon (PostgreSQL)
-Region: EU. Branching für stage/dev (Previews). Kernobjekte: Tenants, Campaigns, Stamps, Rewards, Referrals, PlanCounter.
-Constraints: eine aktive Kampagne je Mandant.
+| Kategorie | Provider | Region | Zweck | Besonderheiten |
+| --- | --- | --- | --- | --- |
+| App Hosting | Fly.io | `eu-central` (Multi-AZ) | API-Monolith + Worker, Blue-Green/Canary | TLS-Termination EU, Autoscaling, Incident-Logs in EU |
+| Datenbank | Neon (PostgreSQL) | EU (Frankfurt/Amsterdam Cluster) | Tenants, Campaigns, Stamps, Rewards, Referrals, PlanCounter | Serverless Branching (dev/stage), Constraint „eine aktive Kampagne je Mandant" |
+| Redis / Cache | Upstash | EU | Anti-Replay `SETNX(jti)`, Idempotenz-Locks, Rate-Limits, kleine Queues | Geo-Replica nicht aktiviert (EU only), TLS enforced |
+| Object Storage | Cloudflare R2 | EU Jurisdiction | WORM-Audit-Exports, Reports, Medien/Assets | Signierte Exporte, Lifecycle 180 Tage, Zugriff via SOPS-creds |
+| CDN / DNS | Cloudflare Regional Services | EU | PWA-Auslieferung, statische Assets, DNS | Regional Services (kein Edge außerhalb EU), HSTS, TLS 1.2+ |
+| Mail | Mailjet oder Brevo | EU | Security-Alerts, Plan-Warnungen, Admin-Einladungen | DPA hinterlegt, SPF/DKIM in DNS-CDN-Doku |
+| Status-Page | getstatuspage (EU) oder eigener Fly-App Slot | EU | Öffentliche Status-Informationen | Muss unabhängig vom Haupt-Hosting laufen |
 
-## Upstash (Redis)
-Region: EU. Nutzung: Anti-Replay SETNX(jti), Idempotenz-Locks, Rate-Limits, kleine Queues.
+## Terraform / Secrets status
 
-## Cloudflare R2 (EU-Jurisdiction) + CDN Regional Services
-R2 Buckets: audit/, reports/. WORM-Exports signiert, 180 Tage.
-CDN: Regional Services aktiv (EU-TLS). PWA-Delivery, Static/Images.
-
-## Mail (Mailjet oder Brevo)
-EU-Datenhaltung, DPA referenziert.
-Zwecke: Sicherheits-Alerts, Plan-Warnungen (80 %), Admin-Einladungen.
-**Terraform Status (dev):**
-- Variablen deklariert (variables.tf), Mail-Provider validiert.
-- Secrets via SOPS (AGE) verschlüsselt, JIT-Decrypt für Plan.
-
-**DoD:** EU-Regionen aktiv, SOPS/AGE produktiv, Plan grün, DPA/Mail EU referenziert.
-
-**Status:** EU-Regionen aktiv, SOPS/AGE produktiv, Plan grün.
+- Variablen in `infra/terraform/variables.tf` deklariert; Provider-Regionen auf EU gesetzt.  
+- Secrets werden via SOPS (AGE) verwaltet, CI/Dev nutzen JIT-Decrypt.  
+- `terraform fmt` / `validate` laufen grün; State-Backends liegen ebenfalls in EU (z. B. Cloudflare R2 Bucket).  
+- DoD: EU-Regionen aktiv, SOPS/AGE produktiv, DPAs referenziert.

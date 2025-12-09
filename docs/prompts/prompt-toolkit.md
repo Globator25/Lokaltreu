@@ -1,65 +1,72 @@
-# 🧠 Lokaltreu Prompt-Toolkit für GPT-5 mini
+# Lokaltreu Prompt-Toolkit (GPT-5)
 
-Dieses Toolkit enthält wiederverwendbare Prompts zur auditierbaren, typensicheren Entwicklung von Lokaltreu. Jeder Prompt ist so formuliert, dass er reproduzierbare, CI-konforme Ergebnisse liefert und für echte Anfänger verständlich bleibt.
-
----
-
-## 🧩 Typgenerierung
-
-> Bitte generiere die TypeScript-Typen für die Route `/stamps/claim` aus folgendem OpenAPI-Schema. Achte auf RFC 7807-konforme Fehlerobjekte und nutze `@lokaltreu/types` als Zielstruktur. Die Typen sollen CI-konform, dokumentiert und wiederverwendbar sein.
-
-✅ Verwendet für: `StampClaimRequest`, `StampClaimResponse`, `Problem`  
-📁 Zielpfad: `packages/types/src/stamps.ts`
+Dieses Toolkit enthält kuratierte Prompts für wiederholbare, CI-konforme Aufgaben rund um Lokaltreu. Jede Vorlage referenziert explizit Zielpfad, Artefakt und Governance-Kontext (AGENTS, SPEC, Roadmap). Vor Nutzung bitte Einträge im [Prompt-Protokoll](prompt-log.md) dokumentieren.
 
 ---
 
-## 🧪 Fehleranalyse
+## Typgenerierung (OpenAPI → Types)
 
-> Bitte analysiere die Fehlerbehandlung in `claimStamp()` und schlage ein RFC 7807-konformes `Problem`-Objekt vor. Achte auf sinnvolle `error_code`-Werte, `correlation_id` und `retry_after`. Ziel: auditierbare Fehlerstruktur für CI und Monitoring.
-
-✅ Verwendet für: `Problem`-Typ in `packages/types`  
-📁 Zielpfad: `apps/api/src/stamps.ts`
-
----
-
-## 🧑‍🏫 Onboarding-Erklärungen
-
-> Bitte erkläre die Funktion `registerAdminTenant()` für absolute Anfänger. Ziel: verständliche Doku, Fehlerverhalten, Rückgabewerte, Sicherheitsaspekte. Nutze einfache Sprache, klare Beispiele und vermeide Fachjargon.
-
-✅ Verwendet für: `docs/onboarding.md`  
-📁 Zielpfad: `apps/api/src/tenants.ts`
+```
+<ziel> Generiere TypeScript-Typen für Route /stamps/claim (Request, Response, Problem) basierend auf lokaltreu-openapi-v2.0.yaml.
+<kontext> Nutze @lokaltreu/types als Ziel, halte dich an RFC 7807 Fehlerobjekte, schema_drift muss 0 bleiben.
+<anforderung> Output als streng typisierte Definitionen inkl. JSDoc, keine manuellen Anpassungen. Diese Typen werden in packages/types/src/stamps.ts gespeichert.
+```
 
 ---
 
-## 🧪 Testgenerierung
+## Fehleranalyse (Problem+JSON)
 
-> Bitte schreibe Jest-Tests für `claimStamp()` inkl. Erfolgsfall, Fehlerfall (TOKEN_EXPIRED), und Mock-Daten. Ziel: CI-konforme Testabdeckung mit klarer Struktur und Wiederverwendbarkeit.
-
-✅ Verwendet für: `apps/api/src/stamps.test.ts`  
-📁 Zielpfad: `apps/api/src/stamps.test.ts`
-
----
-
-## 📚 Dokumentation
-
-> Bitte erstelle ein README für Lokaltreu mit folgenden Abschnitten: Projektziel, Setup-Anleitung, Monorepo-Struktur, API-Dokumentation, CI-Checks, Lizenz. Ziel: verständliche Einstiegshilfe für neue Entwickler und Reviewer.
-
-✅ Verwendet für: `README.md`  
-📁 Zielpfad: Projektwurzel
+```
+<ziel> Analysiere claimStamp() und definiere Problem-Objekte (error_code, correlation_id, retry_after).
+<kontext> Route: apps/api/src/stamps.ts, Referenz SPEC Kapitel Fehlercode. Anti-Replay/Plan-Limits müssen abgebildet werden.
+<anforderung> Liefere RFC 7807-konforme Beispiele + Mapping error_code → HTTP status. Ergebnis fließt in packages/types und Handler.
+```
 
 ---
 
-## 🧭 Refactoring
+## Onboarding-Erklärung (Docs)
 
-> Bitte analysiere die Datei `apps/api/src/stamps.ts` und schlage ein Refactoring vor, das die Fehlerbehandlung verbessert, Typen auslagert und CI-ready ist. Ziel: auditierbare Architektur mit klarer Modularisierung und Wiederverwendbarkeit.
-
-✅ Verwendet für: Refactoring-Vorschläge in `apps/api/src/stamps.ts`  
-📁 Zielpfad: `apps/api/src/stamps.ts`, `packages/types`
+```
+<ziel> Erkläre registerAdminTenant() verständlich für Einsteiger (docs/onboarding.md).
+<kontext> Fokus: Ablauf, Fehler, Security (Single-Admin, Alerts). Quelle SPEC US-1/US-2.
+<anforderung> Schreibe in einfacher Sprache, max. 400 Wörter, erwähne Device-Proof Voraussetzungen.
+```
 
 ---
 
-## 🧠 Best Practices für Prompting
+## Testgenerierung (Vitest/Jest)
 
-- Verwende `<ziel>`, `<kontext>` und `<anforderung>` zur Strukturierung
-- Halte Prompts kurz, präzise und CI-orientiert
-- Dokumentiere jede GPT-Nutzung im [Prompt-Protokoll](prompt-log.md)
+```
+<ziel> Erstelle Tests für claimStamp(): Erfolg, TOKEN_EXPIRED, PLAN_NOT_ALLOWED.
+<kontext> Verwende mocks entsprechend OpenAPI, Anti-Replay via Redis-Mock. Tests laufen über npm test --workspaces.
+<anforderung> Struktur: arrange-act-assert, keine Snapshots. Datei apps/api/src/stamps.test.ts.
+```
+
+---
+
+## Dokumentation (README)
+
+```
+<ziel> Aktualisiere README mit Abschnitten Projektziel, Setup, Monorepo-Struktur, API, CI-Gates, Lizenz.
+<kontext> Nutze Informationen aus docs/01-Project-Canvas.md, docs/CI-Gates.md, AGENTS.
+<anforderung> Prägnant, aber vollständig; Markdown-kompatibel.
+```
+
+---
+
+## Refactoring (Handler)
+
+```
+<ziel> Schlanke Fehlerbehandlung und Typauslagerung in apps/api/src/stamps.ts.
+<kontext> Berücksichtige Idempotency, Device-Proof, Plan-Gates. Typen liegen in packages/types.
+<anforderung> Liefere Änderungsplan + Beispielcode (keine kompletten Dateien). Ziel: auditierbare Architektur.
+```
+
+---
+
+## Prompt-Best-Practices
+
+1. Nutze `<ziel>`, `<kontext>`, `<anforderung>` für Klarheit.  
+2. Verweise auf konkrete Dateien/Abschnitte (SPEC, AGENTS, Roadmap).  
+3. Halte Prompts kurz, eindeutig, CI-orientiert.  
+4. Jede GPT-Nutzung im Prompt-Log dokumentieren (Zeit, Zweck, Ergebnis).

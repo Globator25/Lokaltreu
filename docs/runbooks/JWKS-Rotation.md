@@ -34,15 +34,15 @@ Rotation der JWT-Verifikationskeys (JWKS) für Admin-/Service-Tokens ohne Downti
 
 ### Block 2 – JWK vorbereiten und aufnehmen
 1. Ergänze Draft-JWK im JWKS (noch nicht produktiv deployed) und stelle sicher, dass bestehender Key verbleibt (Overlap/Grace Period).
-2. Synchronisiere Dev/Stage-Configs oder Feature-Flags, damit beide `kid` akzeptiert werden.
+2. Synchronisiere Dev/Stage-Configs oder Feature-Flags, damit beide `kid` akzeptiert werden (Overlap-Strategie: alter Key bleibt solange gültig, bis Grace Period abgeschlossen ist).
 3. Informiere Security Lead + Platform On-Call, dass Stage-Rollout startet.
-- **Verifikation:** JWKS enthält beide Keys, Config generiert ohne Fehler, Stage-Clients validieren beide `kid` in Test.
+- **Verifikation:** JWKS (`/.well-known/jwks.json`) liefert beide Keys, Config generiert ohne Fehler, Stage-Clients validieren beide `kid` in Login/Refresh-Tests.
 
 ### Block 3 – Veröffentlichung/Deploy
 1. Deploy JWKS (mit altem und neuem Key) über standardisierten Prozess/Pipeline (kein manueller Edit, keine Provider-spezifischen CLI-Befehle in diesem Dokument).
 2. Warte Grace Period (mindestens zwei Access-Token TTL) bevor alter Key deaktiviert wird.
-3. Nach Grace Period: entferne alten Key, sobald Security Lead bestätigt, dass alle Clients den neuen `kid` nutzen.
-- **Verifikation:** Monitoring (jwt_validation_errors, invalid_signature, login success) bleibt innerhalb der Basislinie; Logs zeigen neue `kid`-Nutzung; Smoke-Checks (Login, Refresh, Device-Proof) erfolgreich.
+3. Nach Grace Period: entferne alten Key, sobald Security Lead bestätigt, dass alle Clients den neuen `kid` nutzen und die letzte Login-/Refresh-Validierung grün ist.
+- **Verifikation:** Monitoring (jwt_validation_errors, invalid_signature, login success) bleibt innerhalb der Basislinie; Logs zeigen neue `kid`-Nutzung; Smoke-Checks (Login, Refresh, Device-Proof) sowie JWKS-Endpoint-Check (nur neuer Key) erfolgreich.
 
 ### Block 4 – Abschluss & Lessons Learned
 1. Aktualisiere Key-Inventar, Tickets, Dokumentation (Datum, `kid`, Hash, verantwortliche Rollen).
@@ -54,9 +54,9 @@ Rotation der JWT-Verifikationskeys (JWKS) für Admin-/Service-Tokens ohne Downti
 Bei Validierungsfehlern, Ausfällen oder Kompromittierungsverdacht sofort `docs/runbooks/JWKS-Rollback.md` befolgen. Keine ad-hoc-Konfigurationsänderungen, kein Hardcoding von Keys.
 
 ## Evidence & Audit Artifacts
-- Change-/Incident-ID, Approval-Referenz, Datum/Uhrzeit jeder Phase.
+- Change-/Incident-ID, Approval-Referenz, Datum/Uhrzeit jeder Phase + Overlap-Start/Ende.
 - Key-Fingerprint/Hash, `kid`, Version der JWKS-Datei (z. B. Git SHA).
-- Logs/Metrics-Exports (jwt_validation_errors, login success), Smoke-Test-Protokolle, correlation_id-Beispiele (PII-frei).
+- Logs/Metrics-Exports (jwt_validation_errors, login/refresh success, JWKS endpoint response hash), Smoke-Test-Protokolle, correlation_id-Beispiele (PII-frei).
 - Ablage: Ticket-System + `artifacts/security/<ticket-id>/jwks-rotation/`, Replikation in Audit-Speicher (z. B. R2) gemäß `docs/04-Security-and-Abuse.md`.
 
 ## Communication
@@ -70,3 +70,11 @@ Bei Validierungsfehlern, Ausfällen oder Kompromittierungsverdacht sofort `docs/
 | YYYY-MM-DD | Security Lead, Platform On-Call | Dry-run Stage Rotation | Monitoring stable, scheduled rotation alert | Generate new key, stage deploy, metrics review | | | |
 | YYYY-MM-DD | Security Lead, Platform On-Call, Incident Commander | Failover/Incident Simulation | Invalid signature spike alert | Trigger rollback decision tree, redeploy JWKS, validate | | | |
 | EXAMPLE/PLACEHOLDER | 2025-02-10 | Security Lead, Platform On-Call | Stage rotation rehearsal | Planned rotation reminder ticket | Draft key, deploy to stage, verify metrics stay baseline | Outcome: PASS, no issues | TODO: schedule prod exercise | artifacts/security/RB-0001/jwks-rotation-dryrun |
+| 2025-12-16 | Security Lead, Platform On-Call | Planned rotation drill | Monitoring ready, overlap window simulated | Outcome: PASS, overlap validated | STEP9-DRILL-001 | TODO: add automated overlap alert |
+
+## Trockenlauf-Protokoll
+
+| Datum | Rollen | Szenario | Annahmen/Signals | Ergebnis | Evidenz | TODOs |
+|---|---|---|---|---|---|---|
+| EXAMPLE/PLACEHOLDER | YYYY-MM-DD | Incident Commander (IC), Security Lead, Platform On-Call | <kurz> | <kurz> | Ticket-ID / artifacts/... | <kurz> |
+| 2025-12-16 | Incident Commander (IC), Security Lead, Platform On-Call | Rotation tabletop drill | Monitoring nominal, JWKS overlap simulated | Outcome: PASS | STEP9-DRILL-001 | TODO: capture overlap hash auto |

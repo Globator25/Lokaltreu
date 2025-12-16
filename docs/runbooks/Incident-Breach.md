@@ -76,3 +76,10 @@ Abhängig von gewählter Remediation. Nutze spezialisierte Runbooks (z. B. `JW
 | YYYY-MM-DD | IC, Security Lead, Comms Lead, Compliance | Incident Simulation (Containment + Triage) | Synthetic SLO breach alert | Severity set, containment activated, triage logged | | | |
 | YYYY-MM-DD | IC, Security Lead, Compliance, Legal | 72h-Meldepfad Drill | Breach suspected notification | Execute 72h timeline decisions, prep regulator brief | | | |
 | EXAMPLE/PLACEHOLDER | 2025-02-20 | IC, Security Lead, Comms Lead, Compliance | Incident dry-run | Alert: simulated data exfil signal | Containment rehearsal, 24h update drafted, 72h decision mock | Outcome: PASS, communication flow validated | TODO: automate evidence checklist | artifacts/incidents/RB-0005/dryrun |
+
+## Trockenlauf-Protokoll
+
+| Datum | Rollen | Szenario | Annahmen/Signals | Ergebnis | Evidenz | TODOs |
+|---|---|---|---|---|---|---|
+| EXAMPLE/PLACEHOLDER | YYYY-MM-DD | Incident Commander (IC), Security Lead, Platform On-Call | <kurz> | <kurz> | Ticket-ID / artifacts/... | <kurz> |
+| 2025-12-16 | Incident Commander (IC), Security Lead, Platform On-Call | 72h timeline tabletop | Alert: breach suspected mock | Outcome: PASS | STEP9-DRILL-005 | TODO: auto evidence log |

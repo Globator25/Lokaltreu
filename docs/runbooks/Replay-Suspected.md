@@ -62,3 +62,11 @@ Wenn Massnahmen (z. B. Rate-Limit-Erhöhungen) den Normalbetrieb beeinträchti
 | YYYY-MM-DD | Security Analyst, API Tech Lead | Replay-Alert Simulation | Synthetic `rate_token_reuse` spike | Collect logs, triage, apply temporary limits | | | |
 | YYYY-MM-DD | Security Analyst, IC, Compliance | Incident-Eskalation Drill | Escalated abuse alert | Trigger incident path, communication rehearsal | | | |
 | EXAMPLE/PLACEHOLDER | 2025-02-18 | Security Analyst, API Tech Lead | Replay dry-run | Alert: simulated nonce reuse spike | Triage logs, enforce stricter limits, capture evidence | Outcome: PASS, detection latency <5m | TODO: automate metric export | artifacts/security/RB-0004/replay-dryrun |
+| 2025-12-16 | Security Analyst, IC, Compliance | Replay tabletop drill | Alert: synthetic replay burst | Outcome: PASS, mitigations validated | STEP9-DRILL-004 | TODO: script metric snapshot |
+
+## Trockenlauf-Protokoll
+
+| Datum | Rollen | Szenario | Annahmen/Signals | Ergebnis | Evidenz | TODOs |
+|---|---|---|---|---|---|---|
+| EXAMPLE/PLACEHOLDER | YYYY-MM-DD | Incident Commander (IC), Security Lead, Platform On-Call | <kurz> | <kurz> | Ticket-ID / artifacts/... | <kurz> |
+| 2025-12-16 | Incident Commander (IC), Security Lead, Platform On-Call | Replay drill follow-up | Alert: replay detection normal | Outcome: PASS | STEP9-DRILL-004 | TODO: automate evidence upload |

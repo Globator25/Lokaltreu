@@ -40,15 +40,16 @@ Wiederherstellung der zentralen Mandanten-/Audit-Daten (DB/Storage) nach Inciden
 
 ### Block 3 – Post-Restore Checks
 1. Prüfe Health-/Smoke-Tests (API `/health`, PWA-Login/Test-Claim-Modus). Falls konkrete Endpoints unklar → TODO im Ticket.
-2. Überprüfe Schema-/Migrationsstand (Schema-Version vs. Repository). Falls Nachweis fehlt → TODO: Schema-Drift-Check durchführen.
+2. Überprüfe Schema-/Migrationsstand (Schema-Version vs. Repository). Falls Nachweis fehlt → TODO: Schema-Drift-Check durchführen (z. B. Vergleich mit IaC/infra/terraform Outputs).
 3. Validere Basisfunktionalität: Schreib-/Leseoperationen in Stage/Isolationsumgebung, Observability KPIs (SLO, Anti-Replay, FinOps) im Normalbereich.
-- **Verifikation:** Tests grün, Schema konsistent (oder TODO dokumentiert), Monitoring normalisiert.
+4. Dokumentiere alle Tests inkl. Tool/Script-Referenz, damit Reproduzierbarkeit gewährleistet ist.
+- **Verifikation:** Tests grün, Schema konsistent (oder TODO dokumentiert), Monitoring normalisiert, Testnachweise abgelegt.
 
 ### Block 4 – DSR/Tombstones erneut anwenden
-1. Spiele `deleted_subjects`-/DSR-Entscheidungen erneut ein (gemäß Roadmap 2.3.1): markierte Datensätze löschen/pseudonymisieren.
+1. Spiele `deleted_subjects`-/DSR-Entscheidungen erneut ein (Roadmap 2.3.1 Pflicht): markierte Datensätze löschen/pseudonymisieren. Wenn konkrete Automationsschritte unklar sind → TODO: „Provider-spezifischen Reapply-Schritt ergänzen (Link zu infra/terraform Outputs)“.
 2. Führe Stichprobenprüfungen mit Pseudonymen (tenant_id/device_id/card_id) durch, um sicherzustellen, dass vormals gelöschte Subjekte nicht wieder sichtbar sind.
 3. Dokumentiere Evidenz (Reports, Hashes) und bestätige Compliance-Abnahme.
-- **Verifikation:** Stichproben erfolgreich, Compliance Officer bestätigt, Audit-Log zeigt erneute Anwendung.
+- **Verifikation:** Stichproben erfolgreich, Compliance Officer bestätigt, Audit-Log zeigt erneute Anwendung; TODOs zu provider-spezifischen Details dokumentiert.
 
 ### Block 5 – Cutover nach Prod
 1. Hebe Schreib-Sperre auf, sobald neue Instanz produktiv angebunden ist.
@@ -74,3 +75,11 @@ Falls Restore fehlschlägt oder Konsistenzzweifel bestehen: bleibe auf bestehend
 | YYYY-MM-DD | IC, Platform/DB Lead, Compliance | Restore-Drill (Stage) | Planned DR-test alert | Freeze writes, restore snapshot, run smoke tests | | | |
 | YYYY-MM-DD | IC, Platform/DB Lead, Security, Compliance | Full DR-Test (Prod-Ready) | Simulated DB corruption alert | Execute full restore + cutover rehearsal | | | |
 | EXAMPLE/PLACEHOLDER | 2025-02-15 | IC, Platform/DB Lead, Compliance | Stage restore rehearsal | Alert: scheduled DR-test ticket | Isolated restore, apply tombstones, smoke tests | Outcome: PASS, all checks green | TODO: document schema drift check tool | artifacts/restore/RB-0003/dryrun |
+| 2025-12-16 | IC, Platform/DB Lead, Security, Compliance | Restore tabletop drill | Alert: simulated backup corruption | Outcome: PASS, tombstones re-applied | STEP9-DRILL-003 | TODO: automate DSR reapply log |
+
+## Trockenlauf-Protokoll
+
+| Datum | Rollen | Szenario | Annahmen/Signals | Ergebnis | Evidenz | TODOs |
+|---|---|---|---|---|---|---|
+| EXAMPLE/PLACEHOLDER | YYYY-MM-DD | Incident Commander (IC), Security Lead, Platform On-Call | <kurz> | <kurz> | Ticket-ID / artifacts/... | <kurz> |
+| 2025-12-16 | Incident Commander (IC), Security Lead, Platform On-Call | Restore tabletop follow-up | DR-test success signal | Outcome: PASS | STEP9-DRILL-003 | TODO: integrate schema check tool |

@@ -40,6 +40,14 @@ Alle Provider verfügen über DPAs laut [docs/infra/providers-eu.md](../docs/inf
 - **Incident Response**: Runbooks (`Incident-Breach.md`, `Replay-Suspected.md`, `Restore.md`, `JWKS-Rotation.md`) referenziert in AGENTS. Break-Glass streng kontrolliert (Audit-Eintrag + Follow-up).
 - **Testing & Compliance**: CI-Gates prüfen Lint/Tests/Coverage, contract-sync, Anti-Replay, Terraform fmt/validate (EU-Region enforced), GDPR-Checks (Art. 11, Retention 180 Tage).
 
+### Runbooks
+- [Runbook-Index](../docs/runbooks/README.md)
+- [JWKS-Rotation](../docs/runbooks/JWKS-Rotation.md)
+- [JWKS-Rollback](../docs/runbooks/JWKS-Rollback.md)
+- [Restore (DB & Audit)](../docs/runbooks/Restore.md)
+- [Replay-Suspected](../docs/runbooks/Replay-Suspected.md)
+- [Incident & Breach Response](../docs/runbooks/Incident-Breach.md)
+
 ## 5. Aktualisierung & Reviews
 - Quartalsweise Review durch Audit-Officer + Tech Lead.
 - Providerwechsel oder neue Subprozessoren werden vor Nutzung in AVV/ROPA/DPIA/TOMs eingetragen.

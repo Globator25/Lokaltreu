@@ -52,3 +52,7 @@ infra/terraform/secrets/test.enc.tfvars
 
 # Secrets (Repo-Root)
 secrets/
+
+# Local scratchpad (do not commit)
+.local-wip/
+

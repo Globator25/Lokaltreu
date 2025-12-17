@@ -1,0 +1,9 @@
+(a) Patch-Plan  
+- Bestandsaufnahme: `http.createServer`-Handler beginnt direkt bei der Konstante `const server = http.createServer((req, res) => { ÔÇª })` in `apps/api/src/server.ts`; `server.listen(port, () => { ÔÇª })` folgt am Datei-Ende; bisher einziger Import ist `import http from "node:http";`.  
+- Importreihenfolge anpassen: ganz oben `import "./observability/otel";` erg├ñnzen, danach den bestehenden `http`-Import sowie einen neuen Import der Metrik-Helfer (`httpRequestsTotal`, `httpErrorsTotal`, `httpRateLimitedTotal`, `httpDurationMs`, `sanitizeRoute`) aus `./observability/metrics`.  
+- Umgebungslabel vorbereiten: einmalig `const env = process.env.DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || "dev";` definieren, damit jede Metrik diesen Wert ohne erneutes Auslesen verwenden kann.  
+- Request-Instrumentierung: Im `createServer`-Handler zu Requestbeginn `startTime`, `route` (├╝ber `sanitizeRoute`) und `method` erfassen; einen einmaligen Abschluss-Handler (`recordMetrics`) erstellen, der bei `finish`/`close` feuert, Dauer in Millisekunden berechnet und alle geforderten Labels (`route`, `method`, `status_code` als String, `env`) aufbaut.  
+- Metriken schreiben: In `recordMetrics` `http_server_requests_total` inkrementieren, `http_server_duration_ms` (Histogram) mit Dauer bef├╝llen, bei Statuscodes ÔëÑ400 zus├ñtzlich `http_server_errors_total` erh├Âhen sowie bei 429 `rate_limited_total`; keine Body/Header/Query-Daten anfassen.  
+
+(b) Dateien  
+- `apps/api/src/server.ts`

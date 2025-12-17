@@ -12,3 +12,6 @@ scrape_configs:
         action: replace
         replacement: user
         target_label: traffic.source
+      - action: keep
+        regex: "otelcol_.*|lokaltreu_.*"
+        source_labels: ["__name__"]

@@ -6,15 +6,25 @@
     "test": "vitest run",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint src --ext .ts,.js"
+    "lint": "eslint src --ext .ts,.js",
+    "dev": "tsx src/dev-observability.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "type": "module",
+  "dependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.67.2",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.208.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
+    "@opentelemetry/resources": "^2.2.0",
+    "@opentelemetry/sdk-node": "^0.208.0",
+    "@opentelemetry/semantic-conventions": "^1.38.0"
+  },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.21.0",
     "vitest": "^3.2.4"
   }
 }

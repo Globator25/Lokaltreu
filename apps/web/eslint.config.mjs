@@ -1,53 +1,24 @@
-// apps/web/eslint.config.mjs
-import js from '@eslint/js';
-import globals from 'globals';
-import tsParser from '@typescript-eslint/parser';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { FlatCompat } from "@eslint/eslintrc";
 
-/**
- * ESLint Flat Config für apps/web
- * - lintet JS/TS/TSX
- * - ignoriert Build-, Tooling- und Coverage-Dateien
- */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
+const compat = new FlatCompat({ baseDirectory: __dirname });
+
 export default [
-  // Globale Ignores
+  // ⛔️ Build- & Artefakt-Ordner explizit ignorieren (Flat Config Pflicht)
   {
     ignores: [
-      'node_modules/**',
-      '.next/**',
-      'dist/**',
-      'coverage/**',
-      // falls du bestimmte Config-Files komplett ausklammern willst:
-      // 'next.config.ts',
-      // 'postcss.config.js',
-      // 'tailwind.config.js',
+      ".next/**",
+      "out/**",
+      "dist/**",
+      "coverage/**",
+      "node_modules/**",
     ],
   },
 
-  // Hauptkonfiguration für Quellcode-Dateien
-  {
-    files: ['**/*.{js,jsx,ts,tsx}'],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
-      parser: tsParser,
-      parserOptions: {
-        ecmaFeatures: { jsx: true },
-        // kein Projekt-TSConfig nötig für den Parser im ersten Schritt
-      },
-      globals: {
-        // Browser-Globals (React/Next)
-        ...globals.browser,
-        // Node-Globals, die in Config-/Testfiles verwendet werden
-        __dirname: 'readonly',
-        module: 'readonly',
-        require: 'readonly',
-      },
-    },
-    // Basale Regeln aktivieren (JS-Empfehlungen)
-    rules: {
-      ...js.configs.recommended.rules,
-    },
-  },
+  // ✅ Next.js + TypeScript Regeln
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];

@@ -1,0 +1,35 @@
+```diff
+--- a/apps/api/src/server.ts
++++ b/apps/api/src/server.ts
+@@
+-import http from "node:http";
++import "./observability/otel";
++import {
++  httpRequestsTotal,
++  httpDurationMs,
++  httpErrorsTotal,
++  httpRateLimitedTotal,
++  sanitizeRoute,
++} from "./observability/metrics";
++import http from "node:http";
+@@
+-const server = http.createServer((req, res) => {
+-  // Minimaler Health-Check f´┐¢r Smoke-Traffic & Prometheus/Uptime
++const server = http.createServer((req, res) => {
++  const startHr = process.hrtime.bigint();
++  const route = sanitizeRoute(req.url);
++  const method = req.method || "UNKNOWN";
++
++  res.on("finish", () => {
++    const status = res.statusCode;
++    const durationMs = Number(process.hrtime.bigint() - startHr) / 1_000_000;
++    const env = process.env.DEPLOYMENT_ENVIRONMENT || process.env.NODE_ENV || "dev";
++    const labels = { route, method, status_code: String(status), env };
++    httpRequestsTotal.add(1, labels);
++    httpDurationMs.record(durationMs, { route, method, env });
++    if (status >= 400) httpErrorsTotal.add(1, labels);
++    if (status === 429) httpRateLimitedTotal.add(1, labels);
++  });
++
++  // Minimaler Health-Check f´┐¢r Smoke-Traffic & Prometheus/Uptime
+```

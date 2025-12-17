@@ -1,0 +1,84 @@
+name: local
+services:
+  grafana:
+    depends_on:
+      prometheus:
+        condition: service_started
+        required: true
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: admin
+    image: grafana/grafana:latest
+    networks:
+      lokaltreu_obs_default: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "13000"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\user\Projects\lokaltreu\infra\observability\local\grafana\provisioning
+        target: /etc/grafana/provisioning
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: C:\Users\user\Projects\lokaltreu\infra\observability\grafana\dashboards
+        target: /var/lib/grafana/dashboards
+        read_only: true
+        bind:
+          create_host_path: true
+  otel-collector:
+    command:
+      - --config=/etc/otelcol/config.yaml
+    image: otel/opentelemetry-collector-contrib:latest
+    networks:
+      lokaltreu_obs_default: null
+    ports:
+      - mode: ingress
+        target: 4317
+        published: "4317"
+        protocol: tcp
+      - mode: ingress
+        target: 4318
+        published: "14318"
+        protocol: tcp
+      - mode: ingress
+        target: 9464
+        published: "19464"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\user\Projects\lokaltreu\infra\observability\local\otel-collector.yaml
+        target: /etc/otelcol/config.yaml
+        read_only: true
+        bind:
+          create_host_path: true
+  prometheus:
+    depends_on:
+      otel-collector:
+        condition: service_started
+        required: true
+    image: prom/prometheus:latest
+    networks:
+      lokaltreu_obs_default: null
+    ports:
+      - mode: ingress
+        target: 9090
+        published: "19090"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: C:\Users\user\Projects\lokaltreu\infra\observability\local\prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+        bind:
+          create_host_path: true
+networks:
+  lokaltreu_obs_default:
+    name: lokaltreu_obs_default

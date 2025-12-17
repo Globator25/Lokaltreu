@@ -27,7 +27,10 @@
     "lint": "npm -w apps/web run lint && npm -w apps/api run lint",
     "test:security:placeholder": "vitest run tests/security/placeholder.test.ts",
     "schema:drift": "node scripts/schema-drift-placeholder.mjs",
-    "terraform:sops-check": "node scripts/check-tfvars-encryption.mjs"
+    "terraform:sops-check": "node scripts/check-tfvars-encryption.mjs",
+    "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
+    "dev:mock-api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
+    "openapi:lint": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml"
   },
   "keywords": [],
   "author": "",
@@ -42,9 +45,12 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@next/eslint-plugin-next": "^15.5.4",
+    "@next/eslint-plugin-next": "^15.5.9",
+    "@stoplight/prism-cli": "^5.14.2",
+    "@stoplight/spectral-cli": "^6.11.2",
     "@testing-library/jest-dom": "^6.9.1",
-    "@typescript-eslint/parser": "^8.48.1",
+    "@typescript-eslint/eslint-plugin": "8.48.1",
+    "@typescript-eslint/parser": "8.48.1",
     "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
@@ -53,5 +59,8 @@
     "husky": "^9.1.7",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "vite": "7.1.11"
   }
 }

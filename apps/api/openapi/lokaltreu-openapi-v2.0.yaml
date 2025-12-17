@@ -1,12 +1,29 @@
 openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+x-schema-drift-policy: "0"
 info:
   title: Lokaltreu API
+  description: OpenAPI SSOT für Lokaltreu – Mock-First, PII-frei, deckt Admin-, Device- und PWA-Flows ab.
   version: "2.0"
   license:
     name: UNLICENSED
     url: https://example.com/license
+  contact:
+    name: Lokaltreu Contract-Sheriff
+    email: api-contract@lokaltreu.example
 servers:
   - url: https://api.lokaltreu.example/v1
+tags:
+  - name: Admins
+    description: Admin-Onboarding und Verwaltungsrouten
+  - name: Devices
+    description: Registrierung und Bestätigung von Mitarbeitergeräten
+  - name: Stamps
+    description: Ausgabe und Einlösung digitaler Stempel
+  - name: Rewards
+    description: Prämien-Workflows inkl. Device-Proof
+  - name: Referrals
+    description: Refer-a-Friend Links und Limits
 components:
   securitySchemes:
     AdminAuth:
@@ -21,16 +38,39 @@ components:
     IdempotencyKey:
       in: header
       name: Idempotency-Key
+      required: true
       schema:
         type: string
         minLength: 8
         maxLength: 128
+      description: Idempotency protection (TTL 24h); must not contain PII.
     XDeviceProof:
       in: header
       name: X-Device-Proof
       required: true
       schema:
         type: string
+      description: Ed25519 proof over method|path|timestamp|jti; max drift ±30s.
+    XDeviceTimestamp:
+      in: header
+      name: X-Device-Timestamp
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: Unix epoch seconds used in Device-Proof; drift ±30s allowed.
+  headers:
+    Idempotency-Key:
+      description: Echoes the request Idempotency-Key when provided.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    Retry-After:
+      description: Number of seconds to wait before retrying.
+      schema:
+        type: integer
+        minimum: 1
   schemas:
     Problem:
       type: object
@@ -38,6 +78,7 @@ components:
         - type
         - title
         - status
+      additionalProperties: true
       properties:
         type:
           type: string
@@ -89,10 +130,167 @@ components:
           type:
             - string
             - "null"
+    StampClaimResponse:
+      type: object
+      required:
+        - status
+        - stampId
+      properties:
+        status:
+          type: string
+          enum:
+            - claimed
+        stampId:
+          type: string
+          format: uuid
+        rewardUnlocked:
+          type: boolean
+        referralAwarded:
+          type: boolean
+        remainingToReward:
+          type: integer
+          minimum: 0
+        correlation_id:
+          type: string
+    RewardRedeemResponse:
+      type: object
+      required:
+        - status
+        - rewardId
+      properties:
+        status:
+          type: string
+          enum:
+            - redeemed
+        rewardId:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+        device_id:
+          type: string
+        correlation_id:
+          type: string
+  responses:
+    BadRequestProblem:
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            tokenExpired:
+              summary: Token expired
+              value:
+                type: https://lokaltreu.example/problems/token-expired
+                title: Token expired
+                status: 400
+                detail: Stamp token expired or invalid
+                instance: /stamps/claim
+                error_code: TOKEN_EXPIRED
+                correlation_id: corr-0001
+    UnauthorizedProblem:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            deviceUnauthorized:
+              summary: Missing authentication
+              value:
+                type: https://lokaltreu.example/problems/unauthorized
+                title: Unauthorized
+                status: 401
+                detail: Authentication required
+                instance: /rewards/redeem
+                error_code: TOKEN_EXPIRED
+                correlation_id: corr-unauth-001
+    ForbiddenProblem:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            planNotAllowed:
+              summary: Plan does not allow this action
+              value:
+                type: https://lokaltreu.example/problems/plan-not-allowed
+                title: Plan not allowed
+                status: 403
+                detail: Current plan does not include referrals
+                instance: /stamps/claim
+                error_code: PLAN_NOT_ALLOWED
+                correlation_id: corr-plan-001
+    ConflictProblem:
+      description: Conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            tokenReuse:
+              summary: Token already used
+              value:
+                type: https://lokaltreu.example/problems/token-reuse
+                title: Token reuse detected
+                status: 409
+                detail: Token already consumed
+                instance: /rewards/redeem
+                error_code: TOKEN_REUSE
+                correlation_id: corr-conflict-001
+    UnprocessableEntityProblem:
+      description: Unprocessable Entity
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            selfReferral:
+              summary: Self referral blocked
+              value:
+                type: https://lokaltreu.example/problems/self-referral
+                title: Self referral blocked
+                status: 422
+                detail: Referrer and referee belong to same card_id
+                instance: /stamps/claim
+                error_code: SELF_REFERRAL_BLOCKED
+                correlation_id: corr-422-001
+    TooManyRequestsProblem:
+      description: Too Many Requests
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/Retry-After"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            rateLimited:
+              summary: Rate limited
+              value:
+                type: https://lokaltreu.example/problems/rate-limited
+                title: Rate limited
+                status: 429
+                detail: Too many requests, retry later
+                instance: /stamps/claim
+                error_code: RATE_LIMITED
+                correlation_id: corr-429-001
+                retry_after: 30
+    InternalServerErrorProblem:
+      description: Internal Server Error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
 paths:
   /admins/register:
     post:
       summary: Registriert Admin+Mandant
+      description: Erstellt einen neuen Mandanten inklusive Admin-Zugang.
+      tags:
+        - Admins
       operationId: registerAdmin
       security: []
       requestBody:
@@ -115,14 +313,13 @@ paths:
         "201":
           description: Created
         "409":
-          description: Conflict
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/ConflictProblem"
   /devices/registration-links:
     post:
       summary: Einmaliger Registrierungslink (TTL 15m)
+      description: Generiert einen einmaligen Link, mit dem ein Mitarbeitergerät binnen 15 Minuten registriert wird.
+      tags:
+        - Devices
       operationId: createDeviceRegistrationLink
       security:
         - AdminAuth: []
@@ -132,20 +329,15 @@ paths:
         "201":
           description: Created
         "409":
-          description: Already exists
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/ConflictProblem"
         "429":
-          description: Rate limited
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/TooManyRequestsProblem"
   /devices/register/confirm:
     post:
       summary: Bestätigt Gerätebindung (einmalig)
+      description: Schliesst den Device-Proof-Flow ab und verknüpft das Gerät dauerhaft mit dem Tenant.
+      tags:
+        - Devices
       operationId: confirmDeviceRegistration
       security: []
       parameters:
@@ -154,20 +346,15 @@ paths:
         "204":
           description: No Content
         "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/BadRequestProblem"
         "409":
-          description: TOKEN_REUSE
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/ConflictProblem"
   /stamps/tokens:
     post:
       summary: Erzeugt einmaligen Stempel-Token (QR)
+      description: Erstellt einen kurzlebigen QR-Token zum Ausstellen eines digitalen Stempels.
+      tags:
+        - Stamps
       operationId: createStampToken
       security:
         - DeviceKey: []
@@ -190,6 +377,9 @@ paths:
   /stamps/claim:
     post:
       summary: Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
+      description: Validiert QR-Token, bucht Stempel, bewertet Referral-Status und Plan-Gates.
+      tags:
+        - Stamps
       operationId: claimStamp
       security: []
       parameters:
@@ -203,38 +393,45 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StampClaimResponse"
+              examples:
+                rewardUnlocked:
+                  summary: Reward unlocked after final stamp
+                  value:
+                    status: claimed
+                    stampId: 0e2f37d0-3bf4-4a1d-b7e5-a05fb470a111
+                    rewardUnlocked: true
+                    referralAwarded: true
+                    remainingToReward: 0
+                    correlation_id: corr-claim-ok-001
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
         "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/BadRequestProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "409":
-          description: TOKEN_REUSE | REFERRAL_TENANT_MISMATCH
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/ConflictProblem"
         "422":
-          description: SELF_REFERRAL_BLOCKED | REFERRAL_LIMIT_REACHED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/UnprocessableEntityProblem"
         "429":
-          description: RATE_LIMITED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/TooManyRequestsProblem"
   /rewards/redeem:
     post:
       summary: Löst eine Prämie ein
+      description: Validiert Redeem-Token via Device-Proof und markiert Prämie als verbraucht.
+      tags:
+        - Rewards
       operationId: redeemReward
       security:
         - DeviceKey: []
       parameters:
         - $ref: '#/components/parameters/XDeviceProof'
+        - $ref: '#/components/parameters/XDeviceTimestamp'
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
@@ -250,21 +447,40 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RewardRedeemResponse"
+              examples:
+                redeemSuccess:
+                  summary: Reward redeemed successfully
+                  value:
+                    status: redeemed
+                    rewardId: 5ad3ce70-9b6b-4b4d-9c88-56cefd4e0af3
+                    tenant_id: tenant_12345
+                    device_id: device_abcd
+                    correlation_id: corr-redeem-ok-001
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
         "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/BadRequestProblem"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
         "409":
-          description: TOKEN_REUSE
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/ConflictProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsProblem"
+        "500":
+          $ref: "#/components/responses/InternalServerErrorProblem"
   /referrals/link:
     get:
       summary: Liefert personalisierten Referral-Link (Werber)
+      description: Gibt den aktiven Refer-a-Friend-Link für eine pseudonyme Card-ID zurück.
+      tags:
+        - Referrals
       operationId: getReferralLink
       security: []
       responses:
@@ -281,8 +497,4 @@ paths:
                     type: string
                     format: uri
         "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/UnauthorizedProblem"

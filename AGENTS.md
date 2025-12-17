@@ -116,6 +116,8 @@ Wenn eine KI oder ein Tool (z. B. Codex) in diesem Repository arbeitet, soll es:
    - das Single-Admin-Design aufbrechen,
    - die PWA-first-Strategie unterlaufen.
 
+- **Mock & Lint lokal:** `npm run mock:api` startet Prism (Port 4010) gegen das OpenAPI-SSOT; `npm run openapi:lint` prüft das Contract via Spectral.
+
 ---
 
 ## 4. CI-Gates & Quality

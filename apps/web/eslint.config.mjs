@@ -23,14 +23,48 @@ export default [
   // ✅ Next.js + TypeScript Regeln
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 
-  // 🔒 Lokaltreu-spezifische Regeln
+  // 🔒 Lokaltreu-spezifische Regeln (DoD Schritt 11: no-manual-api-types)
+  // Hinweis: Wir sichern doppelt ab:
+  // 1) Custom Rule aus @lokaltreu/eslint-plugin-lokaltreu (primär)
+  // 2) Zusätzliche Restriktion via no-restricted-imports (fallback, auditierbar)
   {
-    files: ["src/**/*.{ts,tsx}"],
+    files: ["src/**/*.{ts,tsx,js,jsx}"],
     plugins: {
       lokaltreu: lokaltreuPlugin,
     },
     rules: {
+      // Primärregel (wie bisher)
       "lokaltreu/no-manual-api-types": "error",
+
+      // Fallback/Absicherung: verhindert "Shadow Types" oder lokale Contract-Kopien
+      // Erlaubt ist ausschließlich @lokaltreu/types (generiert aus OpenAPI SSOT).
+      "no-restricted-imports": [
+  "error",
+  {
+    patterns: [
+      // Nur relative Imports verbieten, die auf manuelle API-Typ-Dateien hindeuten
+      {
+        group: [
+          "./openapi*",
+          "../openapi*",
+          "./*openapi*",
+          "../*openapi*",
+
+          "./*api*types*",
+          "../*api*types*",
+
+          "./*dto*",
+          "../*dto*",
+
+          "./*schema*",
+          "../*schema*"
+        ],
+        message:
+          "no-manual-api-types: Keine manuellen API/DTO/Schema-Typen im Frontend. Nutze ausschließlich @lokaltreu/types (OpenAPI SSOT).",
+      },
+    ],
+  },
+],
     },
   },
 ];

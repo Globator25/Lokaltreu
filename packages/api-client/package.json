@@ -1,0 +1,18 @@
+{
+  "name": "@lokaltreu/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@lokaltreu/types": "file:../types",
+    "openapi-fetch": "^0.15.0"
+  }
+}

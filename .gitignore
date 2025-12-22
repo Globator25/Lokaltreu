@@ -1,22 +1,37 @@
 # Node
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Next.js
 .next/
 out/
 
-# Build
+# Build-Artefakte
 dist/
 apps/**/dist/
+.turbo/
 
-# Env
+# Coverage / Test-Reports
+coverage/
+**/coverage/
+
+# TypeScript-Build-Infos
+**/*.tsbuildinfo
+
+# Env-Dateien
+.env
 .env.*
 !.env.example
 
-# OS/IDE
+# OS / IDE
 .DS_Store
 .vscode-test
+
+# Terraform / Infrastruktur
 .terraform/
 infra/terraform/.terraform/
 infra/terraform/terraform.tfstate
@@ -24,10 +39,20 @@ infra/terraform/terraform.tfstate.*
 infra/terraform/.keys/
 infra/terraform/secrets/*.tfvars
 !infra/terraform/secrets/*.enc.tfvars
-# SOPS/AGE
+
+# SOPS / AGE
 **/keys.txt
-# Decrypted temps
+
+# Entschlüsselte temporäre Dateien
 *.tfvars.plain
 *decrypted*.tfvars
-# Testartefakte
+
+# Test-Artefakte
 infra/terraform/secrets/test.enc.tfvars
+
+# Secrets (Repo-Root)
+secrets/
+
+# Local scratchpad (do not commit)
+.local-wip/
+

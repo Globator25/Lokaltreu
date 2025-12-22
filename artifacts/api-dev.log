@@ -1,0 +1,7 @@
+npm error Lifecycle script `dev` failed with error:
+npm error workspace @lokaltreu/api@1.0.0
+npm error location C:\Users\user\Projects\lokaltreu\apps\api
+npm error Missing script: "dev"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run --workspace=@lokaltreu/api@1.0.0

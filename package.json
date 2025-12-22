@@ -10,16 +10,37 @@
     "build:web": "npm -w apps/web run build",
     "build:api": "npm -w apps/api run build",
     "build": "npm run build:web && npm run build:api",
-    "start:web": "node apps/web/.next/standalone/server.js",
+    "codegen:types": "npx --no-install openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
+    "contract:sync:frontend": "npm run codegen:types && npm run -w apps/web build && git diff --exit-code -- packages/types packages/api-client",
     "start:api": "node apps/api/dist/index.js",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "test:api": "npm run -w apps/api test",
+    "test:api:coverage": "npm run -w apps/api test:coverage",
+    "agents:sentinel:node": "node scripts/agents-sentinel-check.mjs",
+    "agents:sentinels": "npm run -s agents:sentinel:node",
+    "contract:check": "node scripts/contract-check.mjs",
+    "test:with-stub": "cross-env STUB=1 vitest run --coverage",
+    "prepare": "husky",
+    "scan:logs:no-pii": "node scripts/gdpr/scan-logs-no-pii.mjs",
+    "security:api:start": "node apps/api/src/dev-server.js --port=4010 --profile=test",
+    "test:security": "node scripts/test-security.mjs",
+    "test:security:anti-replay": "node scripts/security/anti-replay.mjs",
+    "test:security:device-proof": "node scripts/security/device-proof.mjs",
+    "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
+    "lint": "npm -w apps/web run lint && npm -w apps/api run lint",
+    "test:security:placeholder": "vitest run tests/security/placeholder.test.ts",
+    "schema:drift": "node scripts/schema-drift-placeholder.mjs",
+    "terraform:sops-check": "node scripts/check-tfvars-encryption.mjs",
+    "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
+    "dev:mock-api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
+    "openapi:lint": "spectral lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "engines": {
-  "node": ">=20 <23"
-},
+    "node": ">=20 <23"
+  },
   "description": "",
   "private": "true",
   "workspaces": [
@@ -27,12 +48,23 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@next/eslint-plugin-next": "^15.5.4",
-    "@typescript-eslint/parser": "^8.45.0",
+    "@next/eslint-plugin-next": "^15.5.9",
+    "@stoplight/prism-cli": "^5.14.2",
+    "@stoplight/spectral-cli": "^6.11.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@typescript-eslint/eslint-plugin": "8.48.1",
+    "@typescript-eslint/parser": "8.48.1",
     "@vitest/coverage-v8": "^3.2.4",
+    "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
+    "glob": "^10.4.5",
+    "happy-dom": "^20.0.11",
+    "husky": "^9.1.7",
+    "openapi-typescript": "^7.10.1",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "vite": "7.1.11"
   }
-
 }

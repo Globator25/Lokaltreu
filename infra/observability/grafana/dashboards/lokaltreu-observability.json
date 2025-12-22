@@ -1,0 +1,17 @@
+{
+  "uid": "lokaltreu-observability-devstage",
+  "title": "Lokaltreu Observability (Dev/Stage) - Placeholder",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Prometheus up by job",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "sum by (job) (up)", "refId": "A" }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,7 @@
 creation_rules:
-  - path_regex: infra[\\/]terraform[\\/]secrets[\\/].*\.enc\.tfvars$
+  - path_regex: infra[\\/]terraform[\\/]secrets[\\/].*\\.enc\\.tfvars$
     age: age1pq8v4hd73f4t3nqq90w8z4c8dz9c6xhnar2h79rhwwlumffnp44sutx9hr
-    encrypted_regex: '^(fly_token|neon_api_key|upstash_api_key|cloudflare_api_token|mail_api_key|mail_provider)$'
+    encrypted_regex: '^(fly_token|neon_api_key|upstash_api_key|upstash_email|cloudflare_api_token|mail_api_key|mail_provider|mail_from_name|mail_from_address|firebase_admin_salt)$'
+  - path_regex: infra[\\/]terraform[\\/]env[\\/].*\\.backend\\.enc\\.tfvars$
+    age: age1pq8v4hd73f4t3nqq90w8z4c8dz9c6xhnar2h79rhwwlumffnp44sutx9hr
+    encrypted_regex: '.*'

@@ -82,7 +82,17 @@ npm run build -w apps/web
 npm test --workspaces -- --coverage
 # optional: OpenAPI-Lint
 npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+# API-Dev-Server (Observability + HTTP-Stub)
+npm run -w apps/api dev        # Port via PORT oder DEV_API_PORT (default 4010)
 ```
+
+## Contract-Sync (Frontend)
+- **Befehl:** `npm run contract:sync:frontend`
+- **Ablauf:** Führt `npm run codegen:types` (OpenAPI → `@lokaltreu/types`), anschließend `npm run -w apps/web build`. Danach prüft `git diff --exit-code`, dass keine ungeplanten Änderungen entstanden sind.
+- **Erwartung:** Sauberer Arbeitsbaum nach dem Lauf; bei Drift (`git diff` ≠ 0) muss der Contract konsumierende Code angepasst oder die generierten Typen eingecheckt werden.
+- **Testplan:**
+  1. *Negativtest:* OpenAPI minimal ändern (z. B. Description), **ohne** `npm run codegen:types` auszuführen → `npm run contract:sync:frontend` schlägt fehl (`git diff --exit-code` findet Änderungen oder der Web-Build bricht).
+  2. *Positivtest:* Nach Contract-Anpassung `npm run codegen:types` ausführen → `npm run contract:sync:frontend` läuft grün, Arbeitsbaum bleibt sauber (`git status` clean).
 
 ## Compliance-Artefakte (Ausschnitt)
 

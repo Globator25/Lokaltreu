@@ -3,11 +3,12 @@ name: IaC Validate (dev)
 on:
   pull_request:
     paths:
-      - "infra/terraform/**"
+      - 'infra/terraform/**'
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
-      - "infra/terraform/**"
+      - 'infra/terraform/**'
 
 concurrency:
   group: iac-validate-${{ github.ref }}
@@ -22,9 +23,7 @@ jobs:
     defaults:
       run:
         working-directory: infra/terraform
-
     env:
-      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
       TF_IN_AUTOMATION: "true"
 
     steps:
@@ -36,31 +35,16 @@ jobs:
         with:
           terraform_version: 1.13.3
 
-      - name: Install sops
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y sops
-
-      - name: Write AGE private key
-        run: |
-          printf "%s" "${{ secrets.AGE_PRIVATE_KEY }}" > "$SOPS_AGE_KEY_FILE"
-          chmod 600 "$SOPS_AGE_KEY_FILE"
-
       - name: terraform fmt -check
         run: terraform fmt -check
 
-      - name: terraform init (local state)
+      - name: terraform init (no backend)
         run: terraform init -backend=false
-
-      - name: Decrypt dev secrets to temp
-        run: sops --decrypt secrets/dev.secrets.enc.tfvars > $RUNNER_TEMP/dev.secrets.tfvars
 
       - name: terraform validate
         run: terraform validate
 
-      - name: terraform plan (dev, no backend)
-        run: |
-          terraform plan \
-            -var-file="env/dev.tfvars" \
-            -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
-            -compact-warnings -no-color
+      # Placeholder für terraform plan im Governance-Schritt 4.
+      # Der echte Plan (mit Provider-Zugriff) wird erst in den späteren IaC-Bootstrap-Schritten aktiviert.
+      - name: terraform plan placeholder (dev, no backend)
+        run: echo "terraform plan (dev, no backend) placeholder – echter Plan folgt ab IaC-Bootstrap in späteren Roadmap-Schritten"

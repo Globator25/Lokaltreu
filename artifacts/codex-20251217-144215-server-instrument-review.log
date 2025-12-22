@@ -1,0 +1,9 @@
+**Instrumentation Review**
+
+- Problem ÔÇô `apps/api/src/server.ts:1` importiert ausschlie├ƒlich `http`; der geforderte Side-Effect-Import `./observability/otel` fehlt ganz oben. Erg├ñnze den Import als erste Zeile, damit die Instrumentierung vor jedem weiteren Code aktiviert wird.  
+- OK ÔÇô In der aktuellen Version werden keinerlei Observability-Labels oder -Attributes gesetzt; dadurch gelangen keine PII-Daten in Telemetrie. Beim Nachziehen der Instrumentierung strikt nur technische IDs (Mandant, Route-Templates etc.) verwenden.  
+- Problem ÔÇô Ohne aktive Instrumentierung existiert auch kein `route`-Label, sodass nicht sichergestellt ist, dass Querystrings entfernt werden. Beim Implementieren die Route ├╝ber das registrierte Template (z.ÔÇ»B. `/health`) ohne Query-Anteil setzen.  
+- Problem ÔÇô Metriken oder Spans werden momentan gar nicht emittiert; damit fehlt auch die geforderte `res.on("finish", ÔÇª)`-Logik zur Doppelz├ñhlungs-Vermeidung. Beim Nachr├╝sten ausschlie├ƒlich im `finish`-Handler schreiben.  
+- OK ÔÇô Da die Datei nur den HTTP-Server erstellt und keine Beobachtbarkeit aktiviert, ver├ñndert sich das API-Verhalten derzeit nicht; k├╝nftige Instrumentierung muss strikt auf Side-Effects (Logging/Metriken) beschr├ñnkt bleiben.
+
+N├ñchste Schritte: Import `./observability/otel` an den Anfang setzen, dann die fehlenden Instrumentierungsbl├Âcke erg├ñnzen, dabei Route-Labels ohne Querystrings, PII-freie Attribute und das Schreiben von Metriken/Spans erst nach `res.finish` ber├╝cksichtigen.

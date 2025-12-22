@@ -39,3 +39,7 @@ apps/**/coverage/
 .local-wip/
 docs/_audit/
 /secrets/
+
+# Lokaltreu pipeline evidence (generated)
+work/
+logs/

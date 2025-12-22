@@ -31,3 +31,11 @@ infra/terraform/secrets/*.tfvars
 *decrypted*.tfvars
 # Testartefakte
 infra/terraform/secrets/test.enc.tfvars
+# --- Step13 Audit-Officer: local-only artifacts (do not commit) ---
+artifacts/
+coverage/
+apps/**/coverage/
+**/*.tsbuildinfo
+.local-wip/
+docs/_audit/
+/secrets/

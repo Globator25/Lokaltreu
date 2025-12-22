@@ -21,6 +21,8 @@ export default defineConfig({
       provider: 'v8',                       // Standard bei Vitest
       reporter: ['text', 'json-summary', 'html'],   // json-summary => coverage-summary.json
       reportsDirectory: './coverage',       // => apps/api/coverage/...
+      include: ['src/**/*.ts'],
+      exclude: ['src/**/*.spec.ts', 'scripts/**'],
     },
   },
 });

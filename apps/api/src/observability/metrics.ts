@@ -114,12 +114,19 @@ function refreshFinopsSnapshot(logger: Pick<typeof console, "warn"> = console): 
 }
 
 refreshFinopsSnapshot();
-const finopsInterval = setInterval(() => {
+function runFinopsRefreshTick(
+  logger: Pick<typeof console, "warn"> = console,
+  refresher: (log: Pick<typeof console, "warn">) => void = refreshFinopsSnapshot,
+): void {
   try {
-    refreshFinopsSnapshot();
+    refresher(logger);
   } catch (error) {
-    console.warn("[finops] Failed to refresh snapshot", error);
+    logger.warn("[finops] Failed to refresh snapshot", error);
   }
+}
+
+const finopsInterval = setInterval(() => {
+  runFinopsRefreshTick();
 }, 60_000);
 if (typeof finopsInterval.unref === "function") {
   finopsInterval.unref();
@@ -143,3 +150,9 @@ meter.addBatchObservableCallback(
     activeTenantsGauge,
   ],
 );
+
+export const __test = {
+  refreshFinopsSnapshot,
+  readComponentCosts,
+  runFinopsRefreshTick,
+};

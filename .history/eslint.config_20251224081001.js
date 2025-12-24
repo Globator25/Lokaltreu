@@ -4,20 +4,13 @@ import eslint from "@eslint/js";
 import nextPlugin from "@next/eslint-plugin-next";
 import tseslint from "typescript-eslint";
 
-const nextRules = /** @type {import("eslint").Linter.RulesRecord} */ ({
-  ...nextPlugin.configs.recommended.rules,
-  ...nextPlugin.configs["core-web-vitals"].rules,
-  // Deaktiviert eine Regel, die in JS-Konfigurationsdateien (z.B. next.config.js) stören kann.
-  "@typescript-eslint/no-var-requires": "off",
-});
-
 /**
  * ESLint Flat Configuration
  * @see https://eslint.org/docs/latest/use/configure/configuration-files-new
  */
 export default tseslint.config(
   // Globale Ignores
-  {
+    {
     // Globale Ignores (Flat Config)
     // Wichtig: mit /** arbeiten, damit rekursiv wirklich alles darunter ignoriert wird.
     ignores: [
@@ -58,7 +51,12 @@ export default tseslint.config(
   {
     files: ["apps/web/**/*.{js,jsx,ts,tsx}"],
     plugins: { "@next": nextPlugin },
-    rules: nextRules,
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+      // Deaktiviert eine Regel, die in JS-Konfigurationsdateien (z.B. next.config.js) stören kann.
+      "@typescript-eslint/no-var-requires": "off",
+    },
   },
 
   // 4. Spezifische Konfiguration für die Node.js API

@@ -13,6 +13,9 @@
   "license": "ISC",
   "description": "",
   "type": "module",
+  "dependencies": {
+    "jose": "^5.10.0"
+  },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
     "vitest": "^3.2.4"

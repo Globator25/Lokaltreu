@@ -2,13 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "./src",
     "composite": true
   },
-  "include": [
-  "src/**/*.ts",
-  "vitest.setup.ts",
-  "vitest.config.ts"
-],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

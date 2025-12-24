@@ -64,6 +64,49 @@ components:
           type: string
         retry_after:
           type: integer
+    AdminLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 12
+    AdminRefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+    AdminSessionResponse:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          minimum: 1
+    JwksResponse:
+      type: object
+      required:
+        - keys
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
     StampTokenResponse:
       type: object
       required:
@@ -120,6 +163,177 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /admins/login:
+    post:
+      summary: Admin login
+      operationId: loginAdmin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSessionResponse"
+              examples:
+                session:
+                  summary: Admin session issued
+                  value:
+                    accessToken: "access.jwt.placeholder"
+                    refreshToken: "refresh.jwt.placeholder"
+                    expiresIn: 900
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                invalid_credentials:
+                  summary: Invalid credentials
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/invalid-credentials"
+                    title: "Invalid credentials"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "b2c3d9f0-1e7f-4d2d-9cc1-4e55d8c1f31a"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /admins/refresh:
+    post:
+      summary: Refresh admin session
+      operationId: refreshAdminSession
+      security:
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRefreshRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSessionResponse"
+              examples:
+                refreshed:
+                  summary: Admin session refreshed
+                  value:
+                    accessToken: "access.jwt.placeholder"
+                    refreshToken: "refresh.jwt.placeholder"
+                    expiresIn: 900
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                refresh_expired:
+                  summary: Refresh token expired
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/refresh-expired"
+                    title: "Refresh token expired"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "5b2f0d48-4b4b-4e45-9c9b-2cf0cfb16c8a"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /admins/logout:
+    post:
+      summary: Logout admin session
+      operationId: logoutAdmin
+      security:
+        - AdminAuth: []
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                session_invalid:
+                  summary: Session invalid
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/session-invalid"
+                    title: "Session invalid"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "8d1f5e6a-3a4d-4c71-9ab0-63e5af73b2b1"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /.well-known/jwks.json:
+    get:
+      summary: JWKS
+      operationId: getJwks
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JwksResponse"
+              examples:
+                jwks:
+                  summary: Public JWKS
+                  value:
+                    keys:
+                      - kty: "OKP"
+                        crv: "Ed25519"
+                        kid: "admin-signing-2025-01"
+                        x: "0zQmOeXb8c2u1nTQ7t9I3q5oS8l3n2tqjK2xw4iP9zA"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                jwks_blocked:
+                  summary: JWKS access blocked
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/jwks-blocked"
+                    title: "JWKS access blocked"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "e6b8c2f9-9c5b-4b7f-9f3c-0a1e2b3c4d5e"
   /devices/registration-links:
     post:
       summary: Einmaliger Registrierungslink (TTL 15m)

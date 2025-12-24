@@ -10,7 +10,7 @@
     "build:web": "npm -w apps/web run build",
     "build:api": "npm -w apps/api run build",
     "build": "npm run build:web && npm run build:api",
-    "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
+    "lint": "npm --workspaces run lint",
     "start:web": "node apps/web/.next/standalone/server.js",
     "start:api": "node apps/api/dist/index.js",
     "test": "vitest run --coverage",
@@ -23,8 +23,7 @@
     "security:api:start": "node apps/api/src/dev-server.js --port=4010 --profile=test",
     "test:security:anti-replay": "node scripts/security/anti-replay.mjs",
     "test:security:device-proof": "node scripts/security/device-proof.mjs",
-    "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
-    "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010"
+    "test:security:plan-gate": "node scripts/security/plan-gate.mjs"
   },
   "keywords": [],
   "author": "",
@@ -40,7 +39,6 @@
   ],
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.5.4",
-    "@stoplight/prism-cli": "^5.14.2",
     "@typescript-eslint/parser": "^8.45.0",
     "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^10.1.0",

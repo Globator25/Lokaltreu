@@ -43,3 +43,16 @@ docs/_audit/
 # Lokaltreu pipeline evidence (generated)
 work/
 logs/
+# Local editor history (VS Code Local History extension etc.)
+.history/
+
+# Local patches / backups
+*.bak
+*.patch
+stash-*.patch
+
+# OS noise
+Thumbs.db
+.DS_Store
+# Generated types
+packages/types/src/index.d.ts

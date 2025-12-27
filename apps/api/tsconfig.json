@@ -1,14 +1,18 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "./src",
     "outDir": "./dist",
-    "rootDir": ".",
-    "composite": true
+    // ... restliche Optionen ...
   },
   "include": [
-  "src/**/*.ts",
-  "vitest.setup.ts",
-  "vitest.config.ts"
-],
-  "exclude": ["node_modules", "dist"]
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "vitest.setup.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ]
 }

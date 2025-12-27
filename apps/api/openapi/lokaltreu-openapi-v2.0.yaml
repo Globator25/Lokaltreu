@@ -7,6 +7,10 @@ info:
     url: https://example.com/license
 servers:
   - url: https://api.lokaltreu.example/v1
+    description: Production API
+  - url: http://localhost
+    description: Local test API for contract tests
+
 components:
   securitySchemes:
     AdminAuth:
@@ -17,6 +21,7 @@ components:
       type: apiKey
       in: header
       name: X-Device-Key
+
   parameters:
     IdempotencyKey:
       in: header
@@ -31,6 +36,7 @@ components:
       required: true
       schema:
         type: string
+
   schemas:
     Problem:
       type: object
@@ -64,6 +70,7 @@ components:
           type: string
         retry_after:
           type: integer
+
     AdminLoginRequest:
       type: object
       required:
@@ -76,6 +83,7 @@ components:
         password:
           type: string
           minLength: 12
+
     AdminRefreshRequest:
       type: object
       required:
@@ -83,6 +91,7 @@ components:
       properties:
         refreshToken:
           type: string
+
     AdminSessionResponse:
       type: object
       required:
@@ -97,6 +106,7 @@ components:
         expiresIn:
           type: integer
           minimum: 1
+
     JwksResponse:
       type: object
       required:
@@ -107,6 +117,7 @@ components:
           items:
             type: object
             additionalProperties: true
+
     StampTokenResponse:
       type: object
       required:
@@ -121,6 +132,7 @@ components:
         expiresAt:
           type: string
           format: date-time
+
     StampClaimRequest:
       type: object
       required:
@@ -129,9 +141,9 @@ components:
         qrToken:
           type: string
         ref:
-          type:
-            - string
-            - "null"
+          type: string
+          nullable: true
+
 paths:
   /admins/register:
     post:
@@ -163,6 +175,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /admins/login:
     post:
       summary: Admin login
@@ -215,6 +228,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /admins/refresh:
     post:
       summary: Refresh admin session
@@ -268,6 +282,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /admins/logout:
     post:
       summary: Logout admin session
@@ -298,6 +313,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /.well-known/jwks.json:
     get:
       summary: JWKS
@@ -334,6 +350,7 @@ paths:
                     status: 401
                     error_code: "TOKEN_EXPIRED"
                     correlation_id: "e6b8c2f9-9c5b-4b7f-9f3c-0a1e2b3c4d5e"
+
   /devices/registration-links:
     post:
       summary: Einmaliger Registrierungslink (TTL 15m)
@@ -357,6 +374,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /devices/register/confirm:
     post:
       summary: Bestätigt Gerätebindung (einmalig)
@@ -373,12 +391,34 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Plan not allowed
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://lokaltreu.example/errors/plan-not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    detail: "Upgrade required"
+                    error_code: "PLAN_NOT_ALLOWED"
         "409":
           description: TOKEN_REUSE
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /stamps/tokens:
     post:
       summary: Erzeugt einmaligen Stempel-Token (QR)
@@ -401,6 +441,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /stamps/claim:
     post:
       summary: Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
@@ -441,6 +482,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /rewards/redeem:
     post:
       summary: Löst eine Prämie ein
@@ -461,6 +503,16 @@ paths:
               properties:
                 redeemToken:
                   type: string
+                plan_gate_mode:
+                  type: string
+                  enum:
+                    - PLAN_GATE
+            examples:
+              plan_gate:
+                summary: Trigger plan gate mock response
+                value:
+                  redeemToken: "stub"
+                  plan_gate_mode: "PLAN_GATE"
       responses:
         "200":
           description: OK
@@ -470,12 +522,34 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
         "409":
           description: TOKEN_REUSE
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /referrals/link:
     get:
       summary: Liefert personalisierten Referral-Link (Werber)

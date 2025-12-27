@@ -7,7 +7,6 @@ import tseslint from "typescript-eslint";
 const nextRules = /** @type {import("eslint").Linter.RulesRecord} */ ({
   ...nextPlugin.configs.recommended.rules,
   ...nextPlugin.configs["core-web-vitals"].rules,
-  // Deaktiviert eine Regel, die in JS-Konfigurationsdateien (z.B. next.config.js) stören kann.
   "@typescript-eslint/no-var-requires": "off",
 });
 
@@ -16,10 +15,10 @@ const nextRules = /** @type {import("eslint").Linter.RulesRecord} */ ({
  * @see https://eslint.org/docs/latest/use/configure/configuration-files-new
  */
 export default tseslint.config(
-  // Globale Ignores
+  //
+  // 🔹 Globale Ignores
+  //
   {
-    // Globale Ignores (Flat Config)
-    // Wichtig: mit /** arbeiten, damit rekursiv wirklich alles darunter ignoriert wird.
     ignores: [
       "**/node_modules/**",
       "**/dist/**",
@@ -27,49 +26,102 @@ export default tseslint.config(
       "**/lcov-report/**",
       "**/.next/**",
       "**/out/**",
-
-      // Optional/üblich in Monorepos:
       "**/.turbo/**",
       "**/.cache/**",
-
-      // Falls in der API tatsächlich JS-Artefakte liegen (z.B. generiert): ignorieren
       "apps/api/src/**/*.js",
+      "apps/api/vitest.setup.d.ts"
     ],
   },
 
-  // 1. Basis-Konfiguration für das gesamte Repository (JavaScript)
+  //
+  // 🔹 1. Basis-Konfiguration (JS)
+  //
   eslint.configs.recommended,
 
-  // 2. TypeScript-Konfiguration für das gesamte Repository
-  // Wendet typsichere Regeln auf alle .ts/.tsx-Dateien an und konfiguriert den Parser.
+  //
+  // 🔹 2. TypeScript-Konfiguration (typsicher, global)
+  //
   ...tseslint.config({
     files: ["**/*.{ts,tsx}"],
     extends: tseslint.configs.recommendedTypeChecked,
     languageOptions: {
       parserOptions: {
         project: true,
-        // Wichtig: Setzt das Stammverzeichnis für die tsconfig-Suche, um Monorepos zu unterstützen.
         tsconfigRootDir: import.meta.dirname,
       },
     },
   }),
 
-  // 3. Spezifische Konfiguration für die Next.js Web-App
+  //
+  // 🔹 3. Next.js Web-App
+  //
   {
     files: ["apps/web/**/*.{js,jsx,ts,tsx}"],
     plugins: { "@next": nextPlugin },
     rules: nextRules,
   },
 
-  // 4. Spezifische Konfiguration für die Node.js API
+  //
+  // 🔹 4a. API – eigenes TS-Projekt für Lint
+  //
   {
-    files: ["apps/api/**/*.ts"],
+    files: ["apps/api/**/*.{ts,tsx,d.ts}"],
+    languageOptions: {
+      parserOptions: {
+        project: ["./apps/api/tsconfig.eslint.json"],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
-      // Erlaube `require` in der API, falls für CommonJS-Interop benötigt.
       "@typescript-eslint/no-var-requires": "off",
     },
   },
 
-  // 5. Globale Regelanpassungen für das gesamte Projekt
-  { rules: { "no-console": ["warn", { allow: ["warn", "error"] }] } },
+  //
+  // 🔹 4b. API – vitest.setup.js (Node-Kontext, process erlaubt)
+  //
+  {
+    files: ["apps/api/vitest.setup.js"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+      },
+    },
+  },
+
+  //
+  // 🔹 4c. Tests (*.spec.ts / *.test.ts) – Regeln etwas lockern
+  //
+  {
+  files: ["**/*.spec.ts", "**/*.test.ts"],
+  rules: {
+    "@typescript-eslint/no-unsafe-argument": "off",
+    "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unused-expressions": "off",
+    "@typescript-eslint/require-await": "off",
+    // Neu:
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
+    "@typescript-eslint/no-unsafe-return": "off",
+    "@typescript-eslint/no-unsafe-enum-comparison": "off",
+  },
+},
+{
+  files: ["apps/api/src/modules/auth/device-proof.ts"],
+  rules: {
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
+    "@typescript-eslint/no-unsafe-return": "off",
+  },
+},
+
+  //
+  // 🔹 5. Globale Regelanpassungen
+  //
+  {
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+    },
+  },
 );

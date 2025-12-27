@@ -12,7 +12,7 @@
     "build": "npm run build:web && npm run build:api",
     "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
     "start:web": "node apps/web/.next/standalone/server.js",
-    "start:api": "node apps/api/dist/index.js",
+    "start:api": "node apps/api/dist/server-main.js",
     "test": "vitest run --coverage",
     "agents:sentinel:node": "node scripts/agents-sentinel-check.mjs",
     "agents:sentinels": "npm run -s agents:sentinel:node",
@@ -45,7 +45,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
-    "glob": "^10.4.5",
+    "glob": "^10.5.0",
     "husky": "^9.1.7",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"

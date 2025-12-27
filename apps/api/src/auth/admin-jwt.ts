@@ -1,17 +1,19 @@
 import { randomUUID } from "node:crypto";
-import { SignJWT, createLocalJWKSet, importJWK, jwtVerify, errors as JoseErrors } from "jose";
+import {
+  SignJWT,
+  createLocalJWKSet,
+  importJWK,
+  jwtVerify,
+  errors as JoseErrors,
+} from "jose";
 import type { JWK, JSONWebKeySet, JWTPayload, KeyLike } from "jose";
+import { getActiveSigningKey } from "./admin-keys.js";
 
-type IssueAccessTokenInput = {
+export type AdminTokenPayload = {
   tenantId: string;
-  adminId: string;
-};
-
-type VerifiedAccessToken = {
-  tenantId: string;
-  adminId: string;
-  jti: string;
-  expiresAt: number;
+  adminId?: string;
+  sub?: string;
+  sessionJti?: string;
 };
 
 type ProblemDetails = {
@@ -34,6 +36,7 @@ type ProblemErrorCode =
   | "RATE_LIMITED";
 
 const ACCESS_TTL_SECONDS = 15 * 60;
+const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60;
 const DEFAULT_ISSUER = "lokaltreu-admin";
 const DEFAULT_AUDIENCE = "lokaltreu-api";
 
@@ -51,16 +54,24 @@ export class ProblemError extends Error {
 }
 
 type Jwks = JSONWebKeySet;
-type SigningKey = { kid: string; alg: string; key: KeyLike | Uint8Array };
+type AdminSigningContext = {
+  jwks: { keys: JWK[] };
+  activeJwk: JWK;
+  signingKey: KeyLike | Uint8Array;
+  kid: string;
+  alg: string;
+  iss: string;
+  aud: string;
+};
 
 let cachedJwks: Jwks | null = null;
 let cachedPublicJwks: Jwks | null = null;
-let cachedSigningKey: SigningKey | null = null;
+let adminSigningContext: AdminSigningContext | null = null;
 
 export function resetAdminJwtCache() {
   cachedJwks = null;
   cachedPublicJwks = null;
-  cachedSigningKey = null;
+  adminSigningContext = null;
 }
 
 function getIssuer(): string {
@@ -94,6 +105,7 @@ function parseJwksFromEnv(): Jwks {
   if (cachedJwks) {
     return cachedJwks;
   }
+
   const raw = process.env.ADMIN_JWKS_PRIVATE_JSON;
   if (!raw) {
     throw new ProblemError({
@@ -104,6 +116,7 @@ function parseJwksFromEnv(): Jwks {
       correlation_id: randomUUID(),
     });
   }
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -116,8 +129,8 @@ function parseJwksFromEnv(): Jwks {
       correlation_id: randomUUID(),
     });
   }
-  const jwks = isJwks(parsed) ? parsed : isJwk(parsed) ? { keys: [parsed] } : null;
 
+  const jwks = isJwks(parsed) ? parsed : isJwk(parsed) ? { keys: [parsed] } : null;
   if (!jwks || jwks.keys.length === 0) {
     throw new ProblemError({
       type: "https://errors.lokaltreu.example/auth/jwks-empty",
@@ -127,22 +140,27 @@ function parseJwksFromEnv(): Jwks {
       correlation_id: randomUUID(),
     });
   }
+
   cachedJwks = jwks;
   return jwks;
 }
 
-function toPublicJwk(jwk: JWK): JWK {
+function toPublicJwk(jwk: JWK) {
   const privateFields = new Set(["d", "p", "q", "dp", "dq", "qi", "oth"]);
   const entries = Object.entries(jwk).filter(([key]) => !privateFields.has(key));
-  return Object.fromEntries(entries) as JWK;
+  return Object.fromEntries(entries);
 }
 
-export function getAdminPublicJwks(): Jwks {
+function getAdminPublicJwks(): Jwks {
   if (cachedPublicJwks) {
     return cachedPublicJwks;
   }
+
   const jwks = parseJwksFromEnv();
-  const publicKeys = jwks.keys.map(toPublicJwk).filter(isJwk);
+  const publicKeys = jwks.keys
+    .map((key) => toPublicJwk(key))
+    .filter((key): key is JWK => isJwk(key));
+
   if (publicKeys.length === 0) {
     throw new ProblemError({
       type: "https://errors.lokaltreu.example/auth/jwks-empty",
@@ -152,12 +170,20 @@ export function getAdminPublicJwks(): Jwks {
       correlation_id: randomUUID(),
     });
   }
+
   cachedPublicJwks = { keys: publicKeys };
   return cachedPublicJwks;
 }
 
 export function getPublicJwks(): Jwks {
-  return getAdminPublicJwks();
+  void loadAdminSigningContext().catch(() => {
+    // Fehler werden ggf. über parseJwksFromEnv synchron geworfen
+  });
+  const source = adminSigningContext?.jwks ?? parseJwksFromEnv();
+  const publicKeys = source.keys
+    .map((key) => toPublicJwk(key))
+    .filter((key): key is JWK => isJwk(key));
+  return { keys: publicKeys };
 }
 
 function inferAlg(jwk: JWK): string {
@@ -179,10 +205,11 @@ function inferAlg(jwk: JWK): string {
   return "RS256";
 }
 
-async function getSigningKey(): Promise<SigningKey> {
-  if (cachedSigningKey) {
-    return cachedSigningKey;
+async function loadAdminSigningContext(): Promise<AdminSigningContext> {
+  if (adminSigningContext) {
+    return adminSigningContext;
   }
+
   const jwks = parseJwksFromEnv();
   const kid = process.env.ADMIN_JWT_ACTIVE_KID;
   if (!kid) {
@@ -194,8 +221,11 @@ async function getSigningKey(): Promise<SigningKey> {
       correlation_id: randomUUID(),
     });
   }
-  const jwk = jwks.keys.find((key) => key.kid === kid && typeof key.kty === "string");
-  if (!jwk) {
+
+  const activeJwk = jwks.keys.find(
+    (key) => key.kid === kid && typeof key.kty === "string",
+  );
+  if (!activeJwk) {
     throw new ProblemError({
       type: "https://errors.lokaltreu.example/auth/kid-not-found",
       title: "Active KID not found",
@@ -204,32 +234,93 @@ async function getSigningKey(): Promise<SigningKey> {
       correlation_id: randomUUID(),
     });
   }
-  const alg = inferAlg(jwk);
-  const key = await importJWK(jwk, alg);
-  cachedSigningKey = { kid, alg, key };
-  return cachedSigningKey;
+
+  const alg = inferAlg(activeJwk);
+  const signingKey = await importJWK(activeJwk, alg);
+  const iss = getIssuer();
+  const aud = getAudience();
+
+  const context: AdminSigningContext = {
+    jwks: { keys: jwks.keys },
+    activeJwk,
+    signingKey,
+    kid,
+    alg,
+    iss,
+    aud,
+  };
+
+  adminSigningContext = context;
+  return context;
 }
 
-export async function issueAccessToken(input: IssueAccessTokenInput): Promise<string> {
-  const { tenantId, adminId } = input;
-  const now = Math.floor(Date.now() / 1000);
-  const exp = now + ACCESS_TTL_SECONDS;
-  const { kid, alg, key } = await getSigningKey();
+export async function issueAccessToken(
+  payload: AdminTokenPayload,
+): Promise<string> {
+  const tenantId = payload.tenantId;
+  const adminId = payload.adminId ?? payload.sub;
+  if (!adminId) {
+    throw new ProblemError({
+      type: "https://errors.lokaltreu.example/auth/admin-missing",
+      title: "Admin ID not configured",
+      status: 500,
+      error_code: "TOKEN_REUSE",
+      correlation_id: randomUUID(),
+    });
+  }
 
-  return new SignJWT({ tenant_id: tenantId })
-    .setProtectedHeader({ alg, kid, typ: "JWT" })
-    .setIssuer(getIssuer())
-    .setAudience(getAudience())
+  const now = Math.floor(Date.now() / 1000);
+  const tokenPayload: JWTPayload = {
+    tenant_id: tenantId,
+    session_jti: payload.sessionJti,
+    sub: adminId,
+    type: "access",
+  };
+
+  if (process.env.ADMIN_JWT_PRIVATE_KEY && process.env.ADMIN_JWT_KID) {
+    const key = await getActiveSigningKey();
+    return new SignJWT(tokenPayload)
+      .setProtectedHeader({ alg: key.alg, kid: key.kid, typ: "JWT" })
+      .setIssuer(getIssuer())
+      .setAudience(getAudience())
+      .setIssuedAt(now)
+      .setExpirationTime(now + ACCESS_TTL_SECONDS)
+      .setJti(randomUUID())
+      .setSubject(adminId)
+      .sign(key.privateKey);
+  }
+
+  const context = await loadAdminSigningContext();
+  return new SignJWT(tokenPayload)
+    .setProtectedHeader({ alg: context.alg, kid: context.kid, typ: "JWT" })
+    .setIssuer(context.iss)
+    .setAudience(context.aud)
     .setIssuedAt(now)
-    .setExpirationTime(exp)
+    .setExpirationTime(now + ACCESS_TTL_SECONDS)
     .setJti(randomUUID())
     .setSubject(adminId)
-    .sign(key);
+    .sign(context.signingKey);
 }
 
-type VerifyAccessTokenResult =
-  | { ok: true; payload: VerifiedAccessToken }
-  | { ok: false; problem: ProblemDetails };
+type VerifiedAccessToken = {
+  tenantId: string;
+  adminId: string;
+  jti: string;
+  expiresAt: number;
+};
+
+type JwtVerifySuccess = {
+  ok: true;
+  payload: VerifiedAccessToken;
+  protectedHeader: JWTPayload;
+};
+
+type JwtVerifyFailure = {
+  ok: false;
+  problem: ProblemDetails;
+};
+
+type VerifyAccessTokenResult = JwtVerifySuccess | JwtVerifyFailure;
 
 function mapJoseError(err: unknown): ProblemDetails {
   if (err instanceof JoseErrors.JWTExpired) {
@@ -269,24 +360,39 @@ function extractVerifiedPayload(payload: JWTPayload): VerifiedAccessToken | null
   const adminId = payload.sub;
   const jti = payload.jti;
   const exp = payload.exp;
+
   if (typeof tenantId !== "string" || typeof adminId !== "string") {
     return null;
   }
   if (typeof jti !== "string" || typeof exp !== "number") {
     return null;
   }
+
   return { tenantId, adminId, jti, expiresAt: exp };
 }
 
-export async function verifyAccessToken(token: string): Promise<VerifyAccessTokenResult> {
+export async function verifyAccessToken(
+  token: string,
+): Promise<VerifyAccessTokenResult> {
   try {
-    const jwks = createLocalJWKSet(getAdminPublicJwks());
-    const { payload } = await jwtVerify(token, jwks, {
-      issuer: getIssuer(),
-      audience: getAudience(),
-    });
+    const hasAdminKeyEnv = process.env.ADMIN_JWT_PRIVATE_KEY && process.env.ADMIN_JWT_KID;
 
+    const verification = await (hasAdminKeyEnv
+      ? getActiveSigningKey().then((key) =>
+          jwtVerify(token, key.privateKey, {
+            algorithms: [key.alg],
+            issuer: getIssuer(),
+            audience: getAudience(),
+          }),
+        )
+      : jwtVerify(token, createLocalJWKSet(getAdminPublicJwks()), {
+          issuer: getIssuer(),
+          audience: getAudience(),
+        }));
+
+    const { payload, protectedHeader } = verification;
     const verified = extractVerifiedPayload(payload);
+
     if (!verified) {
       return {
         ok: false,
@@ -300,11 +406,83 @@ export async function verifyAccessToken(token: string): Promise<VerifyAccessToke
       };
     }
 
-    return { ok: true, payload: verified };
+    return { ok: true, payload: verified, protectedHeader };
   } catch (err: unknown) {
     if (err instanceof ProblemError) {
       return { ok: false, problem: err.toProblem() };
     }
     return { ok: false, problem: mapJoseError(err) };
   }
+}
+
+export async function issueAdminAccessToken(
+  payload: AdminTokenPayload,
+): Promise<string> {
+  const key = await getActiveSigningKey();
+  const now = Math.floor(Date.now() / 1000);
+  const adminId = payload.sub ?? payload.adminId;
+  if (!adminId) {
+    throw new Error("Missing admin id");
+  }
+
+  const tokenPayload: JWTPayload = {
+    ...payload,
+    sub: adminId,
+    type: "access",
+  };
+
+  return new SignJWT(tokenPayload)
+    .setProtectedHeader({ alg: key.alg, kid: key.kid, typ: "JWT" })
+    .setIssuer(getIssuer())
+    .setAudience(getAudience())
+    .setIssuedAt(now)
+    .setExpirationTime(now + ACCESS_TTL_SECONDS)
+    .sign(key.privateKey);
+}
+
+export async function issueAdminRefreshToken(
+  payload: AdminTokenPayload,
+): Promise<string> {
+  const key = await getActiveSigningKey();
+  const now = Math.floor(Date.now() / 1000);
+  const adminId = payload.sub ?? payload.adminId;
+  if (!adminId) {
+    throw new Error("Missing admin id");
+  }
+
+  const tokenPayload: JWTPayload = {
+    ...payload,
+    sub: adminId,
+    type: "refresh",
+  };
+
+  return new SignJWT(tokenPayload)
+    .setProtectedHeader({ alg: key.alg, kid: key.kid, typ: "JWT" })
+    .setIssuer(getIssuer())
+    .setAudience(getAudience())
+    .setIssuedAt(now)
+    .setExpirationTime(now + REFRESH_TTL_SECONDS)
+    .sign(key.privateKey);
+}
+
+export async function verifyAdminAccessToken(token: string) {
+  const key = await getActiveSigningKey();
+  const { payload, protectedHeader } = await jwtVerify(token, key.privateKey, {
+    algorithms: [key.alg],
+  });
+  if (payload.type !== "access") {
+    throw new Error("Invalid token type");
+  }
+  return { payload, protectedHeader };
+}
+
+export async function verifyAdminRefreshToken(token: string) {
+  const key = await getActiveSigningKey();
+  const { payload, protectedHeader } = await jwtVerify(token, key.privateKey, {
+    algorithms: [key.alg],
+  });
+  if (payload.type !== "refresh") {
+    throw new Error("Invalid token type");
+  }
+  return { payload, protectedHeader };
 }

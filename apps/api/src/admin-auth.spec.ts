@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { decodeJwt, exportJWK, generateKeyPair } from "jose";
+import { SignJWT, decodeJwt, exportJWK, generateKeyPair } from "jose";
+import type { KeyLike } from "jose";
 import { issueAccessToken, verifyAccessToken, resetAdminJwtCache } from "./auth/admin-jwt.js";
 import { createAppServer } from "./index.js";
 
@@ -7,7 +8,12 @@ const ISSUER = "lokaltreu-admin";
 const AUDIENCE = "lokaltreu-api";
 let envSnapshot: NodeJS.ProcessEnv;
 
-async function setJwksEnv(kid: string) {
+type JwksFixture = {
+  kid: string;
+  privateKey: KeyLike;
+};
+
+async function setJwksEnv(kid: string): Promise<JwksFixture> {
   const { privateKey } = await generateKeyPair("EdDSA");
   const privateJwk = await exportJWK(privateKey);
   privateJwk.kid = kid;
@@ -16,6 +22,7 @@ async function setJwksEnv(kid: string) {
   process.env.ADMIN_JWT_ACTIVE_KID = kid;
   process.env.ADMIN_JWT_ISS = ISSUER;
   process.env.ADMIN_JWT_AUD = AUDIENCE;
+  return { kid, privateKey };
 }
 
 async function startServer() {
@@ -118,6 +125,84 @@ describe("admin-jwt", () => {
       expect(result.problem.status).toBe(401);
     }
   });
+
+  it("rejects expired tokens", async () => {
+    const fixture = await setJwksEnv("kid-expired");
+    resetAdminJwtCache();
+    const now = Math.floor(Date.now() / 1000);
+    const token = await new SignJWT({ tenant_id: "tenant-exp" })
+      .setProtectedHeader({ alg: "EdDSA", kid: fixture.kid, typ: "JWT" })
+      .setIssuer(ISSUER)
+      .setAudience(AUDIENCE)
+      .setIssuedAt(now - 100)
+      .setExpirationTime(now - 10)
+      .setJti("expired-jti")
+      .setSubject("admin-exp")
+      .sign(fixture.privateKey);
+    const result = await verifyAccessToken(token);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.problem.status).toBe(401);
+      expect(result.problem.error_code).toBe("TOKEN_EXPIRED");
+    }
+  });
+
+  it("rejects tokens with invalid signature", async () => {
+    const fixture = await setJwksEnv("kid-valid");
+    const { privateKey: otherKey } = await generateKeyPair("EdDSA");
+    resetAdminJwtCache();
+    const now = Math.floor(Date.now() / 1000);
+    const token = await new SignJWT({ tenant_id: "tenant-bad" })
+      .setProtectedHeader({ alg: "EdDSA", kid: fixture.kid, typ: "JWT" })
+      .setIssuer(ISSUER)
+      .setAudience(AUDIENCE)
+      .setIssuedAt(now)
+      .setExpirationTime(now + 60)
+      .setJti("bad-sig-jti")
+      .setSubject("admin-bad")
+      .sign(otherKey);
+    const result = await verifyAccessToken(token);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.problem.status).toBe(401);
+    }
+  });
+
+  it("returns problem when JWKS is missing or invalid", async () => {
+    process.env.ADMIN_JWKS_PRIVATE_JSON = "not-json";
+    process.env.ADMIN_JWT_ACTIVE_KID = "kid-missing";
+    process.env.ADMIN_JWT_ISS = ISSUER;
+    process.env.ADMIN_JWT_AUD = AUDIENCE;
+    resetAdminJwtCache();
+    const result = await verifyAccessToken("stub-token");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.problem.status).toBe(500);
+    }
+  });
+
+  it("returns problem when JWKS has no keys", async () => {
+    process.env.ADMIN_JWKS_PRIVATE_JSON = JSON.stringify({ keys: [] });
+    process.env.ADMIN_JWT_ACTIVE_KID = "kid-empty";
+    process.env.ADMIN_JWT_ISS = ISSUER;
+    process.env.ADMIN_JWT_AUD = AUDIENCE;
+    resetAdminJwtCache();
+    const result = await verifyAccessToken("stub-token");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.problem.status).toBe(500);
+    }
+  });
+
+  it("returns problem when active kid is missing for signing", async () => {
+    const fixture = await setJwksEnv("kid-sign");
+    process.env.ADMIN_JWT_ACTIVE_KID = "";
+    resetAdminJwtCache();
+    await expect(issueAccessToken({ tenantId: "tenant-x", adminId: "admin-x" })).rejects.toMatchObject({
+      details: { status: 500 },
+    });
+    process.env.ADMIN_JWT_ACTIVE_KID = fixture.kid;
+  });
 });
 
 describe("admin auth endpoints", () => {
@@ -193,6 +278,42 @@ describe("admin auth endpoints", () => {
     }
     expect(getNumber(refreshOld.body, "status")).toBe(401);
     expect(getString(refreshOld.body, "title")).toBeTruthy();
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("returns RFC7807 for bad JSON and missing auth", async () => {
+    const { server, baseUrl } = await startServer();
+    try {
+      const badJson = await fetch(`${baseUrl}/admins/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      });
+      const badJsonBody = await readJson(badJson);
+      expect(badJson.status).toBe(400);
+      expect(badJson.headers.get("content-type")).toContain("application/problem+json");
+      expect(getNumber(badJsonBody, "status")).toBe(400);
+
+      const noAuth = await fetch(`${baseUrl}/admins/refresh`, { method: "POST" });
+      const noAuthBody = await readJson(noAuth);
+      expect(noAuth.status).toBe(401);
+      expect(noAuth.headers.get("content-type")).toContain("application/problem+json");
+      expect(getNumber(noAuthBody, "status")).toBe(401);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("returns 404 Problem+JSON for unknown routes", async () => {
+    const { server, baseUrl } = await startServer();
+    try {
+      const res = await fetch(`${baseUrl}/unknown-path`, { method: "GET" });
+      const body = await readJson(res);
+      expect(res.status).toBe(404);
+      expect(res.headers.get("content-type")).toContain("application/problem+json");
+      expect(getNumber(body, "status")).toBe(404);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

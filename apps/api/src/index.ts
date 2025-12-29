@@ -8,10 +8,13 @@ import { handleAdminRefresh } from "./handlers/admins/refresh.js";
 import { handleAdminRegister } from "./handlers/admins/register.js";
 import { handleGetJwks } from "./handlers/jwks/get-jwks.js";
 import type { AdminSession, AdminSessionStore, AuditEvent, AuditSink } from "./handlers/admins/types.js";
-import { problem, sendProblem } from "./handlers/http-utils.js";
+import { problem, readJsonBody, sendProblem } from "./handlers/http-utils.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";
+import { createIdempotencyMiddleware, InMemoryIdempotencyStore } from "./mw/idempotency.js";
+import { createRateLimitMiddleware, InMemoryRateLimitStore } from "./mw/rate-limit.js";
 import { InMemoryDeviceReplayStore } from "./modules/auth/device-replay-store.js";
 import { InMemoryDeviceRepository } from "./modules/auth/device-repository.js";
+import { createRedisIdempotencyStore } from "./services/idempotencyStore/redis.js";
 
 class InMemoryAdminSessionStore implements AdminSessionStore {
   private readonly sessions = new Map<string, AdminSession>();
@@ -49,12 +52,57 @@ class InMemoryAuditSink implements AuditSink {
   }
 }
 
+async function seedDevDevice(repo: InMemoryDeviceRepository): Promise<void> {
+  const shouldSeed = process.env.API_PROFILE === "dev" && process.env.DEV_SEED === "1";
+  if (!shouldSeed) {
+    return;
+  }
+  const tenantId = process.env.DEV_DEVICE_SEED_TENANT_ID || "tenant-1";
+  const deviceId = process.env.DEV_DEVICE_SEED_DEVICE_ID || "dev-seed-device";
+  const seededPrivateKey = process.env.DEV_DEVICE_SEED_PRIVATE_KEY;
+  let publicKey = process.env.DEV_DEVICE_SEED_PUBLIC_KEY;
+  if (!publicKey && seededPrivateKey) {
+    try {
+      // libsodium private keys include the public key in the last 32 bytes.
+      const raw = Buffer.from(seededPrivateKey, "base64");
+      if (raw.length >= 64) {
+        publicKey = raw.subarray(raw.length - 32).toString("base64");
+      }
+    } catch {
+      publicKey = undefined;
+    }
+  }
+  if (!publicKey) {
+    publicKey = "hO5j3HEAEMA3cRhO0x0LrCOrQ0L1z4fMcdCjvtQ+Rys=";
+  }
+  const existing = await repo.findById({ tenantId, deviceId });
+  if (existing && existing.enabled && existing.publicKey === publicKey) {
+    console.warn(`DEV_SEED device already present for ${tenantId}/${deviceId}`);
+    return;
+  }
+  repo.upsert({
+    tenantId,
+    deviceId,
+    publicKey,
+    algorithm: "ed25519",
+    enabled: true,
+  });
+  console.warn(`DEV_SEED applied for ${tenantId}/${deviceId}`);
+}
+
 export function createAppServer() {
   const sessionStore = new InMemoryAdminSessionStore();
   const auditSink = new InMemoryAuditSink();
   const deviceRepository = new InMemoryDeviceRepository();
   const replayStore = new InMemoryDeviceReplayStore();
+  void seedDevDevice(deviceRepository);
   const deviceAuth = createDeviceAuthMiddleware({ deviceRepository, replayStore });
+  const isProdLike = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
+  const idempotencyStore = isProdLike ? createRedisIdempotencyStore() : new InMemoryIdempotencyStore();
+  // TODO: Wire Redis-backed rate limit store when available.
+  const rateLimitStore = new InMemoryRateLimitStore();
+  const idempotency = createIdempotencyMiddleware(idempotencyStore);
+  const rateLimit = createRateLimitMiddleware(rateLimitStore);
 
   async function requireDeviceAuth(
     req: import("node:http").IncomingMessage,
@@ -63,6 +111,28 @@ export function createAppServer() {
     let allowed = false;
     await deviceAuth(req, res, () => {
       allowed = true;
+    });
+    return allowed;
+  }
+
+  async function requireRateLimit(
+    req: import("node:http").IncomingMessage,
+    res: import("node:http").ServerResponse
+  ): Promise<boolean> {
+    let allowed = false;
+    await rateLimit(req, res).then((ok) => {
+      allowed = ok;
+    });
+    return allowed;
+  }
+
+  async function requireIdempotency(
+    req: import("node:http").IncomingMessage,
+    res: import("node:http").ServerResponse
+  ): Promise<boolean> {
+    let allowed = false;
+    await idempotency(req, res).then((ok) => {
+      allowed = ok;
     });
     return allowed;
   }
@@ -78,6 +148,21 @@ export function createAppServer() {
       if (requiresDeviceAuth) {
         const allowed = await requireDeviceAuth(req, res);
         if (!allowed) {
+          return;
+        }
+      }
+      const isHotRoute =
+        req.method === "POST" && (path === "/stamps/claim" || path === "/rewards/redeem");
+      if (isHotRoute) {
+        if (req.headers["content-type"]?.includes("application/json") && !("body" in req)) {
+          (req as { body?: unknown }).body = await readJsonBody(req);
+        }
+        const rateOk = await requireRateLimit(req, res);
+        if (!rateOk) {
+          return;
+        }
+        const idemOk = await requireIdempotency(req, res);
+        if (!idemOk) {
           return;
         }
       }
@@ -102,11 +187,16 @@ export function createAppServer() {
         return;
       }
 
-      sendProblem(res, problem(404, "Not Found", "Route not found", path, "TOKEN_REUSE"));
-    } catch {
+      // TOKEN_REUSE is used as a generic anti-replay signal; keep copy client-friendly for audits.
       sendProblem(
         res,
-        problem(500, "Internal Server Error", "Unexpected error", req.url ?? "/", "TOKEN_REUSE")
+        problem(404, "Token reuse detected", "Token is invalid or already used", path, "TOKEN_REUSE")
+      );
+    } catch {
+      // Use a consistent, domain-aligned message for TOKEN_REUSE even on unexpected errors.
+      sendProblem(
+        res,
+        problem(500, "Token reuse detected", "Token is invalid or already used", req.url ?? "/", "TOKEN_REUSE")
       );
     }
   }

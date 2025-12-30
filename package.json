@@ -41,12 +41,14 @@
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.5.4",
     "@stoplight/prism-cli": "^5.14.2",
+    "@stoplight/spectral-cli": "^6.15.0",
     "@typescript-eslint/parser": "^8.45.0",
     "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^10.1.0",
     "eslint": "^9.37.0",
     "glob": "^10.5.0",
     "husky": "^9.1.7",
+    "k6": "^0.0.0",
     "typescript-eslint": "^8.45.0",
     "vitest": "^3.2.4"
   }

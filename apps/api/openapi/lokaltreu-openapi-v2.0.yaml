@@ -2,6 +2,11 @@ openapi: 3.1.0
 info:
   title: Lokaltreu API
   version: "2.0"
+  description: API for Lokaltreu SaaS (Admin, Devices, Stamps, Rewards, Referrals).
+  contact:
+    name: Lokaltreu Support
+    url: https://lokaltreu.example
+    email: support@lokaltreu.example
   license:
     name: UNLICENSED
     url: https://example.com/license
@@ -10,6 +15,19 @@ servers:
     description: Production API
   - url: http://localhost
     description: Local test API for contract tests
+tags:
+  - name: Admins
+    description: Admin authentication and session management.
+  - name: Devices
+    description: Device registration and authorization flows.
+  - name: Stamps
+    description: Stamp issuance and claim operations.
+  - name: Rewards
+    description: Reward redemption operations.
+  - name: Referrals
+    description: Referral link retrieval and validation.
+  - name: JWKS
+    description: Public keys for token verification.
 
 components:
   securitySchemes:
@@ -148,6 +166,9 @@ paths:
   /admins/register:
     post:
       summary: Registriert Admin+Mandant
+      description: Creates the initial admin account and tenant.
+      tags:
+        - Admins
       operationId: registerAdmin
       security: []
       requestBody:
@@ -179,6 +200,9 @@ paths:
   /admins/login:
     post:
       summary: Admin login
+      description: Issues a new admin session for valid credentials.
+      tags:
+        - Admins
       operationId: loginAdmin
       security: []
       requestBody:
@@ -232,6 +256,9 @@ paths:
   /admins/refresh:
     post:
       summary: Refresh admin session
+      description: Refreshes an admin session using a refresh token.
+      tags:
+        - Admins
       operationId: refreshAdminSession
       security:
         - AdminAuth: []
@@ -286,6 +313,9 @@ paths:
   /admins/logout:
     post:
       summary: Logout admin session
+      description: Revokes the current admin session.
+      tags:
+        - Admins
       operationId: logoutAdmin
       security:
         - AdminAuth: []
@@ -317,6 +347,9 @@ paths:
   /.well-known/jwks.json:
     get:
       summary: JWKS
+      description: Returns the public JWKS for token verification.
+      tags:
+        - JWKS
       operationId: getJwks
       security: []
       responses:
@@ -354,6 +387,9 @@ paths:
   /devices/registration-links:
     post:
       summary: Einmaliger Registrierungslink (TTL 15m)
+      description: Creates a one-time device registration link with TTL.
+      tags:
+        - Devices
       operationId: createDeviceRegistrationLink
       security:
         - AdminAuth: []
@@ -378,6 +414,9 @@ paths:
   /devices/register/confirm:
     post:
       summary: Bestätigt Gerätebindung (einmalig)
+      description: Confirms the device registration link.
+      tags:
+        - Devices
       operationId: confirmDeviceRegistration
       security: []
       parameters:
@@ -422,6 +461,9 @@ paths:
   /stamps/tokens:
     post:
       summary: Erzeugt einmaligen Stempel-Token (QR)
+      description: Issues a one-time stamp token for client scan.
+      tags:
+        - Stamps
       operationId: createStampToken
       security:
         - DeviceKey: []
@@ -445,6 +487,9 @@ paths:
   /stamps/claim:
     post:
       summary: Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
+      description: Claims a stamp and applies referral rules if eligible.
+      tags:
+        - Stamps
       operationId: claimStamp
       security: []
       parameters:
@@ -486,6 +531,9 @@ paths:
   /rewards/redeem:
     post:
       summary: Löst eine Prämie ein
+      description: Redeems a reward for a valid redemption token.
+      tags:
+        - Rewards
       operationId: redeemReward
       security:
         - DeviceKey: []
@@ -553,6 +601,9 @@ paths:
   /referrals/link:
     get:
       summary: Liefert personalisierten Referral-Link (Werber)
+      description: Returns the referral link for an existing customer.
+      tags:
+        - Referrals
       operationId: getReferralLink
       security: []
       responses:

@@ -138,7 +138,12 @@ export function createDeviceAuthMiddleware(deps: DeviceAuthDeps) {
     replayCache.set(replayKey, nowMs + REPLAY_TTL_MS);
 
     const record = await deps.deviceRepository.findById({ tenantId, deviceId });
+    // A device is considered enabled only when a record exists and enabled === true.
     if (!record || !record.enabled) {
+      if (process.env.API_PROFILE === "dev") {
+        const reason = record ? "disabled flag set" : "missing record";
+        console.warn(`DEVICE_DISABLED dev: ${tenantId}/${deviceId} reason=${reason}`);
+      }
       sendProblem(res, problem(403, "Forbidden", "Device disabled", req.url ?? "/", "DEVICE_DISABLED"));
       return;
     }

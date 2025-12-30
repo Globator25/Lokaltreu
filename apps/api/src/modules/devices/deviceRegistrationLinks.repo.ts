@@ -16,7 +16,14 @@ export interface DeviceRegistrationLink {
   createdAt: Date;
 }
 
-export type DbTransactionLike = unknown;
+export interface DbClientLike {
+  query<T = unknown>(
+    sql: string,
+    params?: unknown[],
+  ): Promise<{ rows: T[]; rowCount: number }>;
+}
+
+export type DbTransactionLike = DbClientLike;
 
 export interface DeviceRegistrationLinksRepository {
   createRegistrationLink(

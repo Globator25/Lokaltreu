@@ -6,14 +6,18 @@ import { handleAdminLogin } from "./handlers/admins/login.js";
 import { handleAdminLogout } from "./handlers/admins/logout.js";
 import { handleAdminRefresh } from "./handlers/admins/refresh.js";
 import { handleAdminRegister } from "./handlers/admins/register.js";
+import { handleDeviceRegistrationConfirm } from "./handlers/devices/register-confirm.js";
+import { handleDeviceRegistrationLinks } from "./handlers/devices/registration-links.js";
 import { handleGetJwks } from "./handlers/jwks/get-jwks.js";
 import type { AdminSession, AdminSessionStore, AuditEvent, AuditSink } from "./handlers/admins/types.js";
 import { problem, readJsonBody, sendProblem } from "./handlers/http-utils.js";
+import { requireAdminAuth } from "./mw/admin-auth.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";
 import { createIdempotencyMiddleware, InMemoryIdempotencyStore } from "./mw/idempotency.js";
 import { createRateLimitMiddleware, InMemoryRateLimitStore } from "./mw/rate-limit.js";
 import { InMemoryDeviceReplayStore } from "./modules/auth/device-replay-store.js";
 import { InMemoryDeviceRepository } from "./modules/auth/device-repository.js";
+import type { DbClientLike } from "./modules/devices/deviceRegistrationLinks.repo.js";
 import { createRedisIdempotencyStore } from "./services/idempotencyStore/redis.js";
 
 class InMemoryAdminSessionStore implements AdminSessionStore {
@@ -103,6 +107,14 @@ export function createAppServer() {
   const rateLimitStore = new InMemoryRateLimitStore();
   const idempotency = createIdempotencyMiddleware(idempotencyStore);
   const rateLimit = createRateLimitMiddleware(rateLimitStore);
+  
+  const dbClient: DbClientLike = {
+  query(sql, params) {
+    void sql;
+    void params;
+    return Promise.reject(new Error("Database client not configured"));
+  },
+};
 
   async function requireDeviceAuth(
     req: import("node:http").IncomingMessage,
@@ -111,6 +123,17 @@ export function createAppServer() {
     let allowed = false;
     await deviceAuth(req, res, () => {
       allowed = true;
+    });
+    return allowed;
+  }
+
+  async function requireAdmin(
+    req: import("node:http").IncomingMessage,
+    res: import("node:http").ServerResponse
+  ): Promise<boolean> {
+    let allowed = false;
+    await requireAdminAuth(req, res).then((ok) => {
+      allowed = ok;
     });
     return allowed;
   }
@@ -180,6 +203,24 @@ export function createAppServer() {
       }
       if (req.method === "POST" && path === "/admins/logout") {
         await handleAdminLogout(req, res, { sessionStore, auditSink });
+        return;
+      }
+      if (req.method === "POST" && path === "/devices/registration-links") {
+        const allowed = await requireAdmin(req, res);
+        if (!allowed) {
+          return;
+        }
+        await handleDeviceRegistrationLinks(req, res, {
+          db: dbClient,
+          logger: console,
+        });
+        return;
+      }
+      if (req.method === "POST" && path === "/devices/register/confirm") {
+        await handleDeviceRegistrationConfirm(req, res, {
+          db: dbClient,
+          logger: console,
+        });
         return;
       }
       if (req.method === "GET" && path === "/.well-known/jwks.json") {

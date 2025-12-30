@@ -40,10 +40,28 @@ components:
       in: header
       name: X-Device-Key
 
+  headers:
+    Idempotency-Key:
+      description: >
+        Echo des Idempotenz-Schlüssels. Gültigkeit 24 h. Scope {tenantId,route,bodyHash}.
+      required: false
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    Retry-After:
+      description: Seconds until the client may retry.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+
   parameters:
     IdempotencyKey:
-      in: header
       name: Idempotency-Key
+      in: header
+      required: true
+      description: Idempotenz für Schreibaktionen. 24 h gültig.
       schema:
         type: string
         minLength: 8
@@ -58,6 +76,7 @@ components:
   schemas:
     Problem:
       type: object
+      additionalProperties: true
       required:
         - type
         - title
@@ -88,6 +107,7 @@ components:
           type: string
         retry_after:
           type: integer
+          minimum: 1
 
     AdminLoginRequest:
       type: object
@@ -161,6 +181,92 @@ components:
         ref:
           type: string
           nullable: true
+
+    DeviceRegistrationLinkResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - linkUrl
+        - token
+        - expiresAt
+      properties:
+        linkUrl:
+          type: string
+          format: uri
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        qrImageUrl:
+          type: string
+          format: uri
+          nullable: true
+
+  responses:
+    400BadRequest:
+      description: Ungültige Anfrage
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            token_expired:
+              summary: Token abgelaufen
+              value:
+                type: "https://errors.lokaltreu.example/token/expired"
+                title: "Token expired"
+                status: 400
+                error_code: "TOKEN_EXPIRED"
+                correlation_id: "abc123"
+    401Unauthorized:
+      description: Nicht autorisiert
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    403Forbidden:
+      description: Verboten
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    409Conflict:
+      description: Konflikt
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            token_reuse:
+              summary: Token bereits verwendet
+              value:
+                type: "https://errors.lokaltreu.example/token/reuse"
+                title: "Token reuse"
+                status: 409
+                error_code: "TOKEN_REUSE"
+                correlation_id: "abc123"
+    422Unprocessable:
+      description: Semantisch fehlerhaft
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    429RateLimited:
+      description: Rate-Limit erreicht
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/Retry-After"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    500ServerError:
+      description: Interner Serverfehler
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
 
 paths:
   /admins/register:
@@ -386,8 +492,8 @@ paths:
 
   /devices/registration-links:
     post:
-      summary: Einmaliger Registrierungslink (TTL 15m)
-      description: Creates a one-time device registration link with TTL.
+      summary: Erzeugt einmaligen Registrierungslink (TTL 15 Min)
+      description: Idempotent. Link ist einmalig und zeitlich begrenzt.
       tags:
         - Devices
       operationId: createDeviceRegistrationLink
@@ -397,66 +503,63 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         "201":
-          description: Created
+          description: Link erstellt
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceRegistrationLinkResponse"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
         "409":
-          description: Already exists
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/409Conflict"
         "429":
-          description: Rate limited
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
 
   /devices/register/confirm:
     post:
-      summary: Bestätigt Gerätebindung (einmalig)
-      description: Confirms the device registration link.
+      summary: Bestätigt Gerätebindung
+      description: Einmalig verwendbar. Idempotent. Sicherheits-E-Mail wird versendet.
       tags:
         - Devices
       operationId: confirmDeviceRegistration
       security: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - token
+              properties:
+                token:
+                  type: string
       responses:
         "204":
-          description: No Content
+          description: Bestätigt
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
         "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "401":
-          description: Unauthorized
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "403":
-          description: Plan not allowed
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-              examples:
-                plan_not_allowed:
-                  summary: Plan gate enforced
-                  value:
-                    type: "https://lokaltreu.example/errors/plan-not-allowed"
-                    title: "Plan not allowed"
-                    status: 403
-                    detail: "Upgrade required"
-                    error_code: "PLAN_NOT_ALLOWED"
+          $ref: "#/components/responses/400BadRequest"
         "409":
-          description: TOKEN_REUSE
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/409Conflict"
+        "429":
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
 
   /stamps/tokens:
     post:

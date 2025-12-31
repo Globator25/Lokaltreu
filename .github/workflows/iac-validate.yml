@@ -24,7 +24,7 @@ jobs:
         working-directory: infra/terraform
 
     env:
-      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
+      SOPS_AGE_KEY_FILE: $RUNNER_TEMP/age.key
       TF_IN_AUTOMATION: "true"
 
     steps:

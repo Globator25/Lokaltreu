@@ -60,7 +60,14 @@ jobs:
 
       - name: terraform plan (dev, no backend)
         run: |
+          # terraform plan returns 2 when changes are present; treat that as success for validation-only CI.
+          set +e
           terraform plan \
             -var-file="env/dev.tfvars" \
             -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
-            -compact-warnings -no-color
+            -compact-warnings -no-color -detailed-exitcode
+          exit_code=$?
+          if [ "$exit_code" -eq 2 ]; then
+            exit 0
+          fi
+          exit "$exit_code"

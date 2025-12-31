@@ -24,7 +24,7 @@ jobs:
         working-directory: infra/terraform
 
     env:
-      SOPS_AGE_KEY_FILE: $RUNNER_TEMP/age.key
+      # Nur allgemeine ENV-Variablen hier, ohne runner-Context
       TF_IN_AUTOMATION: "true"
 
     steps:
@@ -45,6 +45,8 @@ jobs:
           sops --version
 
       - name: Write AGE private key
+        env:
+          SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
         run: |
           mkdir -p "$(dirname "$SOPS_AGE_KEY_FILE")"
           printf "%s" "${{ secrets.AGE_PRIVATE_KEY }}" > "$SOPS_AGE_KEY_FILE"
@@ -58,7 +60,10 @@ jobs:
         run: terraform init -backend=false -upgrade
 
       - name: Decrypt dev secrets to temp
-        run: sops --decrypt secrets/dev.secrets.enc.tfvars > $RUNNER_TEMP/dev.secrets.tfvars
+        env:
+          SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
+        run: |
+          sops --decrypt secrets/dev.secrets.enc.tfvars > "${{ runner.temp }}/dev.secrets.tfvars"
 
       - name: terraform validate
         run: terraform validate
@@ -67,5 +72,5 @@ jobs:
         run: |
           terraform plan \
             -var-file="env/dev.tfvars" \
-            -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
+            -var-file="${{ runner.temp }}/dev.secrets.tfvars" \
             -compact-warnings -no-color

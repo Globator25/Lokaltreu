@@ -38,8 +38,11 @@ jobs:
 
       - name: Install sops
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y sops
+          SOPS_VERSION="3.9.0"
+          curl -L "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64" -o sops
+          sudo mv sops /usr/local/bin/sops
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
 
       - name: Write AGE private key
         run: |

@@ -24,7 +24,7 @@ jobs:
         working-directory: infra/terraform
 
     env:
-      SOPS_AGE_KEY_FILE: runner.temp /age.key
+      SOPS_AGE_KEY_FILE: $RUNNER_TEMP/age.key
       TF_IN_AUTOMATION: "true"
 
     steps:
@@ -50,7 +50,7 @@ jobs:
         run: terraform fmt -check
 
       - name: terraform init (local state)
-        run: terraform init -backend=false
+        run: terraform init -backend=false -upgrade
 
       - name: Decrypt dev secrets to temp
         run: sops --decrypt secrets/dev.secrets.enc.tfvars > $RUNNER_TEMP/dev.secrets.tfvars

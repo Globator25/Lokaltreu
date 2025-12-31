@@ -16,7 +16,7 @@ jobs:
 
       - name: AGENTS.md sentinels
         shell: pwsh
-        run: ./scripts/agents-sentinel-check.ps1
+        run: ./scripts/agents/agents-sentinel-check.ps1
 
       - name: Install
         run: npm ci

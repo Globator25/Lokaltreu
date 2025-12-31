@@ -619,11 +619,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
         "422":
-          description: SELF_REFERRAL_BLOCKED | REFERRAL_LIMIT_REACHED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/422Unprocessable"
         "429":
           description: RATE_LIMITED
           content:

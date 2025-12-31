@@ -25,5 +25,10 @@ jobs:
       - name: Log PII + retention
         run: npm run gdpr:logs
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6.0"
+
       - name: Terraform EU-only fmt+validate
         run: npm run terraform:ci

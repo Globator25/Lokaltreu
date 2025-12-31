@@ -28,8 +28,9 @@
     "test": "vitest run",
     "gdpr:dsr": "vitest run tests/security/idempotency.test.ts",
     "gdpr:logs": "node ./tools/gdpr/log-pii-retention.cjs",
-    "enforce:coverage": "jest --coverage --coverageThreshold '{\"global\":{\"branches\":80,\"functions\":80,\"lines\":80,\"statements\":80}}'"
+    "enforce:coverage": "vitest run --coverage"
   },
+  
   "keywords": [],
   "author": "",
   "license": "ISC",

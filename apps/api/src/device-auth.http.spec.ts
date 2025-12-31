@@ -1,6 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:http";
-// @ts-expect-error fetch types are provided by the Vitest environment
 import sodium from "libsodium-wrappers";
 import { buildCanonicalMessage, initSodium } from "./modules/auth/device-proof.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";

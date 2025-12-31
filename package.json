@@ -26,7 +26,7 @@
     "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
     "gdpr:docs:present": "test -f docs/compliance/step-18-device-onboarding.md",
     "test": "vitest run",
-    "gdpr:dsr": "vitest run --coverage tests/security/idempotency.test.ts",
+    "gdpr:dsr": "vitest run tests/security/idempotency.test.ts",
     "gdpr:logs": "node ./tools/gdpr/log-pii-retention.cjs",
     "enforce:coverage": "vitest run --coverage"
   },

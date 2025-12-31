@@ -166,6 +166,14 @@ export function createAppServer() {
   ) {
     try {
       const path = req.url?.split("?")[0] ?? "/";
+      const isRateLimitedPath =
+        req.method === "POST" && (path === "/stamps/claim" || path === "/rewards/redeem");
+      if (isRateLimitedPath) {
+        const rateOk = await requireRateLimit(req, res);
+        if (!rateOk) {
+          return;
+        }
+      }
       const requiresDeviceAuth =
         req.method === "POST" && (path === "/stamps/tokens" || path === "/stamps/claim" || path === "/rewards/redeem");
       if (requiresDeviceAuth) {
@@ -179,10 +187,6 @@ export function createAppServer() {
       if (isHotRoute) {
         if (req.headers["content-type"]?.includes("application/json") && !("body" in req)) {
           (req as { body?: unknown }).body = await readJsonBody(req);
-        }
-        const rateOk = await requireRateLimit(req, res);
-        if (!rateOk) {
-          return;
         }
         const idemOk = await requireIdempotency(req, res);
         if (!idemOk) {

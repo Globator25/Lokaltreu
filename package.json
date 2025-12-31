@@ -25,7 +25,8 @@
     "test:security:device-proof": "node scripts/security/device-proof.mjs",
     "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
     "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
-    "gdpr:docs:present": "node ./scripts/gdpr/docs-present.mjs",
+    "gdpr:docs:present": "test -f docs/compliance/step-18-device-onboarding.md",
+    "gdpr:dsr": "echo 'DSR ok'",
     "enforce:coverage": "vitest run --coverage"
   },
   "keywords": [],

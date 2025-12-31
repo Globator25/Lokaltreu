@@ -24,8 +24,8 @@ jobs:
         working-directory: infra/terraform
 
     env:
-      # Nur allgemeine ENV-Variablen hier, ohne runner-Context
       TF_IN_AUTOMATION: "true"
+      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
 
     steps:
       - name: Checkout
@@ -45,8 +45,6 @@ jobs:
           sops --version
 
       - name: Write AGE private key
-        env:
-          SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
         run: |
           mkdir -p "$(dirname "$SOPS_AGE_KEY_FILE")"
           printf "%s" "${{ secrets.AGE_PRIVATE_KEY }}" > "$SOPS_AGE_KEY_FILE"
@@ -59,9 +57,16 @@ jobs:
         # align with terraform:ci to ensure provider plugin availability on fresh runners
         run: terraform init -backend=false -upgrade
 
+      - name: Sanity check AGE key file (no secrets printed)
+        run: |
+          if ! grep -q "AGE-SECRET-KEY-1" "$SOPS_AGE_KEY_FILE"; then
+            echo "AGE_PRIVATE_KEY secret does not look like an age private key (expected AGE-SECRET-KEY-1...)."
+            exit 1
+          fi
+          echo "SOPS recipients in dev.secrets.enc.tfvars:"
+          grep -n "recipient" secrets/dev.secrets.enc.tfvars | head -n 20
+
       - name: Decrypt dev secrets to temp
-        env:
-          SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
         run: |
           sops --decrypt secrets/dev.secrets.enc.tfvars > "${{ runner.temp }}/dev.secrets.tfvars"
 

@@ -16,6 +16,7 @@
     "agents:sentinel:node": "node scripts/agents-sentinel-check.mjs",
     "agents:sentinels": "npm run -s agents:sentinel:node",
     "contract:check": "node scripts/contract-check.mjs",
+    "contract:drift-check": "npm run contract:check",
     "test:with-stub": "cross-env STUB=1 vitest run --coverage",
     "prepare": "husky",
     "scan:logs:no-pii": "node scripts/gdpr/scan-logs-no-pii.mjs",

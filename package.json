@@ -18,7 +18,7 @@
     "contract:check": "node scripts/contract-check.mjs",
     "contract:drift-check": "npm run contract:check",
     "contract:drift:check": "npm run contract:drift-check",
-    "problemjson:check": "vitest run --workspaces -- -t RFC7807",
+    "problemjson:check": "vitest run -t RFC7807",
     "test:with-stub": "cross-env STUB=1 vitest run --coverage",
     "prepare": "husky",
     "scan:logs:no-pii": "node scripts/gdpr/scan-logs-no-pii.mjs",
@@ -34,7 +34,6 @@
     "enforce:coverage": "vitest run --coverage",
     "terraform:ci": "cd infra/terraform && terraform fmt -check && terraform init -backend=false -upgrade && terraform validate"
   },
-
   "keywords": [],
   "author": "",
   "license": "ISC",

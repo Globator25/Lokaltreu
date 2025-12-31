@@ -264,6 +264,9 @@ export function createRateLimitMiddleware(store: RateLimitStore) {
       return true;
     }
 
+    const status = 429;
+    const correlationId = req.context?.correlation_id ?? randomUUID();
+
     console.warn({
       event: "rate_limit",
       dimension: hit.dimension,
@@ -272,11 +275,20 @@ export function createRateLimitMiddleware(store: RateLimitStore) {
       tenant_id: tenantId,
       device_id: deviceId,
       card_id: cardId,
-      correlation_id: randomUUID(),
+      correlation_id: correlationId,
     });
 
     const detail = getLimitDetail(hit);
-    const payload = problem(429, "Rate limited", detail, req.url ?? "/", "RATE_LIMITED", hit.retryAfterSeconds);
+    const payload = problem(
+      status,
+      "Rate limited",
+      detail,
+      req.url ?? "/",
+      "RATE_LIMITED",
+      hit.retryAfterSeconds,
+      correlationId
+    );
+
     sendProblem(res, payload);
     return false;
   };

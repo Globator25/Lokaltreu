@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:http";
-// @ts-expect-error -- libsodium-wrappers has no bundled TS types in this repo.
+// @ts-expect-error fetch types are provided by the Vitest environment
 import sodium from "libsodium-wrappers";
 import { buildCanonicalMessage, initSodium } from "./modules/auth/device-proof.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";
@@ -18,7 +18,16 @@ type ServerHandle = {
   baseUrl: string;
 };
 
-const BASE64 = sodium.base64_variants.ORIGINAL;
+type SodiumLike = {
+  base64_variants: { ORIGINAL: number };
+  crypto_sign_detached: (message: Uint8Array, privateKey: Uint8Array) => Uint8Array;
+  from_string: (input: string) => Uint8Array;
+  to_base64: (input: Uint8Array, variant: number) => string;
+  crypto_sign_keypair: () => { publicKey: Uint8Array; privateKey: Uint8Array };
+};
+
+const sodiumLib = sodium as unknown as SodiumLike;
+const BASE64 = sodiumLib.base64_variants.ORIGINAL;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -64,8 +73,11 @@ function signMessage(input: { method: string; path: string; timestamp: string; j
     timestamp: input.timestamp,
     nonce: input.jti,
   });
-  const signatureBytes = sodium.crypto_sign_detached(sodium.from_string(message), input.privateKey);
-  return { message, signature: sodium.to_base64(signatureBytes, BASE64) };
+  const signatureBytes = sodiumLib.crypto_sign_detached(
+    sodiumLib.from_string(message),
+    input.privateKey,
+  );
+  return { message, signature: sodiumLib.to_base64(signatureBytes, BASE64) };
 }
 
 type DeviceRegistrationLinkRow = {
@@ -180,12 +192,12 @@ describe("device auth http integration", () => {
 
   beforeAll(async () => {
     await initSodium();
-    const keypair = sodium.crypto_sign_keypair();
+    const keypair = sodiumLib.crypto_sign_keypair();
     privateKey = keypair.privateKey;
     deviceRecord = {
       tenantId: "tenant-device",
       deviceId: "device-1",
-      publicKey: sodium.to_base64(keypair.publicKey, BASE64),
+      publicKey: sodiumLib.to_base64(keypair.publicKey, BASE64),
       algorithm: "ed25519",
       enabled: true,
     };

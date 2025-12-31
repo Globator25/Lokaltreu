@@ -25,7 +25,7 @@ jobs:
 
     env:
       TF_IN_AUTOMATION: "true"
-      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
+      SOPS_AGE_KEY_FILE: /tmp/age.key
 
     steps:
       - name: Checkout
@@ -68,7 +68,7 @@ jobs:
 
       - name: Decrypt dev secrets to temp
         run: |
-          sops --decrypt secrets/dev.secrets.enc.tfvars > "${{ runner.temp }}/dev.secrets.tfvars"
+          sops --decrypt secrets/dev.secrets.enc.tfvars > /tmp/dev.secrets.tfvars
 
       - name: terraform validate
         run: terraform validate
@@ -77,5 +77,5 @@ jobs:
         run: |
           terraform plan \
             -var-file="env/dev.tfvars" \
-            -var-file="${{ runner.temp }}/dev.secrets.tfvars" \
+            -var-file="/tmp/dev.secrets.tfvars" \
             -compact-warnings -no-color

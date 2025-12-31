@@ -29,7 +29,7 @@
     "gdpr:dsr": "vitest run tests/security/idempotency.test.ts",
     "gdpr:logs": "node ./tools/gdpr/log-pii-retention.cjs",
     "enforce:coverage": "vitest run --coverage",
-    "terraform:ci": "cd infra/terraform && terraform fmt -check && terraform validate"
+    "terraform:ci": "cd infra/terraform && terraform fmt -check && terraform init -backend=false -upgrade && terraform validate"
   },
 
   "keywords": [],

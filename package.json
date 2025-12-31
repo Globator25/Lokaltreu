@@ -13,7 +13,6 @@
     "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
     "start:web": "node apps/web/.next/standalone/server.js",
     "start:api": "node apps/api/dist/server-main.js",
-    "test": "vitest run --coverage",
     "agents:sentinel:node": "node scripts/agents-sentinel-check.mjs",
     "agents:sentinels": "npm run -s agents:sentinel:node",
     "contract:check": "node scripts/contract-check.mjs",
@@ -26,7 +25,8 @@
     "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
     "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
     "gdpr:docs:present": "test -f docs/compliance/step-18-device-onboarding.md",
-    "gdpr:dsr": "npm run test -- tests/security/idempotency.test.ts",
+    "test": "vitest run",
+    "gdpr:dsr": "vitest run tests/security/idempotency.test.ts",
     "enforce:coverage": "jest --coverage --coverageThreshold '{\"global\":{\"branches\":80,\"functions\":80,\"lines\":80,\"statements\":80}}'"
   },
   "keywords": [],

@@ -8,7 +8,8 @@
     // ... restliche Optionen ...
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.d.ts"
   ],
   "exclude": [
     "vitest.setup.ts",

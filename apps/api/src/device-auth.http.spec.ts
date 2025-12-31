@@ -25,7 +25,7 @@ type SodiumLike = {
   crypto_sign_keypair: () => { publicKey: Uint8Array; privateKey: Uint8Array };
 };
 
-const sodiumLib = sodium as unknown as SodiumLike;
+const sodiumLib = sodium as SodiumLike;
 const BASE64 = sodiumLib.base64_variants.ORIGINAL;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -41,8 +41,7 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
 }
 
 function seedDevice(repo: InMemoryDeviceRepository, record: DeviceRecord) {
-  const store = repo as unknown as { devices: Map<string, DeviceRecord> };
-  store.devices.set(`${record.tenantId}:${record.deviceId}`, record);
+  repo.upsert(record);
 }
 
 async function startServer(repo: InMemoryDeviceRepository, replayStore: InMemoryDeviceReplayStore): Promise<ServerHandle> {

@@ -1,0 +1,19 @@
+### POST /stamps/claim without Idempotency-Key -> expect 4xx Problem+JSON with error_code like MISSING_IDEMPOTENCY_KEY
+POST http://localhost/stamps/claim
+Content-Type: application/json
+Accept: application/problem+json
+
+{
+  "qrToken": "stub-qr-token",
+  "ref": null
+}
+
+### POST /stamps/claim with Idempotency-Key -> expect 2xx/201
+POST http://localhost/stamps/claim
+Content-Type: application/json
+Idempotency-Key: claim-12345678
+
+{
+  "qrToken": "stub-qr-token",
+  "ref": null
+}

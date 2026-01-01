@@ -1,0 +1,19 @@
+### POST /stamps/claim with Idempotency-Key (Body A) -> expect 2xx/201
+POST http://localhost/stamps/claim
+Content-Type: application/json
+Idempotency-Key: conflict-key-1
+
+{
+  "qrToken": "token-A",
+  "ref": null
+}
+
+### POST /stamps/claim with same Idempotency-Key but different body (Body B) -> expect 409 Conflict (Idempotency) in current middleware behavior
+POST http://localhost/stamps/claim
+Content-Type: application/json
+Idempotency-Key: conflict-key-1
+
+{
+  "qrToken": "token-B",
+  "ref": null
+}

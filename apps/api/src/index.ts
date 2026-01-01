@@ -20,6 +20,89 @@ import { InMemoryDeviceRepository } from "./modules/auth/device-repository.js";
 import type { DbClientLike } from "./modules/devices/deviceRegistrationLinks.repo.js";
 import { createRedisIdempotencyStore } from "./services/idempotencyStore/redis.js";
 
+type DeviceRegistrationLinkRow = {
+  id: string;
+  tenant_id: string;
+  token_hash: string;
+  expires_at: Date;
+  used_at: Date | null;
+  device_id: string | null;
+  created_by_admin_id: string | null;
+  created_at: Date;
+};
+
+function createInMemoryDeviceRegistrationLinksDbClient(): DbClientLike {
+  const rowsById = new Map<string, DeviceRegistrationLinkRow>();
+  const idByTokenHash = new Map<string, string>();
+
+  return {
+    query<T = unknown>(sql: string, params?: unknown[]) {
+      const normalized = sql.replace(/\s+/g, " ").trim();
+
+      if (normalized.startsWith("INSERT INTO device_registration_links")) {
+        const [id, tenantId, tokenHash, expiresAt, adminId] = params as [
+          string,
+          string,
+          string,
+          Date,
+          string | null,
+        ];
+
+        const row: DeviceRegistrationLinkRow = {
+          id,
+          tenant_id: tenantId,
+          token_hash: tokenHash,
+          expires_at: expiresAt,
+          used_at: null,
+          device_id: null,
+          created_by_admin_id: adminId ?? null,
+          created_at: new Date(),
+        };
+
+        rowsById.set(id, row);
+        idByTokenHash.set(tokenHash, id);
+        return Promise.resolve({ rows: [row] as T[], rowCount: 1 });
+      }
+
+      if (
+        normalized.startsWith("SELECT") &&
+        normalized.includes("FROM device_registration_links") &&
+        normalized.includes("WHERE token_hash = $1")
+      ) {
+        const tokenHash = params?.[0] as string;
+        const id = idByTokenHash.get(tokenHash);
+        if (!id) {
+          return Promise.resolve({ rows: [] as T[], rowCount: 0 });
+        }
+        const row = rowsById.get(id);
+        return Promise.resolve(
+          row
+            ? { rows: [row] as T[], rowCount: 1 }
+            : { rows: [] as T[], rowCount: 0 },
+        );
+      }
+
+      if (
+        normalized.startsWith("UPDATE device_registration_links") &&
+        normalized.includes("SET used_at = now(), device_id = $2") &&
+        normalized.includes("WHERE id = $1") &&
+        normalized.includes("used_at IS NULL")
+      ) {
+        const [id, deviceId] = params as [string, string];
+        const row = rowsById.get(id);
+        if (!row || row.used_at) {
+          return Promise.resolve({ rows: [] as T[], rowCount: 0 });
+        }
+        row.used_at = new Date();
+        row.device_id = deviceId;
+        return Promise.resolve({ rows: [] as T[], rowCount: 1 });
+      }
+
+      throw new Error(`Unexpected SQL in in-memory DB: ${normalized}`);
+    },
+  };
+}
+
 class InMemoryAdminSessionStore implements AdminSessionStore {
   private readonly sessions = new Map<string, AdminSession>();
 
@@ -108,13 +191,15 @@ export function createAppServer() {
   const idempotency = createIdempotencyMiddleware(idempotencyStore);
   const rateLimit = createRateLimitMiddleware(rateLimitStore);
   
-  const dbClient: DbClientLike = {
-  query(sql, params) {
-    void sql;
-    void params;
-    return Promise.reject(new Error("Database client not configured"));
-  },
-};
+  const dbClient: DbClientLike = isProdLike
+    ? {
+        query(sql, params) {
+          void sql;
+          void params;
+          return Promise.reject(new Error("Database client not configured"));
+        },
+      }
+    : createInMemoryDeviceRegistrationLinksDbClient();
 
   async function requireDeviceAuth(
     req: import("node:http").IncomingMessage,
@@ -216,6 +301,7 @@ export function createAppServer() {
         }
         await handleDeviceRegistrationLinks(req, res, {
           db: dbClient,
+          idempotencyStore,
           logger: console,
         });
         return;
@@ -232,16 +318,17 @@ export function createAppServer() {
         return;
       }
 
-      // TOKEN_REUSE is used as a generic anti-replay signal; keep copy client-friendly for audits.
+      // Unknown route: return a generic RFC 7807 problem (no domain-specific error_code).
       sendProblem(
         res,
-        problem(404, "Token reuse detected", "Token is invalid or already used", path, "TOKEN_REUSE")
+        problem(404, "Not Found", "Route not found", req.url ?? "/")
       );
-    } catch {
-      // Use a consistent, domain-aligned message for TOKEN_REUSE even on unexpected errors.
+    } catch (error) {
+      // Unexpected error: log without PII and return a generic RFC 7807 problem (no domain-specific error_code).
+      console.error("Unhandled error", error instanceof Error ? error.message : error);
       sendProblem(
         res,
-        problem(500, "Token reuse detected", "Token is invalid or already used", req.url ?? "/", "TOKEN_REUSE")
+        problem(500, "Internal Server Error", "Unexpected error", req.url ?? "/")
       );
     }
   }

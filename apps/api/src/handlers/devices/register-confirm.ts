@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { problem, readJsonBody, sendProblem } from "../http-utils.js";
+import { validateIdempotencyKey } from "../../mw/idempotency.js";
 import {
   createDeviceOnboardingService,
   DeviceRegistrationTokenExpiredError,
@@ -20,6 +21,16 @@ export async function handleDeviceRegistrationConfirm(
   res: ServerResponse,
   deps: DeviceRegistrationConfirmDeps,
 ) {
+  const rawKey = req.headers["idempotency-key"];
+  const idempotencyKey = typeof rawKey === "string" ? rawKey : Array.isArray(rawKey) ? rawKey[0] : undefined;
+  const validationError = validateIdempotencyKey(idempotencyKey);
+  if (validationError) {
+    return sendProblem(
+      res,
+      problem(400, "Bad Request", validationError, req.url ?? "/devices/register/confirm"),
+    );
+  }
+
   const body = await readJsonBody(req);
   if (!body) {
     return sendProblem(
@@ -45,10 +56,7 @@ export async function handleDeviceRegistrationConfirm(
   try {
     const { deviceId, tenantId } = await deviceOnboarding.confirmRegistration({ token });
 
-    const idempotencyKey = req.headers["idempotency-key"];
-    if (typeof idempotencyKey === "string") {
-      res.setHeader("Idempotency-Key", idempotencyKey);
-    }
+    res.setHeader("Idempotency-Key", idempotencyKey);
 
     deps.logger?.info?.("device registration confirmed", {
       tenantId,
@@ -82,6 +90,15 @@ export async function handleDeviceRegistrationConfirm(
         ),
       );
     }
-    throw error;
+    // Avoid bubbling up into the global TOKEN_REUSE fallback.
+    return sendProblem(
+      res,
+      problem(
+        500,
+        "Internal Server Error",
+        error instanceof Error ? error.message : "Unexpected error",
+        req.url ?? "/devices/register/confirm",
+      ),
+    );
   }
 }

@@ -116,3 +116,23 @@ Ziel ist ein einfacher, nachvollziehbarer Flow **ohne Speicherung von Klartext-T
 > Die konkrete Umsetzung von Lösch-/Pseudonymisierungsprozessen für  
 > `device_registration_links` erfolgt in der zentralen DSR-/Tombstone-Policy  
 > und ist **nicht Bestandteil von Step 18**.
+
+## Manueller Smoke-Test – Geräte-Onboarding (Dev)
+
+Voraussetzungen:
+- API läuft lokal (`npm --workspace apps/api run build && npm --workspace apps/api run start`).
+- Korrekte Base-URL ohne `/v2`-Prefix, z. B.: `http://localhost:3000` (abhängig von `index.ts`-Routing).
+- Admin-Token (falls Auth-Middleware auf den Endpunkten aktiv ist).
+
+### 1. Registration-Link anlegen
+
+```powershell
+$base = "http://localhost:3000"    # ohne /v2
+$admintoken = "<DEIN_ADMIN_JWT>"   # nicht einchecken
+
+$idem = "manual-step18-$(Get-Random)"
+
+curl.exe -i -w "`nSTATUS=%{http_code}`n" -X POST "$base/devices/registration-links" `
+  -H "Authorization: Bearer $admintoken" `
+  -H "Idempotency-Key: $idem" `
+  -H "Content-Type: application/json"

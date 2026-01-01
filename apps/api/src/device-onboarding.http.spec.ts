@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import type { AdminAuthRequest } from "./mw/admin-auth.js";
 import { handleDeviceRegistrationConfirm } from "./handlers/devices/register-confirm.js";
 import { handleDeviceRegistrationLinks } from "./handlers/devices/registration-links.js";
 import type { DbClientLike } from "./modules/devices/deviceRegistrationLinks.repo.js";
+import { InMemoryIdempotencyStore } from "./mw/idempotency.js";
 
 type ServerHandle = {
   server: ReturnType<typeof createServer>;
@@ -95,7 +96,7 @@ function createInMemoryDbClient(): DbClientLike {
   };
 }
 
-async function startDeviceOnboardingServer(db: DbClientLike): Promise<ServerHandle> {
+async function startDeviceOnboardingServer(db: DbClientLike, idempotencyStore: InMemoryIdempotencyStore): Promise<ServerHandle> {
   const server = createServer((req, res) => {
     const path = req.url?.split("?")[0] ?? "/";
     if (req.method === "POST" && path === "/devices/registration-links") {
@@ -107,7 +108,7 @@ async function startDeviceOnboardingServer(db: DbClientLike): Promise<ServerHand
           expiresAt: Math.floor(Date.now() / 1000) + 900,
         },
       };
-      void handleDeviceRegistrationLinks(req as AdminAuthRequest, res, { db });
+      void handleDeviceRegistrationLinks(req as AdminAuthRequest, res, { db, idempotencyStore });
       return;
     }
     if (req.method === "POST" && path === "/devices/register/confirm") {
@@ -137,11 +138,12 @@ describe("device onboarding http integration", () => {
 
   it("creates a registration link and confirms it", async () => {
     const db = createInMemoryDbClient();
-    serverHandle = await startDeviceOnboardingServer(db);
+    const idempotencyStore = new InMemoryIdempotencyStore();
+    serverHandle = await startDeviceOnboardingServer(db, idempotencyStore);
 
     const createRes = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-create-00000001" },
       body: JSON.stringify({}),
     });
 
@@ -152,7 +154,7 @@ describe("device onboarding http integration", () => {
 
     const confirmRes = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-confirm-00000001" },
       body: JSON.stringify({ token }),
     });
 
@@ -161,11 +163,12 @@ describe("device onboarding http integration", () => {
 
   it("rejects token reuse with problem+json", async () => {
     const db = createInMemoryDbClient();
-    serverHandle = await startDeviceOnboardingServer(db);
+    const idempotencyStore = new InMemoryIdempotencyStore();
+    serverHandle = await startDeviceOnboardingServer(db, idempotencyStore);
 
     const createRes = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-create-00000002" },
       body: JSON.stringify({}),
     });
 
@@ -174,7 +177,7 @@ describe("device onboarding http integration", () => {
 
     const firstConfirm = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-confirm-00000002" },
       body: JSON.stringify({ token }),
     });
 
@@ -182,7 +185,7 @@ describe("device onboarding http integration", () => {
 
     const secondConfirm = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-confirm-00000003" },
       body: JSON.stringify({ token }),
     });
 
@@ -190,5 +193,68 @@ describe("device onboarding http integration", () => {
     const body = await readJson(secondConfirm);
     expect(secondConfirm.headers.get("content-type")).toContain("application/problem+json");
     expect(body.error_code).toBe("TOKEN_REUSE");
+  });
+
+  it("rejects expired tokens with problem+json", async () => {
+    vi.useFakeTimers();
+    const start = new Date("2025-01-01T00:00:00.000Z");
+    vi.setSystemTime(start);
+
+    try {
+      const db = createInMemoryDbClient();
+      const idempotencyStore = new InMemoryIdempotencyStore();
+      serverHandle = await startDeviceOnboardingServer(db, idempotencyStore);
+
+      const createRes = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-create-00000003" },
+        body: JSON.stringify({}),
+      });
+
+      expect(createRes.status).toBe(201);
+      const createBody = await readJson(createRes);
+      const token = createBody.token;
+      expect(typeof token).toBe("string");
+
+      vi.setSystemTime(new Date(start.getTime() + 16 * 60 * 1000));
+
+      const confirmRes = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-confirm-00000004" },
+        body: JSON.stringify({ token }),
+      });
+
+      expect(confirmRes.status).toBe(400);
+      const body = await readJson(confirmRes);
+      expect(confirmRes.headers.get("content-type")).toContain("application/problem+json");
+      expect(body.error_code).toBe("TOKEN_EXPIRED");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("replays registration link for same Idempotency-Key", async () => {
+    const db = createInMemoryDbClient();
+    const idempotencyStore = new InMemoryIdempotencyStore();
+    serverHandle = await startDeviceOnboardingServer(db, idempotencyStore);
+
+    const first = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-create-00000004" },
+      body: JSON.stringify({}),
+    });
+    expect(first.status).toBe(201);
+    const firstBody = await readJson(first);
+
+    const second = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-create-00000004" },
+      body: JSON.stringify({}),
+    });
+    expect(second.status).toBe(201);
+    const secondBody = await readJson(second);
+
+    expect(firstBody.token).toBe(secondBody.token);
+    expect(firstBody.expiresAt).toBe(secondBody.expiresAt);
   });
 });

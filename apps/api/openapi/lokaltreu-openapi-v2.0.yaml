@@ -1,20 +1,29 @@
 openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+
 info:
-  title: Lokaltreu API
+  title: Lokaltreu HTTP-API
   version: "2.0"
-  description: API for Lokaltreu SaaS (Admin, Devices, Stamps, Rewards, Referrals).
+  description: >
+    Digitale Stempelkarte als HTTP-API. RFC 7807 für Fehler. Idempotenz via Header.
+    Referral-Funktionen sind planabhängig (Starter blockiert).
+  termsOfService: https://lokaltreu.example/terms
   contact:
-    name: Lokaltreu Support
-    url: https://lokaltreu.example
+    name: Lokaltreu API Support
+    url: https://lokaltreu.example/support
     email: support@lokaltreu.example
   license:
-    name: UNLICENSED
-    url: https://example.com/license
+    name: Proprietary
+  x-schema-drift-policy: "0"
+
 servers:
+  - url: https://api.lokaltreu.example/v2
+    description: Production API v2 (current)
   - url: https://api.lokaltreu.example/v1
-    description: Production API
-  - url: http://localhost
-    description: Local test API for contract tests
+    description: Production API v1 (legacy)
+  - url: http://localhost:3000
+    description: Local dev API (port 3000)
+
 tags:
   - name: Admins
     description: Admin authentication and session management.
@@ -28,6 +37,8 @@ tags:
     description: Referral link retrieval and validation.
   - name: JWKS
     description: Public keys for token verification.
+
+security: []
 
 components:
   securitySchemes:

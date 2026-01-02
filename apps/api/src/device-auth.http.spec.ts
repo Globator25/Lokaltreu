@@ -299,7 +299,10 @@ describe("device onboarding http integration", () => {
 
     const createRes = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": `onboarding-create-${Date.now()}`,
+      },
       body: JSON.stringify({}),
     });
 
@@ -310,7 +313,10 @@ describe("device onboarding http integration", () => {
 
     const confirmRes = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": `onboarding-confirm-${Date.now()}`,
+      },
       body: JSON.stringify({ token }),
     });
 
@@ -323,7 +329,10 @@ describe("device onboarding http integration", () => {
 
     const createRes = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": `onboarding-create-${Date.now()}`,
+      },
       body: JSON.stringify({}),
     });
 
@@ -332,7 +341,10 @@ describe("device onboarding http integration", () => {
 
     const firstConfirm = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": `onboarding-confirm-${Date.now()}`,
+      },
       body: JSON.stringify({ token }),
     });
 
@@ -340,7 +352,10 @@ describe("device onboarding http integration", () => {
 
     const secondConfirm = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": `onboarding-confirm-${Date.now()}-reuse`,
+      },
       body: JSON.stringify({ token }),
     });
 

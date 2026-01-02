@@ -52,7 +52,7 @@ describe("idempotency middleware", () => {
     }
   });
 
-  it("returns 400 for missing Idempotency-Key on hot routes", async () => {
+  it("returns 400 for missing Idempotency-Key on /stamps/claim", async () => {
     handle = await startServer();
     const { res, body } = await requestJson(handle.baseUrl, "/stamps/claim", {
       method: "POST",
@@ -62,15 +62,15 @@ describe("idempotency middleware", () => {
       body: JSON.stringify({ qrToken: "stub" }),
     });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
     expect(res.headers.get("content-type")).toContain("application/problem+json");
     if (!body) {
       throw new Error("Expected problem+json body");
     }
     expect(body.type).toBeDefined();
     expect(body.title).toBeDefined();
-    expect(body.status).toBe(401);
-    expect(body.error_code).toBeDefined();
+    expect(body.status).toBe(400);
+    expect(body.error_code).toBe("IDEMPOTENCY_KEY_INVALID");
     expect(body.correlation_id).toBeDefined();
   });
 

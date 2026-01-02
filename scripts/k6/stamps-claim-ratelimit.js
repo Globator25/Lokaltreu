@@ -18,12 +18,42 @@ export const options = {
 
 const BASE_URL = __ENV.BASE_URL;
 const PATH = "/stamps/claim";
+const TOKENS_PATH = "/stamps/tokens";
 const CARD_ID = __ENV.CARD_ID || "card-rl-1";
 const TENANT_ID = __ENV.TENANT_ID || "tenant-rl-1";
+const DEVICE_PROOF_HEADERS_JSON = __ENV.DEVICE_PROOF_HEADERS_JSON || "";
+
+function readDeviceProofHeaders() {
+  if (!DEVICE_PROOF_HEADERS_JSON) {
+    return {};
+  }
+  const parsed = JSON.parse(DEVICE_PROOF_HEADERS_JSON);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("DEVICE_PROOF_HEADERS_JSON must be a JSON object");
+  }
+  return parsed;
+}
+
+const DEVICE_PROOF_HEADERS = readDeviceProofHeaders();
 
 export default function () {
+  // Create a real stamp token before claiming it.
+  const tokenRes = http.post(`${BASE_URL}${TOKENS_PATH}`, null, {
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": `idem-token-${__VU}-${__ITER}-${Date.now()}`,
+      "x-tenant-id": TENANT_ID,
+      ...DEVICE_PROOF_HEADERS,
+    },
+  });
+  if (tokenRes.status !== 201) {
+    throw new Error(`Failed to create stamp token: ${tokenRes.status} ${tokenRes.body}`);
+  }
+  const tokenBody = tokenRes.json();
+  const qrToken = tokenBody.qrToken;
+  // Use the issued token for the claim request.
   const payload = JSON.stringify({
-    qrToken: `token-${__VU}-${__ITER}`,
+    qrToken,
     ref: null,
   });
 
@@ -38,7 +68,7 @@ export default function () {
   });
 
   check(res, {
-    "status is 201 or 429": (r) => r.status === 201 || r.status === 429,
+    "status is 200 or 429": (r) => r.status === 200 || r.status === 429,
     "problem+json on 429": (r) =>
       r.status !== 429 || (r.headers["Content-Type"] || "").includes("application/problem+json"),
     "retry-after on 429": (r) => r.status !== 429 || Number(r.headers["Retry-After"]) > 0,

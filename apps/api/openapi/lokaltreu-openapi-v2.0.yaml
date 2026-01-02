@@ -193,6 +193,48 @@ components:
           type: string
           nullable: true
 
+    CardState:
+      type: object
+      additionalProperties: false
+      required:
+        - currentStamps
+        - stampsRequired
+        - rewardsAvailable
+      properties:
+        currentStamps:
+          type: integer
+          minimum: 0
+        stampsRequired:
+          type: integer
+          minimum: 1
+        rewardsAvailable:
+          type: integer
+          minimum: 0
+
+    OfferSnippet:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+
+    StampClaimResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - cardState
+      properties:
+        cardState:
+          $ref: "#/components/schemas/CardState"
+        offer:
+          $ref: "#/components/schemas/OfferSnippet"
+          nullable: true
+
     DeviceRegistrationLinkResponse:
       type: object
       additionalProperties: false
@@ -587,6 +629,9 @@ paths:
       responses:
         "201":
           description: Created
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
           content:
             application/json:
               schema:
@@ -617,6 +662,10 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StampClaimResponse"
         "400":
           description: TOKEN_EXPIRED
           content:

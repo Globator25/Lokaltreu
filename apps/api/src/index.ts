@@ -9,6 +9,8 @@ import { handleAdminRegister } from "./handlers/admins/register.js";
 import { handleDeviceRegistrationConfirm } from "./handlers/devices/register-confirm.js";
 import { handleDeviceRegistrationLinks } from "./handlers/devices/registration-links.js";
 import { handleGetJwks } from "./handlers/jwks/get-jwks.js";
+import { handleStampClaim } from "./handlers/stamps/claim.js";
+import { handleStampTokens } from "./handlers/stamps/tokens.js";
 import type { AdminSession, AdminSessionStore, AuditEvent, AuditSink } from "./handlers/admins/types.js";
 import { problem, readJsonBody, sendProblem } from "./handlers/http-utils.js";
 import { requireAdminAuth } from "./mw/admin-auth.js";
@@ -18,6 +20,7 @@ import { createRateLimitMiddleware, InMemoryRateLimitStore } from "./mw/rate-lim
 import { InMemoryDeviceReplayStore } from "./modules/auth/device-replay-store.js";
 import { InMemoryDeviceRepository } from "./modules/auth/device-repository.js";
 import type { DbClientLike } from "./modules/devices/deviceRegistrationLinks.repo.js";
+import { createStampService, InMemoryCardStateStore, InMemoryStampTokenStore } from "./modules/stamps/stamp.service.js";
 import { createRedisIdempotencyStore } from "./services/idempotencyStore/redis.js";
 
 type DeviceRegistrationLinkRow = {
@@ -184,6 +187,9 @@ export function createAppServer() {
   const replayStore = new InMemoryDeviceReplayStore();
   void seedDevDevice(deviceRepository);
   const deviceAuth = createDeviceAuthMiddleware({ deviceRepository, replayStore });
+  const stampTokenStore = new InMemoryStampTokenStore();
+  const cardStateStore = new InMemoryCardStateStore();
+  const stampService = createStampService({ tokenStore: stampTokenStore, cardStore: cardStateStore, logger: console });
   const isProdLike = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
   const idempotencyStore = isProdLike ? createRedisIdempotencyStore() : new InMemoryIdempotencyStore();
   // TODO: Wire Redis-backed rate limit store when available.
@@ -260,11 +266,18 @@ export function createAppServer() {
         }
       }
       const requiresDeviceAuth =
-        req.method === "POST" && (path === "/stamps/tokens" || path === "/stamps/claim" || path === "/rewards/redeem");
+        req.method === "POST" && (path === "/stamps/tokens" || path === "/rewards/redeem");
       if (requiresDeviceAuth) {
-        const allowed = await requireDeviceAuth(req, res);
-        if (!allowed) {
-          return;
+        if (path === "/stamps/tokens" && typeof req.headers.authorization === "string") {
+          const allowed = await requireAdmin(req, res);
+          if (!allowed) {
+            return;
+          }
+        } else {
+          const allowed = await requireDeviceAuth(req, res);
+          if (!allowed) {
+            return;
+          }
         }
       }
       const isHotRoute =
@@ -309,6 +322,21 @@ export function createAppServer() {
       if (req.method === "POST" && path === "/devices/register/confirm") {
         await handleDeviceRegistrationConfirm(req, res, {
           db: dbClient,
+          logger: console,
+        });
+        return;
+      }
+      if (req.method === "POST" && path === "/stamps/tokens") {
+        await handleStampTokens(req, res, {
+          service: stampService,
+          idempotencyStore,
+          logger: console,
+        });
+        return;
+      }
+      if (req.method === "POST" && path === "/stamps/claim") {
+        await handleStampClaim(req, res, {
+          service: stampService,
           logger: console,
         });
         return;

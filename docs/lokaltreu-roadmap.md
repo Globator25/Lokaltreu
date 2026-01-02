@@ -889,6 +889,26 @@ Kernprozess: sichere, nachvollziehbare Vergabe von Stempeln via QR.
 
  • Schritte 13--18
 
+**Schritt 19 – Stempelvergabe (Hot-Route) – Status: ERLEDIGT**
+
+ • Implementiert `/stamps/tokens` und `/stamps/claim` gemäß OpenAPI (Stamps-Sektion) und liefert StampToken-/  Claim-Responses inkl. Problem+JSON-Fehlercodes in `apps/api/openapi/lokaltreu-openapi-v2.0.yaml`.
+ • Hot-Route ist abgesichert:
+  -  Idempotency-Key-Pflicht
+  -  Replay-/Conflict-Handling
+  -  Rate-Limits mit `Retry-After`.
+  - Die Logik ist in Handler/Service abgebildet:
+  - `apps/api/src/handlers/stamps/*`
+  - `apps/api/src/modules/stamps/stamp.service.ts`
+ • Tests:
+  - Token- und Claim-Flow in `apps/api/src/stamps.http.spec.ts`
+  - Idempotency-Middleware- und Rate-Limit-Tests in den bestehenden Security-Tests.
+ • k6:
+  - `scripts/k6/stamps-claim-ratelimit.js` nutzt echte Tokens und prüft 200/429 inkl. Problem+JSON/`Retry-After`.
+
+**Folgeticket (kein Blocker für Schritt 19):**
+
+ • „k6 Device-Proof Signer für Stage/Test“ – für gültige Device-Proof-Header bei `/stamps/tokens` in Lasttests.
+
 **Schritt 20: Prämieneinlösung (Hot-Route)**
 
 **Ziel/Kontext**

@@ -1,42 +1,46 @@
 name: ci
 on:
   pull_request:
+    branches: [main]
   push:
     branches: [main]
 
 jobs:
-  build-test:
+  quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
+        with: { node-version: 20, cache: npm }
 
-      - run: npm ci --include=dev
+      - name: AGENTS.md sentinels
+        shell: pwsh
+        run: ./scripts/agents/agents-sentinel-check.ps1
+
+      - name: Install
+        run: npm ci
 
       - name: Lint
-        run: npm run lint --workspaces --if-present
-
-      - name: Build
-        run: npm run build --workspaces --if-present
-
-      - name: Unit & Contract Tests (with 80% coverage check)
-        run: npm test --workspaces -- --coverage --coverage.threshold.lines=80 --coverage.threshold.functions=80 --coverage.threshold.branches=80 --coverage.threshold.statements=80
+        run: npm run lint
 
       - name: OpenAPI Lint
-        run: npx @redocly/cli@latest lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+        run: npx @stoplight/spectral-cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 
-      - name: Artefakte hochladen (dist)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: apps/**/dist
+      - name: Contract types
+        run: npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts
 
-      - name: Artefakte hochladen (coverage)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: "**/coverage/**"
+      - name: Build
+        run: npm run build
+
+      - name: Tests + Coverage
+        run: npm test --workspaces -- --coverage
+
+      - name: Enforce coverage >= 80%
+        run: npm run enforce:coverage
+
+      - name: Enforce schema_drift = 0
+        run: npm run contract:drift:check
+
+      - name: RFC7807 conformity checks
+        run: npm run problemjson:check

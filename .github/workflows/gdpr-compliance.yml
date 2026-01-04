@@ -1,0 +1,34 @@
+name: gdpr-compliance
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  gdpr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+
+      - name: Install
+        run: npm ci
+
+      - name: Docs present
+        run: npm run gdpr:docs:present
+
+      - name: Art.11 DSR flow
+        run: npm run gdpr:dsr
+
+      - name: Log PII + retention
+        run: npm run gdpr:logs
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform EU-only fmt+validate
+        run: npm run terraform:ci

@@ -84,6 +84,10 @@ npm test --workspaces -- --coverage
 npx @redocly/cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
 ```
 
+## Evidence: Step 16 – Admin Auth
+Für die lokale Admin-JWT-Konfiguration (Step 16) liegt eine kurze, reproduzierbare Anleitung vor.
+Siehe: [work/step16-admin-auth/evidence/README.md](work/step16-admin-auth/evidence/README.md)
+
 ## Compliance-Artefakte (Ausschnitt)
 
 * [docs/CI-Gates.md](docs/CI-Gates.md)

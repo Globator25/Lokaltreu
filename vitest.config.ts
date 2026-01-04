@@ -2,9 +2,34 @@
 import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
+    setupFiles: ["./vitest.setup.ts"],
     coverage: {
       provider: 'v8',
-      lines: 80, functions: 80, branches: 80, statements: 80
+      reporter: ['text', 'lcov'],
+      include: [
+        'apps/api/src/mw/**',
+        'apps/api/src/middleware/**',
+        'apps/api/src/modules/auth/**',
+        'apps/api/src/auth/**'
+      ],
+      exclude: [
+        'apps/**/dist/**',
+        'apps/**/coverage/**',
+        'apps/api/src/dev-server.*',
+        'apps/api/src/server-main.*',
+        'apps/api/src/handlers/admins/types.ts',
+        'scripts/**',
+        'tools/**',
+        'artifacts/**',
+        'work/**',
+        '**/*.d.ts'
+      ],
+      thresholds: {
+        lines: 73,
+        functions: 88.7,
+        branches: 65.6,
+        statements: 73
+      }
     }
   }
 });

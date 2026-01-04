@@ -221,3 +221,8 @@ PR-Beschreibung (Kurzfassung):
 * Rate-Limits sichtbar
 * CI-Pipeline fehlerfrei
 
+## Known Issues
+
+- `npm run test:security:device-proof` meldet für `GET /referrals/link` aktuell, dass „bad“ nicht unterscheidbar ist.
+- Die Redeem-Route (`POST /rewards/redeem`) besteht alle relevanten Device-Proof- und Replay-Tests.
+- Verbesserung für `/referrals/link` wird separat behandelt (Follow-up-Ticket).

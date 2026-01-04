@@ -47,4 +47,36 @@ _Quelle: [DOC:REQ §7], [DOC:LEGAL], [DPIA Lokaltreu]_
   Die Kernfunktion (Stempeln, Prämie einlösen) basiert auf berechtigtem Interesse und benötigt keine Einwilligung.  
   Ein optionaler Hinweistext wird in der PWA angezeigt, aber kein Cookie-Banner.
 
+<<<<<<< Updated upstream
 _Quelle: [DOC:LEGAL], [DPIA Lokaltreu], [EDPB Guidelines]_
+=======
+---
+
+## 5. Betroffenenrechte & Transparenz
+
+- **Art.-11-DSR-Flow:** PWA-Formular für Card-ID + optionalen Kontaktkanal; Statusansicht und Audit-Log-Eintrag.  
+- **Informationspflichten:** Datenschutzhinweise (Infos-DE) verlinkt in PWA und Admin-Dashboard; enthält Rechtsgrundlagen, Datenempfänger, Aufbewahrung.  
+- **Support-Traceability:** Problem+JSON liefert `correlation_id`, sodass Supportanfragen ohne PII beantwortet werden können.  
+- **Break-Glass-Nachvollziehbarkeit:** Jeder Einsatz wird geloggt, Ticket erstellt, Gates wiederhergestellt.  
+_Quelle: [ROADMAP Schritte 34, 42], [AGENTS §5], [Infos-DE]_
+
+---
+
+## 6. Consent & Cookie-Policy
+
+- **Kein Cookie-Banner für Kernfunktionen:** Nur technisch notwendige LocalStorage-Einträge (Tokens, Card-State). Nutzung basiert auf berechtigtem Interesse.  
+- **Optionale Hinweise:** Hinweistext in PWA erklärt Einsatz von LocalStorage/Service Worker. Für optionale Marketing-Funktionen (z. B. Angebotsbanner) werden keine zusätzlichen personenbezogenen Daten erhoben.  
+_Quelle: [DPIA], [Infos-DE], [EDPB-Guidelines 05/2020]_
+
+---
+
+## 7. Monitoring & Audits
+
+- **Intern:** Regelmäßige Reviews der Compliance-Artefakte (Docs-Keeper + Audit-Officer).  
+- **Extern:** Stage-PenTests + Compliance-Audits (Roadmap Schritte 44–45).  
+- **KPIs:** `audit_gaps = 0`, `gdpr-checks = green`, dokumentierte Restore-Tests inkl. Tombstone.  
+- **Incident-Pfad:** Runbook Incident-Breach (72 h Meldepflicht, interne/öffentliche Kommunikation via Status-Page).  
+_Quelle: [ROADMAP Schritte 41–45], [AGENTS §6–§7], [Runbooks]_
+## UX Prototyping & frühes UAT (Schritt 12)
+Alle Prototyping-Aktivitäten halten sich an DSGVO/Art. 11: keine PII, nur Testdaten, Aufzeichnung in EU. Weitere Hinweise in [docs/ux/step-12/README.md](./ux/step-12/README.md) sowie den Entscheidungs-Notizen [UX-Decisions-Schema-Impact](./ux/step-12/UX-Decisions-Schema-Impact.md) für Compliance-Folgenabschätzungen.
+>>>>>>> Stashed changes

@@ -28,8 +28,28 @@ _Quelle: [DOC:SPEC §1]_
 - Keine parallelen Kampagnen je Mandant  
 _Quelle: [DOC:SPEC §1], [DOC:REQ §7]_
 
+<<<<<<< Updated upstream
 ## Leitprinzipien  
 - **Radikale Einfachheit**: Jede Funktion sofort verständlich  
 - **Sicherheit durch Automation**: Alerts, Audit, Limits  
 - **Auditierbarkeit**: WORM-Logs, 180 Tage, signierte Exporte  
 _Quelle: [DOC:REQ §2.3], [DOC:SPEC §2], [DOC:ARCH]_
+=======
+## Leitprinzipien & Architektur  
+- **Single-Admin-Design:** Eine verantwortliche Person pro Mandant.  
+- **Radikale Einfachheit:** UI-Entscheidungen werden per UAT validiert.  
+- **Security & Privacy by Design:** Device-Proof, Rate-Limits, Idempotenz, Art. 6 Abs. 1 lit. f DSGVO.  
+- **Auditierbarkeit:** WORM-Logs, signierte Exporte nach 180 Tagen, Break-Glass nur dokumentiert.  
+- **PWA-first:** Offline-fähige PWA mit Service-Worker, Lighthouse ≥ 90.  
+_Quelle: [SPEC §2, §7–§15], [AGENTS §1–§5], [ROADMAP Schritte 27–36]_
+
+## Erfolgskennzahlen & Qualitätsziele  
+- Onboarding inkl. erster Kampagne < 5 Minuten (US-1).  
+- Performance: /stamps/claim und /rewards/redeem p95 ≤ 3 s, SLO 99,90 % (30 Tage).  
+- Coverage ≥ 80 %, schema_drift = 0, Problem+JSON zu 100 % konform.  
+- Observability: cost_per_tenant, plan_usage_percent, Fehlscan-Spikes.  
+- Compliance: GDPR-/Security-Gates grün, dokumentierter Break-Glass-Fluss.  
+_Quelle: [SPEC §6, §19], [ROADMAP Schritte 37–45], [AGENTS §6–§7], [CI-Gates]_
+## UX Prototyping & frühes UAT (Schritt 12)
+Frühe Nutzer:innen-Tests (Schritt 12 der Roadmap) validieren die Hypothesen dieses Canvas mit realen Admins/Mitarbeiter:innen. Protokolle, Findings und handlungsleitende UX-Entscheidungen werden in [docs/ux/step-12/README.md](./ux/step-12/README.md) und [UX-Decisions-Schema-Impact](./ux/step-12/UX-Decisions-Schema-Impact.md) dokumentiert.
+>>>>>>> Stashed changes

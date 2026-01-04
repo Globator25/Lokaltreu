@@ -9,10 +9,11 @@ import { handleAdminRegister } from "./handlers/admins/register.js";
 import { handleDeviceRegistrationConfirm } from "./handlers/devices/register-confirm.js";
 import { handleDeviceRegistrationLinks } from "./handlers/devices/registration-links.js";
 import { handleGetJwks } from "./handlers/jwks/get-jwks.js";
+import { handleRewardRedeem } from "./handlers/rewards/redeem.js";
 import { handleStampClaim } from "./handlers/stamps/claim.js";
 import { handleStampTokens } from "./handlers/stamps/tokens.js";
 import type { AdminSession, AdminSessionStore, AuditEvent, AuditSink } from "./handlers/admins/types.js";
-import { problem, readJsonBody, sendProblem } from "./handlers/http-utils.js";
+import { isRecord, problem, readJsonBody, sendProblem } from "./handlers/http-utils.js";
 import { requireAdminAuth } from "./mw/admin-auth.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";
 import { createIdempotencyMiddleware, InMemoryIdempotencyStore } from "./mw/idempotency.js";
@@ -20,6 +21,8 @@ import { createRateLimitMiddleware, InMemoryRateLimitStore } from "./mw/rate-lim
 import { InMemoryDeviceReplayStore } from "./modules/auth/device-replay-store.js";
 import { InMemoryDeviceRepository } from "./modules/auth/device-repository.js";
 import type { DbClientLike } from "./modules/devices/deviceRegistrationLinks.repo.js";
+import { InMemoryRewardReplayStore } from "./modules/rewards/reward-replay-store.js";
+import { createRewardService, InMemoryRewardCardStateStore, InMemoryRewardTokenStore } from "./modules/rewards/reward.service.js";
 import { createStampService, InMemoryCardStateStore, InMemoryStampTokenStore } from "./modules/stamps/stamp.service.js";
 import { createRedisIdempotencyStore } from "./services/idempotencyStore/redis.js";
 
@@ -41,6 +44,9 @@ function createInMemoryDeviceRegistrationLinksDbClient(): DbClientLike {
   return {
     query<T = unknown>(sql: string, params?: unknown[]) {
       const normalized = sql.replace(/\s+/g, " ").trim();
+      if (normalized === "BEGIN" || normalized === "COMMIT" || normalized === "ROLLBACK") {
+        return Promise.resolve({ rows: [] as T[], rowCount: 0 });
+      }
 
       if (normalized.startsWith("INSERT INTO device_registration_links")) {
         const [id, tenantId, tokenHash, expiresAt, adminId] = params as [
@@ -190,6 +196,42 @@ export function createAppServer() {
   const stampTokenStore = new InMemoryStampTokenStore();
   const cardStateStore = new InMemoryCardStateStore();
   const stampService = createStampService({ tokenStore: stampTokenStore, cardStore: cardStateStore, logger: console });
+  const rewardTokenStore = new InMemoryRewardTokenStore();
+  const rewardCardStore = new InMemoryRewardCardStateStore();
+  const rewardReplayStore = new InMemoryRewardReplayStore();
+  const transactionRunner = {
+    run: async <T>(fn: () => Promise<T>) => {
+      await dbClient.query("BEGIN");
+      try {
+        const result = await fn();
+        await dbClient.query("COMMIT");
+        return result;
+      } catch (error) {
+        await dbClient.query("ROLLBACK");
+        throw error;
+      }
+    },
+  };
+  const rewardService = createRewardService({
+    tokenStore: rewardTokenStore,
+    cardStore: rewardCardStore,
+    replayStore: rewardReplayStore,
+    transaction: transactionRunner,
+    logger: console,
+    audit: {
+      log: (event, payload) => {
+        const tenantId = typeof payload.tenant_id === "string" ? payload.tenant_id : "unknown";
+        auditSink.audit({
+          event,
+          tenantId,
+          deviceId: typeof payload.device_id === "string" ? payload.device_id : undefined,
+          cardId: typeof payload.card_id === "string" ? payload.card_id : undefined,
+          correlationId: "n/a",
+          at: Date.now(),
+        } as AuditEvent);
+      },
+    },
+  });
   const isProdLike = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
   const idempotencyStore = isProdLike ? createRedisIdempotencyStore() : new InMemoryIdempotencyStore();
   // TODO: Wire Redis-backed rate limit store when available.
@@ -257,17 +299,26 @@ export function createAppServer() {
   ) {
     try {
       const path = req.url?.split("?")[0] ?? "/";
-      const isRateLimitedPath =
-        req.method === "POST" && (path === "/stamps/claim" || path === "/rewards/redeem");
-      if (isRateLimitedPath) {
-        const rateOk = await requireRateLimit(req, res);
-        if (!rateOk) {
-          return;
+      const isClaimRoute = req.method === "POST" && path === "/stamps/claim";
+      const isRedeemRoute = req.method === "POST" && path === "/rewards/redeem";
+      const isHotRoute = isClaimRoute || isRedeemRoute;
+
+      if (isHotRoute) {
+        if (req.headers["content-type"]?.includes("application/json") && !("body" in req)) {
+          (req as { body?: unknown }).body = await readJsonBody(req);
         }
       }
+
       const requiresDeviceAuth =
-        req.method === "POST" && (path === "/stamps/tokens" || path === "/rewards/redeem");
+        req.method === "POST" && (path === "/stamps/tokens" || isRedeemRoute);
       if (requiresDeviceAuth) {
+        if (isRedeemRoute) {
+          const body = (req as { body?: unknown }).body;
+          if (!isRecord(body) || typeof body.redeemToken !== "string") {
+            sendProblem(res, problem(400, "Bad Request", "Missing redeemToken", req.url ?? "/rewards/redeem"));
+            return;
+          }
+        }
         if (path === "/stamps/tokens" && typeof req.headers.authorization === "string") {
           const allowed = await requireAdmin(req, res);
           if (!allowed) {
@@ -280,12 +331,23 @@ export function createAppServer() {
           }
         }
       }
-      const isHotRoute =
-        req.method === "POST" && (path === "/stamps/claim" || path === "/rewards/redeem");
-      if (isHotRoute) {
-        if (req.headers["content-type"]?.includes("application/json") && !("body" in req)) {
-          (req as { body?: unknown }).body = await readJsonBody(req);
+
+      if (isClaimRoute) {
+        const idemOk = await requireIdempotency(req, res);
+        if (!idemOk) {
+          return;
         }
+      }
+
+      const isRateLimitedPath = req.method === "POST" && (isClaimRoute || isRedeemRoute);
+      if (isRateLimitedPath) {
+        const rateOk = await requireRateLimit(req, res);
+        if (!rateOk) {
+          return;
+        }
+      }
+
+      if (isRedeemRoute) {
         const idemOk = await requireIdempotency(req, res);
         if (!idemOk) {
           return;
@@ -337,6 +399,13 @@ export function createAppServer() {
       if (req.method === "POST" && path === "/stamps/claim") {
         await handleStampClaim(req, res, {
           service: stampService,
+          logger: console,
+        });
+        return;
+      }
+      if (req.method === "POST" && path === "/rewards/redeem") {
+        await handleRewardRedeem(req, res, {
+          service: rewardService,
           logger: console,
         });
         return;

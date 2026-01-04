@@ -15,12 +15,15 @@ export interface AdminSessionStore {
 }
 
 export type AuditEvent = {
-  event: "admin.register" | "admin.login" | "admin.token_refresh" | "admin.logout";
+  event: string;
   tenantId: string;
-  adminId: string;
+  adminId?: string;
+  deviceId?: string;
+  cardId?: string;
   correlationId: string;
   ip?: string;
   ua?: string;
+  jti?: string;
   at: number;
 };
 

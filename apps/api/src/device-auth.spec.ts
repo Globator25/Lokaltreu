@@ -35,8 +35,7 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
 }
 
 function seedDevice(repo: InMemoryDeviceRepository, record: DeviceRecord) {
-  const store = repo as unknown as { devices: Map<string, DeviceRecord> };
-  store.devices.set(`${record.tenantId}:${record.deviceId}`, record);
+  repo.upsert(record);
 }
 
 async function createFixture(): Promise<DeviceFixture> {
@@ -78,32 +77,30 @@ function buildSignature(input: {
   method: string;
   path: string;
   timestamp: string;
-  nonce: string;
+  jti: string;
   privateKey: Uint8Array;
 }) {
   const message = buildCanonicalMessage({
     method: input.method,
     path: input.path,
     timestamp: input.timestamp,
-    nonce: input.nonce,
+    jti: input.jti,
   });
   const signatureBytes = sodium.crypto_sign_detached(sodium.from_string(message), input.privateKey);
   return { message, signature: sodium.to_base64(signatureBytes, BASE64) };
 }
 
 function buildHeaders(input: {
-  tenantId: string;
-  deviceId: string;
+  deviceKey: string;
   timestamp: string;
-  nonce: string;
+  jti: string;
   signature: string;
 }) {
   return {
-    "x-tenant-id": input.tenantId,
-    "x-device-id": input.deviceId,
+    "x-device-key": input.deviceKey,
     "x-device-timestamp": input.timestamp,
-    "x-device-nonce": input.nonce,
-    "x-device-signature": input.signature,
+    "x-device-nonce": input.jti,
+    "x-device-proof": input.signature,
   };
 }
 
@@ -120,23 +117,22 @@ describe("device auth middleware", () => {
   it("accepts valid device proof", async () => {
     const fixture = await createFixture();
     serverHandle = await startServer(fixture);
-    const path = "/rewards/redeem";
+    const path = "/stamps/tokens";
     const timestamp = Math.floor(Date.now() / 1000).toString();
-    const nonce = "nonce-valid";
+    const jti = "jti-valid";
     const { signature } = buildSignature({
       method: "POST",
       path,
       timestamp,
-      nonce,
+      jti,
       privateKey: fixture.privateKey,
     });
     const res = await fetch(`${serverHandle.baseUrl}${path}`, {
       method: "POST",
       headers: buildHeaders({
-        tenantId: fixture.record.tenantId,
-        deviceId: fixture.record.deviceId,
+        deviceKey: fixture.record.deviceId,
         timestamp,
-        nonce,
+        jti,
         signature,
       }),
     });
@@ -149,21 +145,20 @@ describe("device auth middleware", () => {
     const otherKey = sodium.crypto_sign_keypair().privateKey;
     serverHandle = await startServer(fixture);
     const timestamp = Math.floor(Date.now() / 1000).toString();
-    const nonce = "nonce-invalid";
+    const jti = "jti-invalid";
     const { signature } = buildSignature({
       method: "POST",
       path: "/stamps/tokens",
       timestamp,
-      nonce,
+      jti,
       privateKey: otherKey,
     });
     const res = await fetch(`${serverHandle.baseUrl}/stamps/tokens`, {
       method: "POST",
       headers: buildHeaders({
-        tenantId: fixture.record.tenantId,
-        deviceId: fixture.record.deviceId,
+        deviceKey: fixture.record.deviceId,
         timestamp,
-        nonce,
+        jti,
         signature,
       }),
     });
@@ -177,21 +172,20 @@ describe("device auth middleware", () => {
     const fixture = await createFixture();
     serverHandle = await startServer(fixture);
     const timestamp = (Math.floor(Date.now() / 1000) + 45).toString();
-    const nonce = "nonce-skew";
+    const jti = "jti-skew";
     const { signature } = buildSignature({
       method: "POST",
       path: "/stamps/tokens",
       timestamp,
-      nonce,
+      jti,
       privateKey: fixture.privateKey,
     });
     const res = await fetch(`${serverHandle.baseUrl}/stamps/tokens`, {
       method: "POST",
       headers: buildHeaders({
-        tenantId: fixture.record.tenantId,
-        deviceId: fixture.record.deviceId,
+        deviceKey: fixture.record.deviceId,
         timestamp,
-        nonce,
+        jti,
         signature,
       }),
     });
@@ -204,21 +198,20 @@ describe("device auth middleware", () => {
   it("rejects replays for reused nonces", async () => {
     const fixture = await createFixture();
     serverHandle = await startServer(fixture);
-    const path = "/rewards/redeem";
+    const path = "/stamps/tokens";
     const timestamp = Math.floor(Date.now() / 1000).toString();
-    const nonce = "nonce-replay";
+    const jti = "jti-replay";
     const { signature } = buildSignature({
       method: "POST",
       path,
       timestamp,
-      nonce,
+      jti,
       privateKey: fixture.privateKey,
     });
     const headers = buildHeaders({
-      tenantId: fixture.record.tenantId,
-      deviceId: fixture.record.deviceId,
+      deviceKey: fixture.record.deviceId,
       timestamp,
-      nonce,
+      jti,
       signature,
     });
 

@@ -4,7 +4,7 @@ type CanonicalMessageInput = {
   method: string;
   path: string;
   timestamp: string;
-  nonce: string;
+  jti: string;
 };
 
 type VerifyDeviceSignatureInput = {
@@ -18,7 +18,8 @@ export async function initSodium(): Promise<void> {
 }
 
 export function buildCanonicalMessage(input: CanonicalMessageInput): string {
-  return `${input.method}\n${input.path}\n${input.timestamp}\n${input.nonce}`;
+  // SPEC: method|path|ts|jti (exact order)
+  return `${input.method}|${input.path}|${input.timestamp}|${input.jti}`;
 }
 
 export function verifyDeviceSignature(input: VerifyDeviceSignatureInput): boolean {

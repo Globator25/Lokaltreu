@@ -1,4 +1,4 @@
-### POST /stamps/claim without Idempotency-Key -> expect 4xx Problem+JSON with error_code like MISSING_IDEMPOTENCY_KEY
+### POST /stamps/claim without Idempotency-Key -> expect 400 Problem+JSON with error_code IDEMPOTENCY_KEY_REQUIRED
 POST http://localhost/stamps/claim
 Content-Type: application/json
 Accept: application/problem+json

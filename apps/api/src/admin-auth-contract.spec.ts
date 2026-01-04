@@ -8,18 +8,17 @@ import { resetAdminJwtCache } from "./auth/admin-jwt.js";
 
 const openapiPath = fileURLToPath(new URL("../openapi/lokaltreu-openapi-v2.0.yaml", import.meta.url));
 let openapiValidatorLoaded = false;
+let openapiValidatorError: unknown = null;
 
 try {
   chai.use(chaiOpenapiResponseValidator(openapiPath));
   openapiValidatorLoaded = true;
-} catch {
-  console.warn(
-    "Admin-Auth-Contract-Tests werden übersprungen: OpenAPI-Spec ist invalid (z. B. StampClaimRequest)."
-  );
+} catch (error) {
+  openapiValidatorError = error;
 }
 
 const { expect } = chai;
-const describeContract = openapiValidatorLoaded ? describe : describe.skip;
+const describeContract = describe;
 
 let envSnapshot: NodeJS.ProcessEnv;
 
@@ -76,6 +75,14 @@ async function readJson(res: Response): Promise<Record<string, unknown> | null> 
 }
 
 describeContract("admin auth contract", () => {
+  // Policy (AGENTS.md): Contract-Tests sind ein normatives Gate; invalid OpenAPI must fail fast.
+  if (!openapiValidatorLoaded) {
+    throw new Error(
+      `OpenAPI ist invalid – bitte Spec reparieren (schema_drift = 0). Details: ${
+        openapiValidatorError instanceof Error ? openapiValidatorError.message : "unknown error"
+      }`
+    );
+  }
   beforeEach(() => {
     envSnapshot = { ...process.env };
   });
@@ -96,6 +103,7 @@ describeContract("admin auth contract", () => {
       });
       const loginBody = await readJson(login);
       vitestExpect(login.status).toBe(200);
+      expect(validationResponse(login, loginBody, "POST", "/admins/login")).to.satisfyApiSpec;
       if (!loginBody) {
         throw new Error("Expected login body");
       }
@@ -155,7 +163,11 @@ describeContract("admin auth contract", () => {
       });
       expect(validationResponse(logout, null, "POST", "/admins/logout")).to.satisfyApiSpec;
 
-      const noAuth = await fetch(`${baseUrl}/admins/logout`, { method: "POST" });
+      const noAuth = await fetch(`${baseUrl}/admins/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: "missing-auth-token" }),
+      });
       const noAuthBody = await readJson(noAuth);
       expect(validationResponse(noAuth, noAuthBody, "POST", "/admins/logout")).to.satisfyApiSpec;
     } finally {

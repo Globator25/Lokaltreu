@@ -69,7 +69,7 @@ function signMessage(input: { method: string; path: string; timestamp: string; j
     method: input.method,
     path: input.path,
     timestamp: input.timestamp,
-    nonce: input.jti,
+    jti: input.jti,
   });
   const signatureBytes = sodiumLib.crypto_sign_detached(
     sodiumLib.from_string(message),
@@ -214,7 +214,7 @@ describe("device auth http integration", () => {
     seedDevice(repo, deviceRecord);
     serverHandle = await startServer(repo, replayStore);
 
-    const path = "/rewards/redeem";
+    const path = "/stamps/tokens";
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const jti = "jti-valid";
     const { signature } = signMessage({
@@ -228,17 +228,11 @@ describe("device auth http integration", () => {
     const res = await fetch(`${serverHandle.baseUrl}${path}`, {
       method: "POST",
       headers: {
-        "content-type": "application/json",
-        "x-tenant-id": deviceRecord.tenantId,
-        "x-device-id": deviceRecord.deviceId,
-        "x-device-nonce": jti,
-        "x-device-signature": signature,
-        "x-device-timestamp": timestamp,
         "x-device-key": deviceRecord.deviceId,
+        "x-device-timestamp": timestamp,
         "x-device-proof": signature,
-        "idempotency-key": "idem-1",
+        "x-device-nonce": jti,
       },
-      body: JSON.stringify({ redeemToken: "stub" }),
     });
 
     expect(res.status).toBe(204);
@@ -250,7 +244,7 @@ describe("device auth http integration", () => {
     seedDevice(repo, deviceRecord);
     serverHandle = await startServer(repo, replayStore);
 
-    const path = "/rewards/redeem";
+    const path = "/stamps/tokens";
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const jti = "jti-invalid";
     const { signature } = signMessage({
@@ -264,16 +258,11 @@ describe("device auth http integration", () => {
     const res = await fetch(`${serverHandle.baseUrl}${path}`, {
       method: "POST",
       headers: {
-        "content-type": "application/json",
-        "x-tenant-id": deviceRecord.tenantId,
-        "x-device-id": deviceRecord.deviceId,
-        "x-device-nonce": "jti-tampered",
-        "x-device-signature": signature,
-        "x-device-timestamp": timestamp,
         "x-device-key": deviceRecord.deviceId,
+        "x-device-timestamp": timestamp,
         "x-device-proof": signature,
+        "x-device-nonce": "jti-tampered",
       },
-      body: JSON.stringify({ redeemToken: "stub" }),
     });
 
     const body = await readJson(res);

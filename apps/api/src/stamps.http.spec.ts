@@ -156,7 +156,11 @@ describe("stamps http integration", () => {
 
   it("allows one claim and blocks parallel reuse attempts", async () => {
     serverHandle = await startStampServer();
-    const createRes = await fetch(`${serverHandle.baseUrl}/stamps/tokens`, {
+    const baseUrl = serverHandle?.baseUrl;
+    if (!baseUrl) {
+      throw new Error("Expected serverHandle to be set");
+    }
+    const createRes = await fetch(`${baseUrl}/stamps/tokens`, {
       method: "POST",
       headers: { "content-type": "application/json", "idempotency-key": "stamp-token-00000004" },
     });
@@ -164,7 +168,7 @@ describe("stamps http integration", () => {
     const qrToken = createBody.qrToken as string;
 
     const requests = Array.from({ length: 10 }, (_value, index) =>
-      fetch(`${serverHandle.baseUrl}/stamps/claim`, {
+      fetch(`${baseUrl}/stamps/claim`, {
         method: "POST",
         headers: { "content-type": "application/json", "idempotency-key": `stamp-claim-parallel-${index}` },
         body: JSON.stringify({ qrToken }),

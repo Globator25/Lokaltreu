@@ -1,5 +1,4 @@
 openapi: 3.1.0
-jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 
 info:
   title: Lokaltreu HTTP-API
@@ -84,6 +83,15 @@ components:
       schema:
         type: string
 
+    XDeviceTimestamp:
+      in: header
+      name: X-Device-Timestamp
+      required: true
+      description: Unix timestamp in seconds (allowed skew ±30s).
+      schema:
+        type: string
+        pattern: "^[0-9]{9,}$"
+
   schemas:
     Problem:
       type: object
@@ -114,6 +122,8 @@ components:
             - REFERRAL_TENANT_MISMATCH
             - PLAN_NOT_ALLOWED
             - RATE_LIMITED
+            - IDEMPOTENCY_KEY_REQUIRED
+            - IDEMPOTENCY_KEY_INVALID
         correlation_id:
           type: string
         retry_after:
@@ -148,6 +158,30 @@ components:
         - refreshToken
         - expiresIn
       properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          minimum: 1
+
+    AdminRegistrationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - adminId
+        - tenantId
+        - accessToken
+        - refreshToken
+        - expiresIn
+      properties:
+        adminId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
         accessToken:
           type: string
         refreshToken:
@@ -224,6 +258,9 @@ components:
           nullable: true
 
     StampClaimResponse:
+      $ref: "#/components/schemas/StampClaimResponsePayload"
+
+    StampClaimResponsePayload:
       type: object
       additionalProperties: false
       required:
@@ -232,8 +269,18 @@ components:
         cardState:
           $ref: "#/components/schemas/CardState"
         offer:
-          $ref: "#/components/schemas/OfferSnippet"
+          allOf:
+            - $ref: "#/components/schemas/OfferSnippet"
           nullable: true
+
+    RedeemResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - cardState
+      properties:
+        cardState:
+          $ref: "#/components/schemas/CardState"
 
     DeviceRegistrationLinkResponse:
       type: object
@@ -349,6 +396,16 @@ paths:
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRegistrationResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "409":
           description: Conflict
           content:
@@ -478,9 +535,27 @@ paths:
       operationId: logoutAdmin
       security:
         - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
       responses:
         "204":
           description: No Content
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "401":
           description: Unauthorized
           content:
@@ -698,6 +773,7 @@ paths:
         - DeviceKey: []
       parameters:
         - $ref: '#/components/parameters/XDeviceProof'
+        - $ref: '#/components/parameters/XDeviceTimestamp'
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
@@ -705,24 +781,19 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - redeemToken
               properties:
                 redeemToken:
                   type: string
-                plan_gate_mode:
-                  type: string
-                  enum:
-                    - PLAN_GATE
-            examples:
-              plan_gate:
-                summary: Trigger plan gate mock response
-                value:
-                  redeemToken: "stub"
-                  plan_gate_mode: "PLAN_GATE"
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedeemResponse"
         "400":
           description: TOKEN_EXPIRED
           content:
@@ -756,6 +827,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/429RateLimited"
 
   /referrals/link:
     get:

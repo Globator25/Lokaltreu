@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import sodium from "libsodium-wrappers";
+import { buildCanonicalMessage, initSodium } from "../../apps/api/src/modules/auth/device-proof.js";
 import { createAppServer } from "../../apps/api/src/index.js";
 
 type ServerHandle = {
@@ -70,30 +72,72 @@ describe("idempotency middleware", () => {
     expect(body.type).toBeDefined();
     expect(body.title).toBeDefined();
     expect(body.status).toBe(400);
-    expect(body.error_code).toBe("IDEMPOTENCY_KEY_INVALID");
+    expect(body.error_code).toBe("IDEMPOTENCY_KEY_REQUIRED");
     expect(body.correlation_id).toBeDefined();
   });
 
   it("returns 400 for missing Idempotency-Key on /rewards/redeem", async () => {
-    handle = await startServer();
-    const { res, body } = await requestJson(handle.baseUrl, "/rewards/redeem", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ redeemToken: "stub" }),
-    });
+    await initSodium();
+    const keypair = sodium.crypto_sign_keypair();
+    const publicKey = sodium.to_base64(keypair.publicKey, sodium.base64_variants.ORIGINAL);
+    const seededPrivateKey = Buffer.from(keypair.privateKey).toString("base64");
+    const priorEnv = {
+      API_PROFILE: process.env.API_PROFILE,
+      DEV_SEED: process.env.DEV_SEED,
+      DEV_DEVICE_SEED_TENANT_ID: process.env.DEV_DEVICE_SEED_TENANT_ID,
+      DEV_DEVICE_SEED_DEVICE_ID: process.env.DEV_DEVICE_SEED_DEVICE_ID,
+      DEV_DEVICE_SEED_PUBLIC_KEY: process.env.DEV_DEVICE_SEED_PUBLIC_KEY,
+      DEV_DEVICE_SEED_PRIVATE_KEY: process.env.DEV_DEVICE_SEED_PRIVATE_KEY,
+    };
+    try {
+      process.env.API_PROFILE = "dev";
+      process.env.DEV_SEED = "1";
+      process.env.DEV_DEVICE_SEED_TENANT_ID = "tenant-1";
+      process.env.DEV_DEVICE_SEED_DEVICE_ID = "device-1";
+      process.env.DEV_DEVICE_SEED_PUBLIC_KEY = publicKey;
+      process.env.DEV_DEVICE_SEED_PRIVATE_KEY = seededPrivateKey;
 
-    expect(res.status).toBe(401);
-    expect(res.headers.get("content-type")).toContain("application/problem+json");
-    if (!body) {
-      throw new Error("Expected problem+json body");
+      handle = await startServer();
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const redeemToken = "stub";
+      const message = buildCanonicalMessage({
+        method: "POST",
+        path: "/rewards/redeem",
+        timestamp,
+        jti: redeemToken,
+      });
+      const signatureBytes = sodium.crypto_sign_detached(sodium.from_string(message), keypair.privateKey);
+      const signature = sodium.to_base64(signatureBytes, sodium.base64_variants.ORIGINAL);
+
+      const { res, body } = await requestJson(handle.baseUrl, "/rewards/redeem", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-device-key": "device-1",
+          "x-device-timestamp": timestamp,
+          "x-device-proof": signature,
+        },
+        body: JSON.stringify({ redeemToken }),
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.headers.get("content-type")).toContain("application/problem+json");
+      if (!body) {
+        throw new Error("Expected problem+json body");
+      }
+      expect(body.type).toBeDefined();
+      expect(body.title).toBeDefined();
+      expect(body.status).toBe(400);
+      expect(body.error_code).toBe("IDEMPOTENCY_KEY_REQUIRED");
+      expect(body.correlation_id).toBeDefined();
+    } finally {
+      process.env.API_PROFILE = priorEnv.API_PROFILE;
+      process.env.DEV_SEED = priorEnv.DEV_SEED;
+      process.env.DEV_DEVICE_SEED_TENANT_ID = priorEnv.DEV_DEVICE_SEED_TENANT_ID;
+      process.env.DEV_DEVICE_SEED_DEVICE_ID = priorEnv.DEV_DEVICE_SEED_DEVICE_ID;
+      process.env.DEV_DEVICE_SEED_PUBLIC_KEY = priorEnv.DEV_DEVICE_SEED_PUBLIC_KEY;
+      process.env.DEV_DEVICE_SEED_PRIVATE_KEY = priorEnv.DEV_DEVICE_SEED_PRIVATE_KEY;
     }
-    expect(body.type).toBeDefined();
-    expect(body.title).toBeDefined();
-    expect(body.status).toBe(401);
-    expect(body.error_code).toBeDefined();
-    expect(body.correlation_id).toBeDefined();
   });
 
   it("returns identical responses for idempotent replays", async () => {

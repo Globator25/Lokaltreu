@@ -102,7 +102,7 @@ describe("idempotency HTTP middleware", () => {
     const body = JSON.parse(res.body) as Record<string, unknown>;
     expect(res.statusCode).toBe(400);
     expect(res.headers["content-type"]).toContain("application/problem+json");
-    expect(body.error_code).toBe("IDEMPOTENCY_KEY_INVALID");
+    expect(body.error_code).toBe("IDEMPOTENCY_KEY_REQUIRED");
   });
 
   it("accepts POST /stamps/claim with Idempotency-Key", async () => {

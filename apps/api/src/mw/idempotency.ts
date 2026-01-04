@@ -260,6 +260,7 @@ function logStoreError(input: {
 
 export function createIdempotencyMiddleware(store?: IdempotencyStore) {
   const resolvedStore = store ?? createIdempotencyStore();
+  const fallbackStore = new InMemoryIdempotencyStore();
   return async function requireIdempotency(
     req: IdempotencyRequest,
     res: ServerResponse,
@@ -276,6 +277,7 @@ export function createIdempotencyMiddleware(store?: IdempotencyStore) {
     const keyHeader = getIdempotencyKey(req);
     const validationError = validateIdempotencyKey(keyHeader);
     if (validationError) {
+      const errorCode = keyHeader ? "IDEMPOTENCY_KEY_INVALID" : "IDEMPOTENCY_KEY_REQUIRED";
       sendProblem(
         response,
         problem(
@@ -283,7 +285,7 @@ export function createIdempotencyMiddleware(store?: IdempotencyStore) {
           "Bad Request",
           validationError,
           req.url ?? "/",
-          "IDEMPOTENCY_KEY_INVALID",
+          errorCode,
           req.context?.correlationId
         )
       );
@@ -299,13 +301,57 @@ export function createIdempotencyMiddleware(store?: IdempotencyStore) {
       idempotencyKey: keyHeader,
     });
 
-    let existing: StoredResult | null = null;
-    try {
-      existing = await resolvedStore.getResult(idempotencyKey);
-    } catch (error) {
-      logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
-      existing = null;
-    }
+    let useFallback = false;
+    const getResultSafe = async (): Promise<StoredResult | null> => {
+      if (useFallback) {
+        return fallbackStore.getResult(idempotencyKey);
+      }
+      try {
+        return await resolvedStore.getResult(idempotencyKey);
+      } catch (error) {
+        logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
+        useFallback = true;
+        return fallbackStore.getResult(idempotencyKey);
+      }
+    };
+    const acquireLockSafe = async (): Promise<boolean> => {
+      if (useFallback) {
+        return fallbackStore.acquireLock(idempotencyKey, IDEMPOTENCY_TTL_SECONDS);
+      }
+      try {
+        return await resolvedStore.acquireLock(idempotencyKey, IDEMPOTENCY_TTL_SECONDS);
+      } catch (error) {
+        logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
+        useFallback = true;
+        return fallbackStore.acquireLock(idempotencyKey, IDEMPOTENCY_TTL_SECONDS);
+      }
+    };
+    const setResultSafe = async (value: StoredResult): Promise<void> => {
+      if (useFallback) {
+        return fallbackStore.setResult(idempotencyKey, value, IDEMPOTENCY_TTL_SECONDS);
+      }
+      try {
+        await resolvedStore.setResult(idempotencyKey, value, IDEMPOTENCY_TTL_SECONDS);
+      } catch (error) {
+        logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
+        useFallback = true;
+        await fallbackStore.setResult(idempotencyKey, value, IDEMPOTENCY_TTL_SECONDS);
+      }
+    };
+    const releaseLockSafe = async (): Promise<void> => {
+      if (useFallback) {
+        return fallbackStore.releaseLock(idempotencyKey);
+      }
+      try {
+        await resolvedStore.releaseLock(idempotencyKey);
+      } catch (error) {
+        logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
+        useFallback = true;
+        await fallbackStore.releaseLock(idempotencyKey);
+      }
+    };
+
+    const existing = await getResultSafe();
     if (existing) {
       console.warn({
         event: "idempotency",
@@ -322,13 +368,7 @@ export function createIdempotencyMiddleware(store?: IdempotencyStore) {
       return false;
     }
 
-    let acquired = false;
-    try {
-      acquired = await resolvedStore.acquireLock(idempotencyKey, IDEMPOTENCY_TTL_SECONDS);
-    } catch (error) {
-      logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
-      acquired = true;
-    }
+    const acquired = await acquireLockSafe();
     if (!acquired) {
       console.warn({
         event: "idempotency",
@@ -421,29 +461,13 @@ export function createIdempotencyMiddleware(store?: IdempotencyStore) {
           }
         }
         headerRecord["Idempotency-Key"] = keyHeader ?? "";
-        void (async () => {
-          try {
-            await resolvedStore.setResult(
-              idempotencyKey,
-              {
-                status,
-                headers: headerRecord,
-                body: rawBody,
-              },
-              IDEMPOTENCY_TTL_SECONDS
-            );
-          } catch (error) {
-            logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
-          }
-        })();
+        void setResultSafe({
+          status,
+          headers: headerRecord,
+          body: rawBody,
+        });
       } else {
-        void (async () => {
-          try {
-            await resolvedStore.releaseLock(idempotencyKey);
-          } catch (error) {
-            logStoreError({ routeId, tenantId, correlationId: req.context?.correlationId, error });
-          }
-        })();
+        void releaseLockSafe();
       }
 
       // Optional: restore original methods to avoid multiple wrapping.

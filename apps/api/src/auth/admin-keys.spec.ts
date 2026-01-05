@@ -3,8 +3,8 @@ import { exportPKCS8, generateKeyPair } from "jose";
 
 let envSnapshot: NodeJS.ProcessEnv;
 
-async function loadModule() {
-  await vi.resetModules();
+function loadModule() {
+  vi.resetModules();
   return import("./admin-keys.js");
 }
 

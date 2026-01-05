@@ -5,6 +5,12 @@ import {
   StampTokenReuseError,
   type StampService,
 } from "../../modules/stamps/stamp.service.js";
+import {
+  PlanNotAllowedError,
+  ReferralLimitReachedError,
+  ReferralTenantMismatchError,
+  SelfReferralBlockedError,
+} from "../../services/referrals.service.js";
 
 type StampClaimDeps = {
   service: StampService;
@@ -17,12 +23,13 @@ type StampClaimDeps = {
 
 type StampClaimRequest = IncomingMessage & {
   body?: unknown;
+  context?: { cardId?: string };
 };
 
-function readCardId(req: IncomingMessage): string {
-  const header = req.headers["x-card-id"];
-  if (typeof header === "string" && header.trim()) {
-    return header.trim();
+function readCardId(req: StampClaimRequest): string {
+  const fromContext = req.context?.cardId;
+  if (typeof fromContext === "string" && fromContext.trim()) {
+    return fromContext.trim();
   }
   return "card-anon";
 }
@@ -76,6 +83,54 @@ export async function handleStampClaim(
       return sendProblem(
         res,
         problem(409, "Token reuse", error.message, req.url ?? "/stamps/claim", "TOKEN_REUSE"),
+      );
+    }
+    if (error instanceof PlanNotAllowedError) {
+      return sendProblem(
+        res,
+        problem(
+          403,
+          "Plan not allowed",
+          error.message,
+          req.url ?? "/stamps/claim",
+          "PLAN_NOT_ALLOWED",
+        ),
+      );
+    }
+    if (error instanceof ReferralTenantMismatchError) {
+      return sendProblem(
+        res,
+        problem(
+          409,
+          "Referral tenant mismatch",
+          error.message,
+          req.url ?? "/stamps/claim",
+          "REFERRAL_TENANT_MISMATCH",
+        ),
+      );
+    }
+    if (error instanceof SelfReferralBlockedError) {
+      return sendProblem(
+        res,
+        problem(
+          422,
+          "Self referral blocked",
+          error.message,
+          req.url ?? "/stamps/claim",
+          "SELF_REFERRAL_BLOCKED",
+        ),
+      );
+    }
+    if (error instanceof ReferralLimitReachedError) {
+      return sendProblem(
+        res,
+        problem(
+          422,
+          "Referral limit reached",
+          error.message,
+          req.url ?? "/stamps/claim",
+          "REFERRAL_LIMIT_REACHED",
+        ),
       );
     }
     deps.logger?.error?.("stamp claim failed", error);

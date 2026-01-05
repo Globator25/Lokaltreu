@@ -225,11 +225,17 @@ export function createDeviceAuthMiddleware(deps: DeviceAuthDeps) {
       timestamp: timestampRaw,
       jti,
     });
-    const valid = verifyDeviceSignature({
-      publicKey: record.publicKey,
-      signature,
-      message,
-    });
+    let valid = false;
+    try {
+      valid = verifyDeviceSignature({
+        publicKey: record.publicKey,
+        signature,
+        message,
+      });
+    } catch {
+      sendProblem(res, problem(authStatus, authTitle, "Invalid device proof", req.url ?? "/", errorCode));
+      return;
+    }
     if (!valid) {
       sendProblem(res, problem(authStatus, authTitle, "Invalid device proof", req.url ?? "/", errorCode));
       return;

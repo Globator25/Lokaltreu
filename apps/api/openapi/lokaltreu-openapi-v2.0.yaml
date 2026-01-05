@@ -29,7 +29,7 @@ tags:
   - name: Devices
     description: Device registration and authorization flows.
   - name: Stamps
-    description: Stamp issuance and claim operations.
+    description: Device registration and authorization flows.
   - name: Rewards
     description: Reward redemption operations.
   - name: Referrals
@@ -76,6 +76,32 @@ components:
         type: string
         minLength: 8
         maxLength: 128
+    XTenantId:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      description: Tenant context for anonymous customer flows (pseudonymous, no PII).
+      schema:
+        type: string
+        format: uuid
+    XCardId:
+      name: X-Card-Id
+      in: header
+      required: false
+      description: Pseudonymous customer card id (no PII).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    XCardIdRequired:
+      name: X-Card-Id
+      in: header
+      required: true
+      description: Pseudonymous customer card id (no PII).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
     XDeviceProof:
       in: header
       name: X-Device-Proof
@@ -120,6 +146,7 @@ components:
             - SELF_REFERRAL_BLOCKED
             - REFERRAL_LIMIT_REACHED
             - REFERRAL_TENANT_MISMATCH
+            - REFERRAL_CODE_INVALID
             - PLAN_NOT_ALLOWED
             - RATE_LIMITED
             - IDEMPOTENCY_KEY_REQUIRED
@@ -352,6 +379,17 @@ components:
         application/problem+json:
           schema:
             $ref: "#/components/schemas/Problem"
+          examples:
+            referral_code_invalid:
+              summary: Referral code invalid or unknown
+              value:
+                type: "https://errors.lokaltreu.example/referral/code-invalid"
+                title: "Invalid referral code"
+                status: 422
+                detail: "Referral code is invalid or unknown."
+                instance: "/stamps/claim"
+                error_code: "REFERRAL_CODE_INVALID"
+                correlation_id: "11111111-2222-3333-4444-555555555555"
     429RateLimited:
       description: Rate-Limit erreicht
       headers:
@@ -728,6 +766,7 @@ paths:
       security: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XCardId'
       requestBody:
         required: true
         content:
@@ -753,6 +792,21 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
         "422":
           $ref: "#/components/responses/422Unprocessable"
         "429":
@@ -829,6 +883,8 @@ paths:
                 $ref: "#/components/schemas/Problem"
         "429":
           $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
 
   /referrals/link:
     get:
@@ -838,6 +894,9 @@ paths:
         - Referrals
       operationId: getReferralLink
       security: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCardIdRequired'
       responses:
         "200":
           description: OK

@@ -11,10 +11,9 @@ console.log(`[plan-gate] baseUrl=${BASE_URL}`);
 
 const headers = {
   "content-type": "application/json",
-  "x-device-proof": "stub-proof",
-  "x-device-timestamp": Math.floor(Date.now() / 1000).toString(),
-  "x-device-key": process.env.DEVICE_KEY || "mock-device-key",
   "Idempotency-Key": randomUUID(),
+  "x-tenant-id": process.env.TENANT_ID || "tenant-1",
+  "x-card-id": process.env.CARD_ID || "card-1",
   authorization: `Bearer ${process.env.STARTER_TOKEN || process.env.AUTH_TOKEN || "starter"}`,
 };
 
@@ -24,10 +23,9 @@ if (preferredStatus) {
 
 let r;
 try {
-  r = await fetch(joinUrl(BASE_URL, "/rewards/redeem"), {
-    method: "POST",
+  r = await fetch(joinUrl(BASE_URL, "/referrals/link"), {
+    method: "GET",
     headers,
-    body: JSON.stringify({ redeemToken: "stub" }),
   });
 } catch (err) {
   console.error(`[plan-gate] baseUrl not reachable: ${BASE_URL}`);

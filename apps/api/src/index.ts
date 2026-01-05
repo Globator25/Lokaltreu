@@ -9,6 +9,7 @@ import { handleAdminRegister } from "./handlers/admins/register.js";
 import { handleDeviceRegistrationConfirm } from "./handlers/devices/register-confirm.js";
 import { handleDeviceRegistrationLinks } from "./handlers/devices/registration-links.js";
 import { handleGetJwks } from "./handlers/jwks/get-jwks.js";
+import { handleGetReferralLink } from "./handlers/referrals/link.js";
 import { handleRewardRedeem } from "./handlers/rewards/redeem.js";
 import { handleStampClaim } from "./handlers/stamps/claim.js";
 import { handleStampTokens } from "./handlers/stamps/tokens.js";
@@ -25,6 +26,10 @@ import { InMemoryRewardReplayStore } from "./modules/rewards/reward-replay-store
 import { createRewardService, InMemoryRewardCardStateStore, InMemoryRewardTokenStore } from "./modules/rewards/reward.service.js";
 import { createStampService, InMemoryCardStateStore, InMemoryStampTokenStore } from "./modules/stamps/stamp.service.js";
 import { createRedisIdempotencyStore } from "./services/idempotencyStore/redis.js";
+import { InMemoryReferralRepository } from "./repositories/referrals.repo.js";
+import { createDbReferralRepository } from "./repositories/referrals.db.js";
+import { InMemoryTenantPlanStore } from "./services/plan-gate.js";
+import { createReferralService } from "./services/referrals.service.js";
 
 type DeviceRegistrationLinkRow = {
   id: string;
@@ -149,7 +154,9 @@ class InMemoryAuditSink implements AuditSink {
 }
 
 async function seedDevDevice(repo: InMemoryDeviceRepository): Promise<void> {
-  const shouldSeed = process.env.API_PROFILE === "dev" && process.env.DEV_SEED === "1";
+  const shouldSeed =
+    (process.env.API_PROFILE === "dev" || process.env.API_PROFILE === "test") &&
+    process.env.DEV_SEED === "1";
   if (!shouldSeed) {
     return;
   }
@@ -248,6 +255,55 @@ export function createAppServer() {
         },
       }
     : createInMemoryDeviceRegistrationLinksDbClient();
+
+  const planStore = new InMemoryTenantPlanStore();
+  const referralRepo = isProdLike ? createDbReferralRepository(dbClient) : new InMemoryReferralRepository();
+  const referralService = createReferralService({
+    repo: referralRepo,
+    planStore,
+    logger: console,
+    audit: {
+      log: (event, payload) => {
+        const tenantId = typeof payload.tenant_id === "string" ? payload.tenant_id : "unknown";
+        auditSink.audit({
+          event,
+          tenantId,
+          deviceId: typeof payload.device_id === "string" ? payload.device_id : undefined,
+          cardId:
+            typeof payload.referred_card_id === "string"
+              ? payload.referred_card_id
+              : typeof payload.referrer_card_id === "string"
+                ? payload.referrer_card_id
+                : typeof payload.card_id === "string"
+                  ? payload.card_id
+                  : undefined,
+          correlationId: "n/a",
+          at: Date.now(),
+        } as AuditEvent);
+      },
+    },
+  });
+
+  const stampServiceWithReferrals = createStampService({
+    tokenStore: stampTokenStore,
+    cardStore: cardStateStore,
+    logger: console,
+    transaction: transactionRunner,
+    referrals: referralService,
+    audit: {
+      log: (event, payload) => {
+        const tenantId = typeof payload.tenantId === "string" ? payload.tenantId : "unknown";
+        auditSink.audit({
+          event,
+          tenantId,
+          deviceId: typeof payload.deviceId === "string" ? payload.deviceId : undefined,
+          cardId: typeof payload.cardId === "string" ? payload.cardId : undefined,
+          correlationId: "n/a",
+          at: Date.now(),
+        } as AuditEvent);
+      },
+    },
+  });
 
   async function requireDeviceAuth(
     req: import("node:http").IncomingMessage,
@@ -398,7 +454,14 @@ export function createAppServer() {
       }
       if (req.method === "POST" && path === "/stamps/claim") {
         await handleStampClaim(req, res, {
-          service: stampService,
+          service: stampServiceWithReferrals,
+          logger: console,
+        });
+        return;
+      }
+      if (req.method === "GET" && path === "/referrals/link") {
+        await handleGetReferralLink(req, res, {
+          service: referralService,
           logger: console,
         });
         return;

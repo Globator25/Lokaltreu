@@ -103,6 +103,11 @@ export class InMemoryCardStateStore implements CardStateStore {
     this.cards.set(cardId, next);
     return { ...next };
   }
+
+  getState(cardId: string): CardState | undefined {
+    const existing = this.cards.get(cardId);
+    return existing ? { ...existing } : undefined;
+  }
 }
 
 export class StampTokenExpiredError extends Error {
@@ -132,9 +137,38 @@ export interface StampService {
   }): Promise<StampClaimResponse>;
 }
 
+export type TransactionRunner = {
+  run: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+type ReferralService = {
+  resolveReferralContext: (params: {
+    tenantId: string;
+    referredCardId: string;
+    code: string;
+  }) => Promise<{
+    referral: { code: string; referrerCardId: string };
+    referrerCardId: string;
+  } | null>;
+  hasFirstStamp: (params: { tenantId: string; cardId: string }) => Promise<boolean>;
+  markFirstStampIfAbsent: (params: { tenantId: string; cardId: string }) => Promise<boolean>;
+  qualifyReferral: (params: {
+    tenantId: string;
+    referral: { code: string; referrerCardId: string };
+    referredCardId: string;
+  }) => Promise<boolean>;
+  markBonusCredited: (params: {
+    tenantId: string;
+    referral: { code: string; referrerCardId: string };
+    referredCardId: string;
+  }) => Promise<boolean>;
+};
+
 export interface StampServiceDeps {
   tokenStore: StampTokenStore;
   cardStore: CardStateStore;
+  transaction?: TransactionRunner;
+  referrals?: ReferralService;
   logger?: {
     info: (...args: unknown[]) => void;
     warn: (...args: unknown[]) => void;
@@ -153,6 +187,8 @@ function generateQrToken(): string {
 }
 
 export function createStampService(deps: StampServiceDeps): StampService {
+  const transaction = deps.transaction ?? { run: async (fn) => fn() };
+
   return {
     async createToken(params) {
       const qrToken = generateQrToken();
@@ -194,12 +230,55 @@ export function createStampService(deps: StampServiceDeps): StampService {
       if (record.usedAt) {
         throw new StampTokenReuseError();
       }
+
+      const tenantId = record.tenantId ?? "unknown";
+      const referrals = deps.referrals;
+      let referralContext:
+        | { referral: { code: string; referrerCardId: string }; referrerCardId: string }
+        | null = null;
+
+      if (params.ref && referrals) {
+        referralContext = await referrals.resolveReferralContext({
+          tenantId,
+          referredCardId: params.cardId,
+          code: params.ref,
+        });
+      }
+
       const marked = await deps.tokenStore.markUsed(record.id, new Date());
       if (!marked) {
         throw new StampTokenReuseError();
       }
 
-      const cardState = deps.cardStore.applyStamp(params.cardId);
+      const cardState = await transaction.run(async () => {
+        if (referrals) {
+          const isFirstStamp = await referrals.markFirstStampIfAbsent({
+            tenantId,
+            cardId: params.cardId,
+          });
+
+          if (referralContext && isFirstStamp) {
+            const qualified = await referrals.qualifyReferral({
+              tenantId,
+              referral: referralContext.referral,
+              referredCardId: params.cardId,
+            });
+
+            if (qualified) {
+              const credited = await referrals.markBonusCredited({
+                tenantId,
+                referral: referralContext.referral,
+                referredCardId: params.cardId,
+              });
+              if (credited) {
+                deps.cardStore.applyStamp(referralContext.referrerCardId);
+              }
+            }
+          }
+        }
+
+        return deps.cardStore.applyStamp(params.cardId);
+      });
 
       await deps.audit?.log("stamps.claimed", {
         tenantId: record.tenantId,

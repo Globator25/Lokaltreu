@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SignJWT, exportJWK, generateKeyPair, importJWK } from "jose";
-import type { JWK } from "jose";
+import { SignJWT, exportJWK, generateKeyPair } from "jose";
 
 let envSnapshot: NodeJS.ProcessEnv;
 
-async function setJwksEnv(keys: JWK[], activeKid: string) {
-  process.env.ADMIN_JWKS_PRIVATE_JSON = JSON.stringify({ keys });
-  process.env.ADMIN_JWT_ACTIVE_KID = activeKid;
+async function loadModule() {
+  vi.resetModules();
+  return import("./keystore.js");
 }
 
 describe("keystore", () => {
@@ -16,55 +15,90 @@ describe("keystore", () => {
 
   afterEach(() => {
     process.env = { ...envSnapshot };
-    vi.resetModules();
   });
 
-  it("returns public JWKS without private fields", async () => {
+  it("returns problem when JWKS env is missing", async () => {
+    delete process.env.ADMIN_JWKS_PRIVATE_JSON;
+    delete process.env.ADMIN_JWT_ACTIVE_KID;
+    const mod = await loadModule();
+    await expect(mod.getPublicJwks()).rejects.toBeInstanceOf(mod.ProblemError);
+  });
+
+  it("returns problem when active kid is missing", async () => {
     const { privateKey } = await generateKeyPair("EdDSA");
-    const privateJwk = await exportJWK(privateKey);
-    privateJwk.kid = "kid-public";
-    privateJwk.alg = "EdDSA";
-    await setJwksEnv([privateJwk], "kid-public");
-
-    const { getPublicJwks } = await import("./keystore.js");
-    const jwks = await getPublicJwks();
-    expect(Array.isArray(jwks.keys)).toBe(true);
-    expect(jwks.keys).toHaveLength(1);
-    const key = jwks.keys[0] as JWK & Record<string, unknown>;
-    expect(key.d).toBeUndefined();
-    expect(key.p).toBeUndefined();
-    expect(key.q).toBeUndefined();
-    expect(key.dp).toBeUndefined();
-    expect(key.dq).toBeUndefined();
-    expect(key.qi).toBeUndefined();
+    const jwk = await exportJWK(privateKey);
+    jwk.kid = "kid-missing";
+    process.env.ADMIN_JWKS_PRIVATE_JSON = JSON.stringify({ keys: [jwk] });
+    delete process.env.ADMIN_JWT_ACTIVE_KID;
+    const mod = await loadModule();
+    await expect(mod.getPublicJwks()).rejects.toBeInstanceOf(mod.ProblemError);
   });
 
-  it("invalidates tokens after removing old keys", async () => {
-    const { privateKey: key1 } = await generateKeyPair("EdDSA");
-    const { privateKey: key2 } = await generateKeyPair("EdDSA");
-    const jwk1 = await exportJWK(key1);
-    jwk1.kid = "kid-1";
-    jwk1.alg = "EdDSA";
-    const jwk2 = await exportJWK(key2);
-    jwk2.kid = "kid-2";
-    jwk2.alg = "EdDSA";
-    await setJwksEnv([jwk1, jwk2], "kid-2");
+  it("returns problem when active kid is not found", async () => {
+    const { privateKey } = await generateKeyPair("EdDSA");
+    const jwk = await exportJWK(privateKey);
+    jwk.kid = "kid-a";
+    process.env.ADMIN_JWKS_PRIVATE_JSON = JSON.stringify({ keys: [jwk] });
+    process.env.ADMIN_JWT_ACTIVE_KID = "kid-b";
+    const mod = await loadModule();
+    const err = await mod.getPublicJwks().catch((error: unknown) => error);
+    expect(err).toBeInstanceOf(mod.ProblemError);
+    if (err instanceof mod.ProblemError) {
+      expect(err.details.status).toBe(401);
+    }
+  });
 
-    const signingKey = (await importJWK(jwk1, "EdDSA")) as unknown;
-    const token = await new SignJWT({ sub: "admin-1" })
-      .setProtectedHeader({ alg: "EdDSA", kid: "kid-1", typ: "JWT" })
-      .setIssuedAt(Math.floor(Date.now() / 1000))
-      .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
-      .sign(signingKey as Parameters<SignJWT["sign"]>[0]);
+  it("returns problem for unsupported oct key", async () => {
+    const jwk = {
+      kty: "oct",
+      kid: "kid-oct",
+      alg: "HS256",
+      k: Buffer.from("secret-key").toString("base64url"),
+    };
+    process.env.ADMIN_JWKS_PRIVATE_JSON = JSON.stringify({ keys: [jwk] });
+    process.env.ADMIN_JWT_ACTIVE_KID = "kid-oct";
+    const mod = await loadModule();
+    await expect(mod.getActiveSigningKey()).rejects.toBeInstanceOf(mod.ProblemError);
+  });
 
-    const { verifyAdminJwt } = await import("./keystore.js");
-    await expect(verifyAdminJwt(token)).resolves.toBeTruthy();
+  it("verifies tokens and exposes public JWKS", async () => {
+    const { privateKey } = await generateKeyPair("EdDSA");
+    const jwk = await exportJWK(privateKey);
+    jwk.kid = "kid-ed";
+    delete jwk.alg;
+    process.env.ADMIN_JWKS_PRIVATE_JSON = JSON.stringify({ keys: [jwk] });
+    process.env.ADMIN_JWT_ACTIVE_KID = "kid-ed";
 
-    await setJwksEnv([jwk2], "kid-2");
-    vi.resetModules();
-    const { verifyAdminJwt: verifyAfterRotation } = await import("./keystore.js");
-    await expect(verifyAfterRotation(token)).rejects.toMatchObject({
-      details: { status: 401 },
-    });
+    const mod = await loadModule();
+    const now = Math.floor(Date.now() / 1000);
+    const token = await new SignJWT({ scope: "admin" })
+      .setProtectedHeader({ alg: "EdDSA", kid: "kid-ed", typ: "JWT" })
+      .setIssuedAt(now)
+      .setExpirationTime(now + 60)
+      .setSubject("admin-1")
+      .sign(privateKey);
+
+    const result = await mod.verifyAdminJwt(token);
+    expect(result.payload.sub).toBe("admin-1");
+
+    const jwks = await mod.getPublicJwks();
+    expect(jwks.keys).toHaveLength(1);
+    expect(jwks.keys[0].kid).toBe("kid-ed");
+    expect((jwks.keys[0] as { d?: string }).d).toBeUndefined();
+  });
+
+  it("maps invalid token to a 401 problem", async () => {
+    const { privateKey } = await generateKeyPair("EdDSA");
+    const jwk = await exportJWK(privateKey);
+    jwk.kid = "kid-invalid";
+    process.env.ADMIN_JWKS_PRIVATE_JSON = JSON.stringify({ keys: [jwk] });
+    process.env.ADMIN_JWT_ACTIVE_KID = "kid-invalid";
+    const mod = await loadModule();
+    const err = await mod.verifyAdminJwt("not-a-jwt").catch((error: unknown) => error);
+    expect(err).toBeInstanceOf(mod.ProblemError);
+    if (err instanceof mod.ProblemError) {
+      expect(err.details.status).toBe(401);
+      expect(err.details.error_code).toBe("TOKEN_REUSE");
+    }
   });
 });

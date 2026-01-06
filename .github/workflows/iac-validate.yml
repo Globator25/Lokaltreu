@@ -24,8 +24,8 @@ jobs:
         working-directory: infra/terraform
 
     env:
-      SOPS_AGE_KEY_FILE: ${{ runner.temp }}/age.key
       TF_IN_AUTOMATION: "true"
+      SOPS_AGE_KEY_FILE: /tmp/age.key
 
     steps:
       - name: Checkout
@@ -38,11 +38,15 @@ jobs:
 
       - name: Install sops
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y sops
+          SOPS_VERSION="3.9.0"
+          curl -L "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64" -o sops
+          sudo mv sops /usr/local/bin/sops
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
 
       - name: Write AGE private key
         run: |
+          mkdir -p "$(dirname "$SOPS_AGE_KEY_FILE")"
           printf "%s" "${{ secrets.AGE_PRIVATE_KEY }}" > "$SOPS_AGE_KEY_FILE"
           chmod 600 "$SOPS_AGE_KEY_FILE"
 
@@ -50,10 +54,21 @@ jobs:
         run: terraform fmt -check
 
       - name: terraform init (local state)
-        run: terraform init -backend=false
+        # align with terraform:ci to ensure provider plugin availability on fresh runners
+        run: terraform init -backend=false -upgrade
+
+      - name: Sanity check AGE key file (no secrets printed)
+        run: |
+          if ! grep -q "AGE-SECRET-KEY-1" "$SOPS_AGE_KEY_FILE"; then
+            echo "AGE_PRIVATE_KEY secret does not look like an age private key (expected AGE-SECRET-KEY-1...)."
+            exit 1
+          fi
+          echo "SOPS recipients in dev.secrets.enc.tfvars:"
+          grep -n "recipient" secrets/dev.secrets.enc.tfvars | head -n 20
 
       - name: Decrypt dev secrets to temp
-        run: sops --decrypt secrets/dev.secrets.enc.tfvars > $RUNNER_TEMP/dev.secrets.tfvars
+        run: |
+          sops --decrypt secrets/dev.secrets.enc.tfvars > /tmp/dev.secrets.tfvars
 
       - name: terraform validate
         run: terraform validate
@@ -62,5 +77,5 @@ jobs:
         run: |
           terraform plan \
             -var-file="env/dev.tfvars" \
-            -var-file="$RUNNER_TEMP/dev.secrets.tfvars" \
+            -var-file="/tmp/dev.secrets.tfvars" \
             -compact-warnings -no-color

@@ -1,12 +1,44 @@
 openapi: 3.1.0
+
 info:
-  title: Lokaltreu API
+  title: Lokaltreu HTTP-API
   version: "2.0"
+  description: >
+    Digitale Stempelkarte als HTTP-API. RFC 7807 für Fehler. Idempotenz via Header.
+    Referral-Funktionen sind planabhängig (Starter blockiert).
+  termsOfService: https://lokaltreu.example/terms
+  contact:
+    name: Lokaltreu API Support
+    url: https://lokaltreu.example/support
+    email: support@lokaltreu.example
   license:
-    name: UNLICENSED
-    url: https://example.com/license
+    name: Proprietary
+  x-schema-drift-policy: "0"
+
 servers:
+  - url: https://api.lokaltreu.example/v2
+    description: Production API v2 (current)
   - url: https://api.lokaltreu.example/v1
+    description: Production API v1 (legacy)
+  - url: http://localhost:3000
+    description: Local dev API (port 3000)
+
+tags:
+  - name: Admins
+    description: Admin authentication and session management.
+  - name: Devices
+    description: Device registration and authorization flows.
+  - name: Stamps
+    description: Device registration and authorization flows.
+  - name: Rewards
+    description: Reward redemption operations.
+  - name: Referrals
+    description: Referral link retrieval and validation.
+  - name: JWKS
+    description: Public keys for token verification.
+
+security: []
+
 components:
   securitySchemes:
     AdminAuth:
@@ -17,13 +49,58 @@ components:
       type: apiKey
       in: header
       name: X-Device-Key
-  parameters:
-    IdempotencyKey:
-      in: header
-      name: Idempotency-Key
+
+  headers:
+    Idempotency-Key:
+      description: >
+        Echo des Idempotenz-Schlüssels. Gültigkeit 24 h. Scope {tenantId,route,bodyHash}.
+      required: false
       schema:
         type: string
         minLength: 8
+        maxLength: 128
+    Retry-After:
+      description: Seconds until the client may retry.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Idempotenz für Schreibaktionen. 24 h gültig.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    XTenantId:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      description: Tenant context for anonymous customer flows (pseudonymous, no PII).
+      schema:
+        type: string
+        format: uuid
+    XCardId:
+      name: X-Card-Id
+      in: header
+      required: false
+      description: Pseudonymous customer card id (no PII).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    XCardIdRequired:
+      name: X-Card-Id
+      in: header
+      required: true
+      description: Pseudonymous customer card id (no PII).
+      schema:
+        type: string
+        minLength: 1
         maxLength: 128
     XDeviceProof:
       in: header
@@ -31,9 +108,20 @@ components:
       required: true
       schema:
         type: string
+
+    XDeviceTimestamp:
+      in: header
+      name: X-Device-Timestamp
+      required: true
+      description: Unix timestamp in seconds (allowed skew ±30s).
+      schema:
+        type: string
+        pattern: "^[0-9]{9,}$"
+
   schemas:
     Problem:
       type: object
+      additionalProperties: true
       required:
         - type
         - title
@@ -58,12 +146,88 @@ components:
             - SELF_REFERRAL_BLOCKED
             - REFERRAL_LIMIT_REACHED
             - REFERRAL_TENANT_MISMATCH
+            - REFERRAL_CODE_INVALID
             - PLAN_NOT_ALLOWED
             - RATE_LIMITED
+            - IDEMPOTENCY_KEY_REQUIRED
+            - IDEMPOTENCY_KEY_INVALID
         correlation_id:
           type: string
         retry_after:
           type: integer
+          minimum: 1
+
+    AdminLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 12
+
+    AdminRefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    AdminSessionResponse:
+      type: object
+      required:
+        - accessToken
+        - refreshToken
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          minimum: 1
+
+    AdminRegistrationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - adminId
+        - tenantId
+        - accessToken
+        - refreshToken
+        - expiresIn
+      properties:
+        adminId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          minimum: 1
+
+    JwksResponse:
+      type: object
+      required:
+        - keys
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
     StampTokenResponse:
       type: object
       required:
@@ -78,6 +242,7 @@ components:
         expiresAt:
           type: string
           format: date-time
+
     StampClaimRequest:
       type: object
       required:
@@ -86,13 +251,168 @@ components:
         qrToken:
           type: string
         ref:
-          type:
-            - string
-            - "null"
+          type: string
+          nullable: true
+
+    CardState:
+      type: object
+      additionalProperties: false
+      required:
+        - currentStamps
+        - stampsRequired
+        - rewardsAvailable
+      properties:
+        currentStamps:
+          type: integer
+          minimum: 0
+        stampsRequired:
+          type: integer
+          minimum: 1
+        rewardsAvailable:
+          type: integer
+          minimum: 0
+
+    OfferSnippet:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+
+    StampClaimResponse:
+      $ref: "#/components/schemas/StampClaimResponsePayload"
+
+    StampClaimResponsePayload:
+      type: object
+      additionalProperties: false
+      required:
+        - cardState
+      properties:
+        cardState:
+          $ref: "#/components/schemas/CardState"
+        offer:
+          allOf:
+            - $ref: "#/components/schemas/OfferSnippet"
+          nullable: true
+
+    RedeemResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - cardState
+      properties:
+        cardState:
+          $ref: "#/components/schemas/CardState"
+
+    DeviceRegistrationLinkResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - linkUrl
+        - token
+        - expiresAt
+      properties:
+        linkUrl:
+          type: string
+          format: uri
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        qrImageUrl:
+          type: string
+          format: uri
+          nullable: true
+
+  responses:
+    400BadRequest:
+      description: Ungültige Anfrage
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            token_expired:
+              summary: Token abgelaufen
+              value:
+                type: "https://errors.lokaltreu.example/token/expired"
+                title: "Token expired"
+                status: 400
+                error_code: "TOKEN_EXPIRED"
+                correlation_id: "abc123"
+    401Unauthorized:
+      description: Nicht autorisiert
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    403Forbidden:
+      description: Verboten
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    409Conflict:
+      description: Konflikt
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            token_reuse:
+              summary: Token bereits verwendet
+              value:
+                type: "https://errors.lokaltreu.example/token/reuse"
+                title: "Token reuse"
+                status: 409
+                error_code: "TOKEN_REUSE"
+                correlation_id: "abc123"
+    422Unprocessable:
+      description: Semantisch fehlerhaft
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            referral_code_invalid:
+              summary: Referral code invalid or unknown
+              value:
+                type: "https://errors.lokaltreu.example/referral/code-invalid"
+                title: "Invalid referral code"
+                status: 422
+                detail: "Referral code is invalid or unknown."
+                instance: "/stamps/claim"
+                error_code: "REFERRAL_CODE_INVALID"
+                correlation_id: "11111111-2222-3333-4444-555555555555"
+    429RateLimited:
+      description: Rate-Limit erreicht
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/Retry-After"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    500ServerError:
+      description: Interner Serverfehler
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
 paths:
   /admins/register:
     post:
       summary: Registriert Admin+Mandant
+      description: Creates the initial admin account and tenant.
+      tags:
+        - Admins
       operationId: registerAdmin
       security: []
       requestBody:
@@ -114,15 +434,234 @@ paths:
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRegistrationResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "409":
           description: Conflict
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
+  /admins/login:
+    post:
+      summary: Admin login
+      description: Issues a new admin session for valid credentials.
+      tags:
+        - Admins
+      operationId: loginAdmin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSessionResponse"
+              examples:
+                session:
+                  summary: Admin session issued
+                  value:
+                    accessToken: "access.jwt.placeholder"
+                    refreshToken: "refresh.jwt.placeholder"
+                    expiresIn: 900
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                invalid_credentials:
+                  summary: Invalid credentials
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/invalid-credentials"
+                    title: "Invalid credentials"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "b2c3d9f0-1e7f-4d2d-9cc1-4e55d8c1f31a"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /admins/refresh:
+    post:
+      summary: Refresh admin session
+      description: Refreshes an admin session using a refresh token.
+      tags:
+        - Admins
+      operationId: refreshAdminSession
+      security:
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRefreshRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSessionResponse"
+              examples:
+                refreshed:
+                  summary: Admin session refreshed
+                  value:
+                    accessToken: "access.jwt.placeholder"
+                    refreshToken: "refresh.jwt.placeholder"
+                    expiresIn: 900
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                refresh_expired:
+                  summary: Refresh token expired
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/refresh-expired"
+                    title: "Refresh token expired"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "5b2f0d48-4b4b-4e45-9c9b-2cf0cfb16c8a"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /admins/logout:
+    post:
+      summary: Logout admin session
+      description: Revokes the current admin session.
+      tags:
+        - Admins
+      operationId: logoutAdmin
+      security:
+        - AdminAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                session_invalid:
+                  summary: Session invalid
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/session-invalid"
+                    title: "Session invalid"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "8d1f5e6a-3a4d-4c71-9ab0-63e5af73b2b1"
+        "429":
+          description: Rate limited
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /.well-known/jwks.json:
+    get:
+      summary: JWKS
+      description: Returns the public JWKS for token verification.
+      tags:
+        - JWKS
+      operationId: getJwks
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JwksResponse"
+              examples:
+                jwks:
+                  summary: Public JWKS
+                  value:
+                    keys:
+                      - kty: "OKP"
+                        crv: "Ed25519"
+                        kid: "admin-signing-2025-01"
+                        x: "0zQmOeXb8c2u1nTQ7t9I3q5oS8l3n2tqjK2xw4iP9zA"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                jwks_blocked:
+                  summary: JWKS access blocked
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/jwks-blocked"
+                    title: "JWKS access blocked"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "e6b8c2f9-9c5b-4b7f-9f3c-0a1e2b3c4d5e"
+
   /devices/registration-links:
     post:
-      summary: Einmaliger Registrierungslink (TTL 15m)
+      summary: Erzeugt einmaligen Registrierungslink (TTL 15 Min)
+      description: Idempotent. Link ist einmalig und zeitlich begrenzt.
+      tags:
+        - Devices
       operationId: createDeviceRegistrationLink
       security:
         - AdminAuth: []
@@ -130,44 +669,70 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         "201":
-          description: Created
+          description: Link erstellt
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceRegistrationLinkResponse"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
         "409":
-          description: Already exists
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/409Conflict"
         "429":
-          description: Rate limited
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
+
   /devices/register/confirm:
     post:
-      summary: Bestätigt Gerätebindung (einmalig)
+      summary: Bestätigt Gerätebindung
+      description: Einmalig verwendbar. Idempotent. Sicherheits-E-Mail wird versendet.
+      tags:
+        - Devices
       operationId: confirmDeviceRegistration
       security: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - token
+              properties:
+                token:
+                  type: string
       responses:
         "204":
-          description: No Content
+          description: Bestätigt
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
         "400":
-          description: TOKEN_EXPIRED
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/400BadRequest"
         "409":
-          description: TOKEN_REUSE
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          $ref: "#/components/responses/409Conflict"
+        "429":
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
+
   /stamps/tokens:
     post:
       summary: Erzeugt einmaligen Stempel-Token (QR)
+      description: Issues a one-time stamp token for client scan.
+      tags:
+        - Stamps
       operationId: createStampToken
       security:
         - DeviceKey: []
@@ -177,6 +742,9 @@ paths:
       responses:
         "201":
           description: Created
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
           content:
             application/json:
               schema:
@@ -187,13 +755,18 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /stamps/claim:
     post:
       summary: Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
+      description: Claims a stamp and applies referral rules if eligible.
+      tags:
+        - Stamps
       operationId: claimStamp
       security: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/XCardId'
       requestBody:
         required: true
         content:
@@ -203,6 +776,10 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StampClaimResponse"
         "400":
           description: TOKEN_EXPIRED
           content:
@@ -215,26 +792,42 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-        "422":
-          description: SELF_REFERRAL_BLOCKED | REFERRAL_LIMIT_REACHED
+        "403":
+          description: PLAN_NOT_ALLOWED
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "422":
+          $ref: "#/components/responses/422Unprocessable"
         "429":
           description: RATE_LIMITED
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
   /rewards/redeem:
     post:
       summary: Löst eine Prämie ein
+      description: Redeems a reward for a valid redemption token.
+      tags:
+        - Rewards
       operationId: redeemReward
       security:
         - DeviceKey: []
       parameters:
         - $ref: '#/components/parameters/XDeviceProof'
+        - $ref: '#/components/parameters/XDeviceTimestamp'
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
@@ -242,6 +835,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
                 - redeemToken
               properties:
@@ -250,23 +844,59 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedeemResponse"
         "400":
           description: TOKEN_EXPIRED
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
         "409":
           description: TOKEN_REUSE
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
+
   /referrals/link:
     get:
       summary: Liefert personalisierten Referral-Link (Werber)
+      description: Returns the referral link for an existing customer.
+      tags:
+        - Referrals
       operationId: getReferralLink
       security: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCardIdRequired'
       responses:
         "200":
           description: OK

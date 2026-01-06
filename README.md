@@ -105,3 +105,6 @@ Siehe: [work/step16-admin-auth/evidence/README.md](work/step16-admin-auth/eviden
 - Verfügbarkeit Kernrouten: 99,90 %
 - Performance: p50 ≤ 500 ms, p95 ≤ 3000 ms, p99 ≤ 6000 ms
 - Resilienz: RPO 15 min, RTO 60 min
+
+## chore: trigger ci quality on main (no functional changes)
+

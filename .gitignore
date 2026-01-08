@@ -56,3 +56,8 @@ Thumbs.db
 .DS_Store
 # Generated types
 packages/types/src/index.d.ts
+
+# local debug logs
+agents-sentinel.log
+contract-check.log
+

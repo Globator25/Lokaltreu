@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 set -e
-npm run -s agents:sentinel:node
-npm run -s contract:check
+node scripts/agents-sentinel-check.mjs
+node scripts/contract-check.mjs

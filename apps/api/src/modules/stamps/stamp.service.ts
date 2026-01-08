@@ -1,5 +1,12 @@
 import crypto from "node:crypto";
 import { hashToken } from "../../handlers/http-utils.js";
+import {
+  planAllowsFeature,
+  resolveTenantPlan,
+  type TenantPlanStore,
+} from "../../plan/plan-policy.js";
+import type { DbTransactionLike, ReferralRecord } from "../../repositories/referrals.repo.js";
+import { PLAN_NOT_ALLOWED_ERROR } from "../../problem/plan.js";
 
 export type StampTokenRecord = {
   id: string;
@@ -134,6 +141,7 @@ export interface StampService {
     qrToken: string;
     cardId: string;
     ref?: string | null;
+    correlationId?: string;
   }): Promise<StampClaimResponse>;
 }
 
@@ -146,21 +154,24 @@ type ReferralService = {
     tenantId: string;
     referredCardId: string;
     code: string;
+    tx?: DbTransactionLike;
   }) => Promise<{
-    referral: { code: string; referrerCardId: string };
+    referral: ReferralRecord;
     referrerCardId: string;
   } | null>;
-  hasFirstStamp: (params: { tenantId: string; cardId: string }) => Promise<boolean>;
-  markFirstStampIfAbsent: (params: { tenantId: string; cardId: string }) => Promise<boolean>;
+  hasFirstStamp: (params: { tenantId: string; cardId: string; tx?: DbTransactionLike }) => Promise<boolean>;
+  markFirstStampIfAbsent: (params: { tenantId: string; cardId: string; tx?: DbTransactionLike }) => Promise<boolean>;
   qualifyReferral: (params: {
     tenantId: string;
-    referral: { code: string; referrerCardId: string };
+    referral: ReferralRecord;
     referredCardId: string;
+    tx?: DbTransactionLike;
   }) => Promise<boolean>;
   markBonusCredited: (params: {
     tenantId: string;
-    referral: { code: string; referrerCardId: string };
+    referral: ReferralRecord;
     referredCardId: string;
+    tx?: DbTransactionLike;
   }) => Promise<boolean>;
 };
 
@@ -169,6 +180,13 @@ export interface StampServiceDeps {
   cardStore: CardStateStore;
   transaction?: TransactionRunner;
   referrals?: ReferralService;
+  planStore?: TenantPlanStore;
+  planUsage?: {
+    recordStamp: (params: {
+      tenantId: string;
+      correlationId: string;
+    }) => Promise<void> | void;
+  };
   logger?: {
     info: (...args: unknown[]) => void;
     warn: (...args: unknown[]) => void;
@@ -233,9 +251,14 @@ export function createStampService(deps: StampServiceDeps): StampService {
 
       const tenantId = record.tenantId ?? "unknown";
       const referrals = deps.referrals;
-      let referralContext:
-        | { referral: { code: string; referrerCardId: string }; referrerCardId: string }
-        | null = null;
+      let referralContext: { referral: ReferralRecord; referrerCardId: string } | null = null;
+
+      if (params.ref && deps.planStore) {
+        const plan = resolveTenantPlan(await deps.planStore.getPlan(tenantId));
+        if (!planAllowsFeature(plan, "referral")) {
+          throw new Error(PLAN_NOT_ALLOWED_ERROR);
+        }
+      }
 
       if (params.ref && referrals) {
         referralContext = await referrals.resolveReferralContext({
@@ -291,6 +314,20 @@ export function createStampService(deps: StampServiceDeps): StampService {
         tenantId: record.tenantId,
         deviceId: record.deviceId,
       });
+
+      if (deps.planUsage && record.tenantId) {
+        try {
+          await deps.planUsage.recordStamp({
+            tenantId: record.tenantId,
+            correlationId: params.correlationId ?? crypto.randomUUID(),
+          });
+        } catch (error) {
+          deps.logger?.warn?.("plan usage tracking failed", {
+            tenantId: record.tenantId,
+            error: error instanceof Error ? error.message : "unknown",
+          });
+        }
+      }
 
       return {
         cardState,

@@ -492,14 +492,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/Problem"
               examples:
-                invalid_credentials:
-                  summary: Invalid credentials
+                unauthorized:
+                  summary: Missing or invalid auth context
                   value:
-                    type: "https://errors.lokaltreu.example/auth/invalid-credentials"
-                    title: "Invalid credentials"
+                    type: "https://errors.lokaltreu.example/auth/unauthorized"
+                    title: "Unauthorized"
                     status: 401
                     error_code: "TOKEN_EXPIRED"
-                    correlation_id: "b2c3d9f0-1e7f-4d2d-9cc1-4e55d8c1f31a"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
         "429":
           description: Rate limited
           content:
@@ -720,6 +735,21 @@ paths:
               $ref: "#/components/headers/Idempotency-Key"
         "400":
           $ref: "#/components/responses/400BadRequest"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
         "409":
           $ref: "#/components/responses/409Conflict"
         "429":

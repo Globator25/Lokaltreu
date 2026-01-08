@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { toProblemDetails } from "../problem/to-problem-details.js";
 
 export type ProblemDetails = {
   type: string;
@@ -27,6 +28,24 @@ export function problem(
     error_code,
     correlation_id: randomUUID(),
   };
+}
+
+export function problemFromError(params: {
+  error: unknown;
+  instance: string;
+  status?: number;
+  title?: string;
+  error_code?: string;
+  fallback_detail?: string;
+}): ProblemDetails {
+  const fallback = problem(
+    params.status ?? 500,
+    params.title ?? "Internal Server Error",
+    params.fallback_detail ?? "Unexpected error",
+    params.instance,
+    params.error_code
+  );
+  return toProblemDetails(params.error, fallback);
 }
 
 export function sendJson(res: ServerResponse, status: number, payload: unknown) {

@@ -1,12 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { problem, readJsonBody, sendJson, sendProblem } from "../http-utils.js";
+import { isPlanNotAllowedError, makePlanNotAllowedProblem } from "../../problem/plan.js";
+import { toProblemDetails } from "../../problem/to-problem-details.js";
 import {
   StampTokenExpiredError,
   StampTokenReuseError,
   type StampService,
 } from "../../modules/stamps/stamp.service.js";
 import {
-  PlanNotAllowedError,
   ReferralLimitReachedError,
   ReferralTenantMismatchError,
   SelfReferralBlockedError,
@@ -23,7 +25,7 @@ type StampClaimDeps = {
 
 type StampClaimRequest = IncomingMessage & {
   body?: unknown;
-  context?: { cardId?: string };
+  context?: { cardId?: string; correlation_id?: string; correlationId?: string };
 };
 
 function readCardId(req: StampClaimRequest): string {
@@ -66,10 +68,14 @@ export async function handleStampClaim(
 
   try {
     const cardId = readCardId(req);
+    const correlationId =
+      req.context?.correlation_id ?? req.context?.correlationId ?? randomUUID();
+    req.context = { ...(req.context ?? {}), correlation_id: correlationId };
     const payload = await deps.service.claimStamp({
       qrToken,
       ref,
       cardId,
+      correlationId,
     });
     return sendJson(res, 200, payload);
   } catch (error) {
@@ -85,16 +91,16 @@ export async function handleStampClaim(
         problem(409, "Token reuse", error.message, req.url ?? "/stamps/claim", "TOKEN_REUSE"),
       );
     }
-    if (error instanceof PlanNotAllowedError) {
+    if (isPlanNotAllowedError(error)) {
+      const correlationId =
+        req.context?.correlation_id ?? req.context?.correlationId ?? randomUUID();
       return sendProblem(
         res,
-        problem(
-          403,
-          "Plan not allowed",
-          error.message,
-          req.url ?? "/stamps/claim",
-          "PLAN_NOT_ALLOWED",
-        ),
+        makePlanNotAllowedProblem({
+          correlationId,
+          detail: "Referral feature not available for this plan",
+          instance: req.url ?? "/stamps/claim",
+        }),
       );
     }
     if (error instanceof ReferralTenantMismatchError) {
@@ -133,15 +139,14 @@ export async function handleStampClaim(
         ),
       );
     }
-    deps.logger?.error?.("stamp claim failed", error);
-    return sendProblem(
-      res,
-      problem(
-        500,
-        "Internal Server Error",
-        error instanceof Error ? error.message : "Unexpected error",
-        req.url ?? "/stamps/claim",
-      ),
+    const fallback = problem(
+      500,
+      "Internal Server Error",
+      "Unexpected error",
+      req.url ?? "/stamps/claim",
     );
+    const payload = toProblemDetails(error, fallback);
+    deps.logger?.error?.("stamp claim failed", payload);
+    return sendProblem(res, payload);
   }
 }

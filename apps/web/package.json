@@ -7,10 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:plan": "node -e \"console.log('test:plan: skip web')\"",
+    "test:plan:file": "node -e \"console.log('test:plan:file: skip web')\""
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
+    "husky": "^9.1.7",
+    "libsodium-wrappers": "^0.7.15",
     "next": "15.5.9",
     "postcss": "^8.5.6",
     "react": "19.1.0",

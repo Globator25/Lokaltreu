@@ -3,13 +3,7 @@ import type { ReferralRecord, ReferralRepository, DbTransactionLike } from "../r
 import { generateReferralCode } from "../repositories/referrals.repo.js";
 import type { TenantPlanStore } from "./plan-gate.js";
 import { planAllowsFeature, resolveTenantPlan } from "./plan-gate.js";
-
-export class PlanNotAllowedError extends Error {
-  constructor(message = "Plan not allowed") {
-    super(message);
-    this.name = "PlanNotAllowedError";
-  }
-}
+import { PLAN_NOT_ALLOWED_ERROR } from "../problem/plan.js";
 
 export class ReferralNotFoundError extends Error {
   constructor(message = "Referral code not found") {
@@ -81,7 +75,7 @@ export function createReferralService(deps: ReferralServiceDeps) {
   async function requireReferralPlan(tenantId: string): Promise<void> {
     const plan = resolveTenantPlan(await deps.planStore.getPlan(tenantId));
     if (!planAllowsFeature(plan, "referral")) {
-      throw new PlanNotAllowedError();
+      throw new Error(PLAN_NOT_ALLOWED_ERROR);
     }
   }
 

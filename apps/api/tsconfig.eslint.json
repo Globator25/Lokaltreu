@@ -7,6 +7,9 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.d.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "tests/**/*.d.ts",
     "vitest.setup.ts",
     "vitest.setup.d.ts",
     "vitest.config.ts"

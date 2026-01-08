@@ -20,12 +20,14 @@
     "contract:drift:check": "npm run contract:drift-check",
     "problemjson:check": "vitest run -t RFC7807",
     "test:with-stub": "cross-env STUB=1 vitest run --coverage",
-    "prepare": "husky",
+    "prepare": "husky install",
     "scan:logs:no-pii": "node scripts/gdpr/scan-logs-no-pii.mjs",
     "security:api:start": "node apps/api/src/dev-server.js --port=4010 --profile=test",
     "test:security:anti-replay": "node scripts/security/anti-replay.mjs",
     "test:security:device-proof": "node scripts/security/device-proof.mjs",
     "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
+    "test:plan": "npm --workspaces=false -w apps/api run test:plan",
+    "test:plan:file": "npm --workspaces=false -w apps/api run test --",
     "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
     "gdpr:docs:present": "test -f docs/compliance/step-18-device-onboarding.md",
     "test": "vitest run",
@@ -41,7 +43,7 @@
     "node": ">=20 <23"
   },
   "description": "",
-  "private": "true",
+  "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"

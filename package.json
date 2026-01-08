@@ -20,7 +20,7 @@
     "contract:drift:check": "npm run contract:drift-check",
     "problemjson:check": "vitest run -t RFC7807",
     "test:with-stub": "cross-env STUB=1 vitest run --coverage",
-    "prepare": "husky",
+    "prepare": "husky install",
     "scan:logs:no-pii": "node scripts/gdpr/scan-logs-no-pii.mjs",
     "security:api:start": "node apps/api/src/dev-server.js --port=4010 --profile=test",
     "test:security:anti-replay": "node scripts/security/anti-replay.mjs",

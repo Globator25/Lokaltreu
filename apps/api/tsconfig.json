@@ -14,6 +14,7 @@
   "exclude": [
     "vitest.setup.ts",
     "src/**/*.spec.ts",
-    "src/**/*.test.ts"
+    "src/**/*.test.ts",
+    "src/**/plan-test-helpers.ts"
   ]
 }

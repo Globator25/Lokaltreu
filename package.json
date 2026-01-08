@@ -26,6 +26,8 @@
     "test:security:anti-replay": "node scripts/security/anti-replay.mjs",
     "test:security:device-proof": "node scripts/security/device-proof.mjs",
     "test:security:plan-gate": "node scripts/security/plan-gate.mjs",
+    "test:plan": "npm --workspaces=false -w apps/api run test:plan",
+    "test:plan:file": "npm --workspaces=false -w apps/api run test --",
     "mock:api": "prism mock apps/api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010",
     "gdpr:docs:present": "test -f docs/compliance/step-18-device-onboarding.md",
     "test": "vitest run",
@@ -41,7 +43,7 @@
     "node": ">=20 <23"
   },
   "description": "",
-  "private": "true",
+  "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"

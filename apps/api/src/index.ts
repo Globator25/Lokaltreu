@@ -18,6 +18,7 @@ import { isRecord, problem, readJsonBody, sendProblem } from "./handlers/http-ut
 import { requireAdminAuth } from "./mw/admin-auth.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";
 import { createIdempotencyMiddleware, InMemoryIdempotencyStore } from "./mw/idempotency.js";
+import { requirePlanFeature as requirePlanFeatureGate } from "./mw/plan-gate.js";
 import { createRateLimitMiddleware, InMemoryRateLimitStore } from "./mw/rate-limit.js";
 import { InMemoryDeviceReplayStore } from "./modules/auth/device-replay-store.js";
 import { InMemoryDeviceRepository } from "./modules/auth/device-repository.js";
@@ -28,8 +29,9 @@ import { createStampService, InMemoryCardStateStore, InMemoryStampTokenStore } f
 import { createRedisIdempotencyStore } from "./services/idempotencyStore/redis.js";
 import { InMemoryReferralRepository } from "./repositories/referrals.repo.js";
 import { createDbReferralRepository } from "./repositories/referrals.db.js";
-import { InMemoryTenantPlanStore } from "./services/plan-gate.js";
+import { InMemoryTenantPlanStore, resolveTenantPlan } from "./services/plan-gate.js";
 import { createReferralService } from "./services/referrals.service.js";
+import { createPlanUsageTracker, InMemoryActiveDeviceStore } from "./plan/plan-policy.js";
 
 type DeviceRegistrationLinkRow = {
   id: string;
@@ -257,6 +259,45 @@ export function createAppServer() {
     : createInMemoryDeviceRegistrationLinksDbClient();
 
   const planStore = new InMemoryTenantPlanStore();
+  const activeDeviceStore = new InMemoryActiveDeviceStore();
+  const planUsageTracker = createPlanUsageTracker({ planStore });
+  const planUsage = {
+    recordStamp: async (params: { tenantId: string; correlationId: string }) => {
+      const plan = resolveTenantPlan(await planStore.getPlan(params.tenantId));
+      const usage = await planUsageTracker.recordStamp({
+        tenantId: params.tenantId,
+        plan,
+        correlationId: params.correlationId,
+      });
+      if (!usage) {
+        return;
+      }
+      const threshold = usage.threshold;
+      if (!threshold || !usage.shouldNotify) {
+        return;
+      }
+      const event =
+        threshold === 100 ? "plan.limit.upgrade_signal_emitted" : "plan.limit.warning_emitted";
+      auditSink.audit({
+        event,
+        tenantId: params.tenantId,
+        correlationId: params.correlationId,
+        meta: {
+          usage_percent: usage.usagePercent,
+          threshold,
+          plan_code: plan,
+        },
+        at: Date.now(),
+      });
+      console.warn("plan limit signal emitted", {
+        tenant_id: params.tenantId,
+        correlation_id: params.correlationId,
+        usage_percent: usage.usagePercent,
+        threshold,
+        plan_code: plan,
+      });
+    },
+  };
   const referralRepo = isProdLike ? createDbReferralRepository(dbClient) : new InMemoryReferralRepository();
   const referralService = createReferralService({
     repo: referralRepo,
@@ -290,6 +331,8 @@ export function createAppServer() {
     logger: console,
     transaction: transactionRunner,
     referrals: referralService,
+    planStore,
+    planUsage,
     audit: {
       log: (event, payload) => {
         const tenantId = typeof payload.tenantId === "string" ? payload.tenantId : "unknown";
@@ -441,6 +484,8 @@ export function createAppServer() {
         await handleDeviceRegistrationConfirm(req, res, {
           db: dbClient,
           logger: console,
+          planStore,
+          activeDeviceStore,
         });
         return;
       }
@@ -460,6 +505,10 @@ export function createAppServer() {
         return;
       }
       if (req.method === "GET" && path === "/referrals/link") {
+        const planOk = await requirePlanFeatureGate(req, res, { planStore, logger: console }, "referrals");
+        if (!planOk) {
+          return;
+        }
         await handleGetReferralLink(req, res, {
           service: referralService,
           logger: console,

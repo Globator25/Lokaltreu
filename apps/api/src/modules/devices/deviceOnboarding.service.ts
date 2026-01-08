@@ -1,6 +1,13 @@
 import crypto from "node:crypto";
 
 import type { DeviceRegistrationLinksRepo } from "./deviceRegistrationLinks.repo.js";
+import {
+  resolvePlanLimits,
+  resolveTenantPlan,
+  type ActiveDeviceStore,
+  type TenantPlanStore,
+} from "../../plan/plan-policy.js";
+import { PLAN_NOT_ALLOWED_ERROR } from "../../problem/plan.js";
 
 /**
  * Service for device onboarding (Step 18).
@@ -47,6 +54,9 @@ export interface DeviceOnboardingServiceDeps {
       tenantId: string;
     }) => Promise<{ deviceId: string }>;
   };
+
+  planStore?: TenantPlanStore;
+  activeDeviceStore?: ActiveDeviceStore;
 
   buildRegistrationLinkUrl?: (token: string, tenantId: string) => string;
 }
@@ -136,12 +146,28 @@ export function createDeviceOnboardingService(
       }
 
       const tenantId = link.tenantId;
+
+      if (deps.planStore && deps.activeDeviceStore) {
+        const plan = resolveTenantPlan(await deps.planStore.getPlan(tenantId));
+        const deviceLimit = resolvePlanLimits(plan).devicesAllowed;
+        if (deviceLimit) {
+          const activeCount = await deps.activeDeviceStore.countActive(tenantId);
+          if (activeCount >= deviceLimit) {
+            throw new Error(PLAN_NOT_ALLOWED_ERROR);
+          }
+        }
+      }
+
       const deviceId =
         (await deviceService?.bindDeviceToTenant({
           tenantId,
         }))?.deviceId ?? crypto.randomUUID();
 
       await repo.markUsed({ id: link.id, deviceId });
+
+      if (deps.activeDeviceStore) {
+        await deps.activeDeviceStore.markActive({ tenantId, deviceId });
+      }
 
       await mail?.sendDeviceBoundAlert({
         tenantId,

@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { problem, readJsonBody, sendProblem } from "../http-utils.js";
 import { validateIdempotencyKey } from "../../mw/idempotency.js";
+import { isPlanNotAllowedError, makePlanNotAllowedProblem } from "../../problem/plan.js";
 import {
   createDeviceOnboardingService,
   DeviceRegistrationTokenExpiredError,
@@ -88,6 +90,17 @@ export async function handleDeviceRegistrationConfirm(
           req.url ?? "/devices/register/confirm",
           "TOKEN_REUSE",
         ),
+      );
+    }
+    if (isPlanNotAllowedError(error)) {
+      const correlationId = randomUUID();
+      return sendProblem(
+        res,
+        makePlanNotAllowedProblem({
+          correlationId,
+          detail: "Device limit exceeded for this plan",
+          instance: req.url ?? "/devices/register/confirm",
+        }),
       );
     }
     // Avoid bubbling up into the global TOKEN_REUSE fallback.

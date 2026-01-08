@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { problem, sendJson, sendProblem } from "../http-utils.js";
+import { isPlanNotAllowedError, makePlanNotAllowedProblem } from "../../problem/plan.js";
 import type { ReferralLinkResult } from "../../services/referrals.service.js";
-import { PlanNotAllowedError } from "../../services/referrals.service.js";
 
 type ReferralLinkDeps = {
   service: {
@@ -97,16 +98,25 @@ export async function handleGetReferralLink(
     });
     return sendJson(res, 200, { refCodeURL: result.refCodeURL });
   } catch (error) {
-    if (error instanceof PlanNotAllowedError) {
+    if (isPlanNotAllowedError(error)) {
+      const correlationId =
+        (req as { context?: { correlation_id?: string; correlationId?: string } }).context
+          ?.correlation_id ??
+        (req as { context?: { correlation_id?: string; correlationId?: string } }).context
+          ?.correlationId ??
+        randomUUID();
+      deps.logger?.warn?.("referral plan gate blocked", {
+        tenant_id: tenantId,
+        correlation_id: correlationId,
+        feature: "referrals",
+      });
       return sendProblem(
         res,
-        problem(
-          403,
-          "Plan not allowed",
-          "Referral feature not available for this plan",
-          req.url ?? "/referrals/link",
-          "PLAN_NOT_ALLOWED",
-        ),
+        makePlanNotAllowedProblem({
+          correlationId,
+          detail: "Referral feature not available for this plan",
+          instance: req.url ?? "/referrals/link",
+        }),
       );
     }
     if (error instanceof Error && error.message === "REFERRAL_BASE_URL_NOT_CONFIGURED") {

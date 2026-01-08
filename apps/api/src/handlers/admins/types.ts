@@ -24,6 +24,7 @@ export type AuditEvent = {
   ip?: string;
   ua?: string;
   jti?: string;
+  meta?: Record<string, unknown>;
   at: number;
 };
 

@@ -10,5 +10,9 @@
     "test:plan": "node -e \"console.log('test:plan: skip @lokaltreu/types')\"",
     "test:plan:file": "node -e \"console.log('test:plan:file: skip @lokaltreu/types')\""
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "husky": "^9.1.7",
+    "libsodium-wrappers": "^0.7.15"
+  }
 }

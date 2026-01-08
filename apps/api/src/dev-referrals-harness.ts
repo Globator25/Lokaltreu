@@ -2,6 +2,32 @@ import { startReferralServer } from "./referrals-test-server.js";
 import type { PlanCode } from "./plan/plan-policy.js";
 
 const ALLOWED_PLANS: readonly PlanCode[] = ["starter", "plus", "premium"];
+type EnvMap = Record<string, string | undefined>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const env: EnvMap = (() => {
+  if (!isRecord(globalThis)) {
+    return {};
+  }
+  const maybeProcess = globalThis["process"];
+  if (!isRecord(maybeProcess)) {
+    return {};
+  }
+  const maybeEnv = maybeProcess["env"];
+  if (!isRecord(maybeEnv)) {
+    return {};
+  }
+  const result: EnvMap = {};
+  for (const [key, value] of Object.entries(maybeEnv)) {
+    if (typeof value === "string") {
+      result[key] = value;
+    }
+  }
+  return result;
+})();
 
 function isPlanCode(value: string): value is PlanCode {
   return (ALLOWED_PLANS as readonly string[]).includes(value);
@@ -10,7 +36,7 @@ function isPlanCode(value: string): value is PlanCode {
 async function main() {
   try {
     const serverHandle = await startReferralServer();
-    const rawPlanOverride = process.env.HARNESS_TENANT1_PLAN;
+    const rawPlanOverride = env.HARNESS_TENANT1_PLAN;
     const planOverride = rawPlanOverride?.trim();
     const hasOverride = Boolean(planOverride);
     let tenant1Plan: PlanCode = "plus";
@@ -45,7 +71,7 @@ async function main() {
     await new Promise<void>(() => {});
   } catch (err) {
     console.error("dev-referrals-harness failed:", err);
-    process.exitCode = 1;
+    return;
   }
 }
 

@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { problem, sendJson, sendProblem } from "../http-utils.js";
 import { isPlanNotAllowedError, makePlanNotAllowedProblem } from "../../problem/plan.js";
+import { toProblemDetails } from "../../problem/to-problem-details.js";
 import type { ReferralLinkResult } from "../../services/referrals.service.js";
 
 type ReferralLinkDeps = {
@@ -141,15 +142,14 @@ export async function handleGetReferralLink(
         ),
       );
     }
-    deps.logger?.error?.("referrals link failed", error);
-    return sendProblem(
-      res,
-      problem(
-        500,
-        "Internal Server Error",
-        error instanceof Error ? error.message : "Unexpected error",
-        req.url ?? "/referrals/link",
-      ),
+    const fallback = problem(
+      500,
+      "Internal Server Error",
+      "Unexpected error",
+      req.url ?? "/referrals/link",
     );
+    const payload = toProblemDetails(error, fallback);
+    deps.logger?.error?.("referrals link failed", payload);
+    return sendProblem(res, payload);
   }
 }

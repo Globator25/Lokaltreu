@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
-import { sendProblem } from "../handlers/http-utils.js";
+import { problem, sendProblem } from "../handlers/http-utils.js";
 import { makePlanNotAllowedProblem } from "../problem/plan.js";
+import { toProblemDetails } from "../problem/to-problem-details.js";
 import {
   normalizePlanFeature,
   planAllowsFeature,
@@ -56,7 +57,25 @@ export async function requirePlanFeature(
     return true;
   }
   const correlationId = resolveRequestCorrelationId(req);
-  const plan = resolveTenantPlan(await deps.planStore.getPlan(tenantId));
+  let plan: ReturnType<typeof resolveTenantPlan>;
+  try {
+    plan = resolveTenantPlan(await deps.planStore.getPlan(tenantId));
+  } catch (error) {
+    deps.logger?.error?.("plan gate failed", {
+      tenant_id: tenantId,
+      correlation_id: correlationId,
+      feature,
+    });
+    const fallback = problem(
+      500,
+      "Internal Server Error",
+      "Unexpected error",
+      req.url ?? "/",
+    );
+    const payload = toProblemDetails(error, fallback);
+    sendProblem(res, payload);
+    return false;
+  }
   if (!planAllowsFeature(plan, feature)) {
     const normalized = normalizePlanFeature(feature);
     deps.logger?.warn?.("plan gate blocked", {

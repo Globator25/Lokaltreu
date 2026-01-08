@@ -1,10 +1,9 @@
-import type { components } from "@lokaltreu/types";
+import type { ProblemDetails } from "../handlers/http-utils.js";
 
-type Problem = components["schemas"]["Problem"];
-type ProblemErrorCode = NonNullable<Problem["error_code"]>;
-type PlanErrorCode = Extract<ProblemErrorCode, "PLAN_NOT_ALLOWED">;
+type PlanErrorCode = "PLAN_NOT_ALLOWED";
 
-export type PlanProblem = Problem & {
+export type PlanProblem = ProblemDetails & {
+  status: 403;
   error_code: PlanErrorCode;
   correlation_id: string;
 };

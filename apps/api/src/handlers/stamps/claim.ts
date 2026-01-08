@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { problem, readJsonBody, sendJson, sendProblem } from "../http-utils.js";
 import { isPlanNotAllowedError, makePlanNotAllowedProblem } from "../../problem/plan.js";
+import { toProblemDetails } from "../../problem/to-problem-details.js";
 import {
   StampTokenExpiredError,
   StampTokenReuseError,
@@ -138,15 +139,14 @@ export async function handleStampClaim(
         ),
       );
     }
-    deps.logger?.error?.("stamp claim failed", error);
-    return sendProblem(
-      res,
-      problem(
-        500,
-        "Internal Server Error",
-        error instanceof Error ? error.message : "Unexpected error",
-        req.url ?? "/stamps/claim",
-      ),
+    const fallback = problem(
+      500,
+      "Internal Server Error",
+      "Unexpected error",
+      req.url ?? "/stamps/claim",
     );
+    const payload = toProblemDetails(error, fallback);
+    deps.logger?.error?.("stamp claim failed", payload);
+    return sendProblem(res, payload);
   }
 }

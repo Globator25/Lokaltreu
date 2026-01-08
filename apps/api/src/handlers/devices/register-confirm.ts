@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { problem, readJsonBody, sendProblem } from "../http-utils.js";
+import { toProblemDetails } from "../../problem/to-problem-details.js";
 import { validateIdempotencyKey } from "../../mw/idempotency.js";
 import { isPlanNotAllowedError, makePlanNotAllowedProblem } from "../../problem/plan.js";
 import {
@@ -104,14 +105,13 @@ export async function handleDeviceRegistrationConfirm(
       );
     }
     // Avoid bubbling up into the global TOKEN_REUSE fallback.
-    return sendProblem(
-      res,
-      problem(
-        500,
-        "Internal Server Error",
-        error instanceof Error ? error.message : "Unexpected error",
-        req.url ?? "/devices/register/confirm",
-      ),
+    const fallback = problem(
+      500,
+      "Internal Server Error",
+      "Unexpected error",
+      req.url ?? "/devices/register/confirm",
     );
+    const payload = toProblemDetails(error, fallback);
+    return sendProblem(res, payload);
   }
 }

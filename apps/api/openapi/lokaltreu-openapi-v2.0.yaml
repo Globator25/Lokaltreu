@@ -36,6 +36,8 @@ tags:
     description: Referral link retrieval and validation.
   - name: JWKS
     description: Public keys for token verification.
+  - name: DSR
+    description: Data subject requests (DSR) and tombstone workflow.
 
 security: []
 
@@ -117,6 +119,13 @@ components:
       schema:
         type: string
         pattern: "^[0-9]{9,}$"
+    DsrRequestId:
+      name: dsr_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
 
   schemas:
     Problem:
@@ -226,7 +235,111 @@ components:
           type: array
           items:
             type: object
-            additionalProperties: true
+    DsrSubject:
+      type: object
+      additionalProperties: false
+      required:
+        - subject_type
+        - subject_id
+      properties:
+        subject_type:
+          type: string
+          enum:
+            - card_id
+            - device_id
+            - subject_id
+        subject_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+    DsrRequestCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - requestType
+        - subject
+      properties:
+        requestType:
+          type: string
+          enum:
+            - DELETE
+            - ERASURE
+        subject:
+          $ref: "#/components/schemas/DsrSubject"
+        reason:
+          type: string
+          maxLength: 256
+    DsrRequestResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - dsrRequestId
+        - status
+        - requestType
+        - subject
+        - createdAt
+      properties:
+        dsrRequestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - PENDING
+            - FULFILLED
+            - REJECTED
+        requestType:
+          type: string
+          enum:
+            - DELETE
+            - ERASURE
+        subject:
+          $ref: "#/components/schemas/DsrSubject"
+        createdAt:
+          type: string
+          format: date-time
+    DsrRequestStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - dsrRequestId
+        - status
+        - requestType
+        - subject
+        - createdAt
+      properties:
+        dsrRequestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - PENDING
+            - FULFILLED
+            - REJECTED
+        requestType:
+          type: string
+          enum:
+            - DELETE
+            - ERASURE
+        subject:
+          $ref: "#/components/schemas/DsrSubject"
+        createdAt:
+          type: string
+          format: date-time
+        fulfilledAt:
+          type: string
+          format: date-time
+          nullable: true
+    DsrFulfillRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        action:
+          type: string
+          enum:
+            - DELETE
+            - PSEUDONYMIZE
 
     StampTokenResponse:
       type: object
@@ -756,6 +869,413 @@ paths:
           $ref: "#/components/responses/429RateLimited"
         "500":
           $ref: "#/components/responses/500ServerError"
+
+  /dsr/requests:
+    post:
+      summary: Create DSR request
+      description: Creates a DSR request and records a tombstone on fulfillment.
+      tags:
+        - DSR
+      operationId: createDsrRequest
+      security:
+        - AdminAuth: []
+      parameters:
+        - $ref: "#/components/parameters/XTenantId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DsrRequestCreateRequest"
+            examples:
+              delete_request:
+                summary: Delete request for card_id
+                value:
+                  requestType: "DELETE"
+                  subject:
+                    subject_type: "card_id"
+                    subject_id: "card-123"
+                  reason: "Customer requested erasure."
+      responses:
+        "201":
+          description: Created
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DsrRequestResponse"
+              examples:
+                created:
+                  summary: DSR request created
+                  value:
+                    dsrRequestId: "11111111-2222-3333-4444-555555555555"
+                    status: "PENDING"
+                    requestType: "DELETE"
+                    subject:
+                      subject_type: "card_id"
+                      subject_id: "card-123"
+                    createdAt: "2026-01-08T12:00:00Z"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                validation_error:
+                  summary: Validation failed
+                  value:
+                    type: "https://errors.lokaltreu.example/request/invalid"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "Invalid requestType"
+                    instance: "/dsr/requests"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                unauthorized:
+                  summary: Missing or invalid auth
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/unauthorized"
+                    title: "Unauthorized"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                conflict:
+                  summary: Idempotency conflict
+                  value:
+                    type: "https://errors.lokaltreu.example/token/reuse"
+                    title: "Conflict"
+                    status: 409
+                    error_code: "TOKEN_REUSE"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/Retry-After"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                rate_limited:
+                  summary: Rate limited
+                  value:
+                    type: "https://errors.lokaltreu.example/rate/limited"
+                    title: "Rate limited"
+                    status: 429
+                    error_code: "RATE_LIMITED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                server_error:
+                  summary: Internal error
+                  value:
+                    type: "https://errors.lokaltreu.example/server/error"
+                    title: "Internal Server Error"
+                    status: 500
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+
+  /dsr/requests/{dsr_id}:
+    get:
+      summary: Get DSR request status
+      description: Returns status and metadata for a DSR request.
+      tags:
+        - DSR
+      operationId: getDsrRequest
+      security:
+        - AdminAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DsrRequestId"
+        - $ref: "#/components/parameters/XTenantId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DsrRequestStatusResponse"
+              examples:
+                status:
+                  summary: DSR request status
+                  value:
+                    dsrRequestId: "11111111-2222-3333-4444-555555555555"
+                    status: "PENDING"
+                    requestType: "DELETE"
+                    subject:
+                      subject_type: "card_id"
+                      subject_id: "card-123"
+                    createdAt: "2026-01-08T12:00:00Z"
+                    fulfilledAt: null
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                validation_error:
+                  summary: Validation failed
+                  value:
+                    type: "https://errors.lokaltreu.example/request/invalid"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "Invalid dsr_id"
+                    instance: "/dsr/requests/{dsr_id}"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                unauthorized:
+                  summary: Missing or invalid auth
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/unauthorized"
+                    title: "Unauthorized"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                conflict:
+                  summary: Request already fulfilled
+                  value:
+                    type: "https://errors.lokaltreu.example/token/reuse"
+                    title: "Conflict"
+                    status: 409
+                    error_code: "TOKEN_REUSE"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/Retry-After"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                rate_limited:
+                  summary: Rate limited
+                  value:
+                    type: "https://errors.lokaltreu.example/rate/limited"
+                    title: "Rate limited"
+                    status: 429
+                    error_code: "RATE_LIMITED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                server_error:
+                  summary: Internal error
+                  value:
+                    type: "https://errors.lokaltreu.example/server/error"
+                    title: "Internal Server Error"
+                    status: 500
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+
+  /dsr/requests/{dsr_id}/fulfill:
+    post:
+      summary: Fulfill DSR request
+      description: Triggers deletion/pseudonymization and inserts tombstone records.
+      tags:
+        - DSR
+      operationId: fulfillDsrRequest
+      security:
+        - AdminAuth: []
+      parameters:
+        - $ref: "#/components/parameters/DsrRequestId"
+        - $ref: "#/components/parameters/XTenantId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DsrFulfillRequest"
+            examples:
+              fulfill_delete:
+                summary: Fulfill delete
+                value:
+                  action: "DELETE"
+      responses:
+        "200":
+          description: OK
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DsrRequestStatusResponse"
+              examples:
+                fulfilled:
+                  summary: DSR request fulfilled
+                  value:
+                    dsrRequestId: "11111111-2222-3333-4444-555555555555"
+                    status: "FULFILLED"
+                    requestType: "DELETE"
+                    subject:
+                      subject_type: "card_id"
+                      subject_id: "card-123"
+                    createdAt: "2026-01-08T12:00:00Z"
+                    fulfilledAt: "2026-01-08T12:10:00Z"
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                validation_error:
+                  summary: Validation failed
+                  value:
+                    type: "https://errors.lokaltreu.example/request/invalid"
+                    title: "Bad Request"
+                    status: 400
+                    detail: "Invalid action"
+                    instance: "/dsr/requests/{dsr_id}/fulfill"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                unauthorized:
+                  summary: Missing or invalid auth
+                  value:
+                    type: "https://errors.lokaltreu.example/auth/unauthorized"
+                    title: "Unauthorized"
+                    status: 401
+                    error_code: "TOKEN_EXPIRED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "403":
+          description: PLAN_NOT_ALLOWED
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                plan_not_allowed:
+                  summary: Plan gate enforced
+                  value:
+                    type: "https://errors.lokaltreu.example/plan/not-allowed"
+                    title: "Plan not allowed"
+                    status: 403
+                    error_code: "PLAN_NOT_ALLOWED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "409":
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                conflict:
+                  summary: Already fulfilled
+                  value:
+                    type: "https://errors.lokaltreu.example/token/reuse"
+                    title: "Conflict"
+                    status: 409
+                    error_code: "TOKEN_REUSE"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "429":
+          description: Rate limited
+          headers:
+            Retry-After:
+              $ref: "#/components/headers/Retry-After"
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                rate_limited:
+                  summary: Rate limited
+                  value:
+                    type: "https://errors.lokaltreu.example/rate/limited"
+                    title: "Rate limited"
+                    status: 429
+                    error_code: "RATE_LIMITED"
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                server_error:
+                  summary: Internal error
+                  value:
+                    type: "https://errors.lokaltreu.example/server/error"
+                    title: "Internal Server Error"
+                    status: 500
+                    correlation_id: "11111111-2222-3333-4444-555555555555"
 
   /stamps/tokens:
     post:

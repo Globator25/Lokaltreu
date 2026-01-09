@@ -8,6 +8,11 @@ import { handleAdminRefresh } from "./handlers/admins/refresh.js";
 import { handleAdminRegister } from "./handlers/admins/register.js";
 import { handleDeviceRegistrationConfirm } from "./handlers/devices/register-confirm.js";
 import { handleDeviceRegistrationLinks } from "./handlers/devices/registration-links.js";
+import {
+  handleCreateDsrRequest,
+  handleFulfillDsrRequest,
+  handleGetDsrRequest,
+} from "./handlers/dsr.js";
 import { handleGetJwks } from "./handlers/jwks/get-jwks.js";
 import { handleGetReferralLink } from "./handlers/referrals/link.js";
 import { handleRewardRedeem } from "./handlers/rewards/redeem.js";
@@ -32,6 +37,9 @@ import { createDbReferralRepository } from "./repositories/referrals.db.js";
 import { InMemoryTenantPlanStore, resolveTenantPlan } from "./services/plan-gate.js";
 import { createReferralService } from "./services/referrals.service.js";
 import { createPlanUsageTracker, InMemoryActiveDeviceStore } from "./plan/plan-policy.js";
+import { InMemoryDeletedSubjectsRepository, createDbDeletedSubjectsRepository } from "./repositories/deleted-subjects-repo.js";
+import { InMemoryDsrRequestRepository, createDbDsrRequestRepository } from "./repositories/dsr-requests-repo.js";
+import { createDsrService } from "./services/dsr-service.js";
 
 type DeviceRegistrationLinkRow = {
   id: string;
@@ -325,6 +333,28 @@ export function createAppServer() {
     },
   });
 
+  const dsrRequestRepo = isProdLike
+    ? createDbDsrRequestRepository(dbClient)
+    : new InMemoryDsrRequestRepository();
+  const deletedSubjectsRepo = isProdLike
+    ? createDbDeletedSubjectsRepository(dbClient)
+    : new InMemoryDeletedSubjectsRepository();
+  const dsrService = createDsrService({
+    repo: dsrRequestRepo,
+    tombstoneRepo: deletedSubjectsRepo,
+    transaction: transactionRunner,
+    applyDeletion: (params) => {
+      console.warn("dsr deletion applied", {
+        tenant_id: params.tenantId,
+        subject_id: params.subjectId,
+        correlation_id: params.correlationId,
+        action: params.action,
+      });
+      return Promise.resolve();
+    },
+    logger: console,
+  });
+
   const stampServiceWithReferrals = createStampService({
     tokenStore: stampTokenStore,
     cardStore: cardStateStore,
@@ -398,6 +428,8 @@ export function createAppServer() {
   ) {
     try {
       const path = req.url?.split("?")[0] ?? "/";
+      const dsrRequestMatch = path.match(/^\/dsr\/requests\/([^/]+)$/);
+      const dsrFulfillMatch = path.match(/^\/dsr\/requests\/([^/]+)\/fulfill$/);
       const isClaimRoute = req.method === "POST" && path === "/stamps/claim";
       const isRedeemRoute = req.method === "POST" && path === "/rewards/redeem";
       const isHotRoute = isClaimRoute || isRedeemRoute;
@@ -466,6 +498,42 @@ export function createAppServer() {
       }
       if (req.method === "POST" && path === "/admins/logout") {
         await handleAdminLogout(req, res, { sessionStore, auditSink });
+        return;
+      }
+      if (req.method === "POST" && path === "/dsr/requests") {
+        const allowed = await requireAdmin(req, res);
+        if (!allowed) {
+          return;
+        }
+        await handleCreateDsrRequest(req, res, {
+          service: dsrService,
+          idempotencyStore,
+          logger: console,
+        });
+        return;
+      }
+      if (req.method === "GET" && dsrRequestMatch) {
+        const allowed = await requireAdmin(req, res);
+        if (!allowed) {
+          return;
+        }
+        await handleGetDsrRequest(req, res, {
+          service: dsrService,
+          idempotencyStore,
+          logger: console,
+        }, dsrRequestMatch[1]);
+        return;
+      }
+      if (req.method === "POST" && dsrFulfillMatch) {
+        const allowed = await requireAdmin(req, res);
+        if (!allowed) {
+          return;
+        }
+        await handleFulfillDsrRequest(req, res, {
+          service: dsrService,
+          idempotencyStore,
+          logger: console,
+        }, dsrFulfillMatch[1]);
         return;
       }
       if (req.method === "POST" && path === "/devices/registration-links") {

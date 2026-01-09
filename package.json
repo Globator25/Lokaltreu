@@ -10,6 +10,7 @@
     "build:web": "npm -w apps/web run build",
     "build:api": "npm -w apps/api run build",
     "build": "npm run build:web && npm run build:api",
+    "prelint": "node ./scripts/gen-openapi-types.mjs",
     "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
     "start:web": "node apps/web/.next/standalone/server.js",
     "start:api": "node apps/api/dist/server-main.js",

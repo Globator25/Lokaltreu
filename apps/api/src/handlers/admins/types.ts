@@ -29,5 +29,5 @@ export type AuditEvent = {
 };
 
 export interface AuditSink {
-  audit(event: AuditEvent): void;
+  audit(event: AuditEvent): Promise<void> | void;
 }

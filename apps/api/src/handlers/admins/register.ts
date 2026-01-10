@@ -45,7 +45,7 @@ export async function handleAdminRegister(
     expiresAt,
   });
 
-  deps.auditSink.audit({
+  await Promise.resolve(deps.auditSink.audit({
     event: "admin.register",
     tenantId,
     adminId,
@@ -53,7 +53,7 @@ export async function handleAdminRegister(
     ip: normalizeIp(req),
     ua: normalizeUa(req),
     at: Date.now(),
-  });
+  }));
 
   res.setHeader(
     "Set-Cookie",

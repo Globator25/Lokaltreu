@@ -31,9 +31,9 @@ describe("audit export job", () => {
       ts: new Date("2026-01-01T00:00:00.000Z"),
       action: "admin.login",
       result: "SUCCESS",
-      deviceId: null,
-      cardId: null,
-      jti: null,
+      deviceId: undefined,
+      cardId: undefined,
+      jti: undefined,
       correlationId: "corr-1",
     };
 
@@ -46,9 +46,9 @@ describe("audit export job", () => {
         ts: base.ts,
         action: base.action,
         result: base.result,
-        deviceId: base.deviceId,
-        cardId: base.cardId,
-        jti: base.jti,
+        deviceId: base.deviceId ?? null,
+        cardId: base.cardId ?? null,
+        jti: base.jti ?? null,
         correlationId: base.correlationId,
         prevHash,
         hash,
@@ -79,6 +79,13 @@ describe("audit export job", () => {
     expect(meta?.contentType).toBe("application/json");
     expect(sig?.contentType).toBe("application/octet-stream");
     expect(meta?.body).toContain("\"tenant_id\":\"tenant-1\"");
+    const metaJson = JSON.parse(meta?.body ?? "{}") as { object_key_prefix?: string };
+    expect(metaJson.object_key_prefix).toMatch(
+      /^audit\/tenant=tenant-1\/date=\d{4}-\d{2}-\d{2}\/from_\d+_to_\d+$/,
+    );
+    expect(meta?.body).toContain("\"sig_encoding\":\"base64\"");
+    expect(meta?.body).toContain("\"sig_format\":\"ed25519-raw-64bytes-base64\"");
+    expect(meta?.body).toContain("\"public_key_fingerprint_format\":\"sha256(pem-utf8-raw)\"");
 
     const signature = Buffer.from(sig?.body ?? "", "base64");
     const verified = crypto.verify(null, Buffer.from(meta?.body ?? "", "utf8"), publicKey, signature);

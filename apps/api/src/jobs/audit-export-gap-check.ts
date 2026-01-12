@@ -3,30 +3,58 @@ import {
   InMemoryAuditGapCounter,
 } from "../modules/audit/export/audit-export.monitor.js";
 import type { AuditExportRepository, AuditExportRun } from "../modules/audit/export/audit-export.repo.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createJobDbClient } from "./db.js";
+
+export function parseTenantFilter(value: string | undefined): string[] | undefined {
+  const tenants = value
+    ?.split(",")
+    .map((tenant) => tenant.trim())
+    .filter(Boolean);
+  return tenants && tenants.length > 0 ? tenants : undefined;
+}
+
+export function exitCodeForGapEvents(gapEvents: number): number {
+  return gapEvents > 0 ? 2 : 0;
+}
 
 async function alertWebhook(payload: unknown): Promise<void> {
   const url = process.env.AUDIT_EXPORT_ALERT_WEBHOOK_URL;
   if (!url) {
     return;
   }
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`alert webhook failed: ${response.status} ${text}`);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      console.warn("audit export webhook failed", {
+        status: response.status,
+        status_text: response.statusText,
+        error: text.slice(0, 256),
+      });
+    }
+  } catch (error) {
+    console.warn("audit export webhook error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
-async function main() {
+export async function runGapCheck() {
   const counter = new InMemoryAuditGapCounter();
   const db = await createJobDbClient();
   try {
+    const tenantFilter = parseTenantFilter(process.env.AUDIT_EXPORT_TENANTS);
     const repo: AuditExportRepository = {
       async listTenants() {
+        if (tenantFilter) {
+          return tenantFilter;
+        }
         type TenantRow = { tenant_id: string };
         const result = await db.query<TenantRow>(`SELECT DISTINCT tenant_id FROM audit_log_worm`);
         return result.rows.map((row) => row.tenant_id);
@@ -127,12 +155,20 @@ async function main() {
       tenants_checked: summary.tenantsChecked,
       audit_gaps_count: counter.value,
     });
+    process.exitCode = exitCodeForGapEvents(summary.gapEvents);
   } finally {
     await db.close();
   }
 }
 
-void main().catch((error) => {
-  console.error("audit export gap check failed", error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+async function main() {
+  await runGapCheck();
+}
+
+const isMain = fileURLToPath(import.meta.url) === path.resolve(process.argv[1] ?? "");
+if (isMain) {
+  void main().catch((error) => {
+    console.error("audit export gap check failed", error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

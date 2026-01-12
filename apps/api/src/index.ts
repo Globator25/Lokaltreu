@@ -40,11 +40,14 @@ import { createPlanUsageTracker, InMemoryActiveDeviceStore } from "./plan/plan-p
 import { InMemoryDeletedSubjectsRepository, createDbDeletedSubjectsRepository } from "./repositories/deleted-subjects-repo.js";
 import { InMemoryDsrRequestRepository, createDbDsrRequestRepository } from "./repositories/dsr-requests-repo.js";
 import { createDsrService } from "./services/dsr-service.js";
+<<<<<<< HEAD
 import {
   InMemoryWormAuditWriter,
   createDbWormAuditWriter,
   type WormAuditWriter,
 } from "./modules/audit/worm/worm-writer.js";
+=======
+>>>>>>> origin/main
 
 type DeviceRegistrationLinkRow = {
   id: string;

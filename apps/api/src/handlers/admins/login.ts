@@ -33,7 +33,7 @@ export async function handleAdminLogin(
     expiresAt,
   });
 
-  deps.auditSink.audit({
+  await Promise.resolve(deps.auditSink.audit({
     event: "admin.login",
     tenantId,
     adminId,
@@ -41,7 +41,7 @@ export async function handleAdminLogin(
     ip: normalizeIp(req),
     ua: normalizeUa(req),
     at: Date.now(),
-  });
+  }));
 
   return sendJson(res, 200, {
     accessToken,

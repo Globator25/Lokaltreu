@@ -23,8 +23,6 @@ API-->>Device: Bestätigungsseite
 
 Device->>API: POST /devices/register/confirm
 API->>Mail: Sicherheits-Alert an Admin
-<<<<<<< Updated upstream
-=======
 API-->>Portal: device.register Audit-Eintrag, Link invalidiert
 ```
 
@@ -116,6 +114,6 @@ API-->>ReferrerPWA: Bonus-Stempel im nächsten Sync sichtbar
 - Error-Handling folgt RFC 7807; correlation_id dient dem Support.  
 - Prozesse sind Grundlage für UAT (Roadmap Schritt 12 & 40) und E2E-Tests (Schritt 39).  
 - Diagramme dienen auch als Referenz für Runbooks (Replay-Suspected, JWKS-Rotation) und CI-Gates (Anti-Replay, Device-Proof).
+
 ## UX Prototyping & frühes UAT (Schritt 12)
 Die Prozessbeschreibungen werden durch Schritt‑12-Prototyping gegen reale User-Flows getestet (Admin US‑1, Mitarbeiter-Aktionen). Ergebnisse, offene Fragen und Schema-Auswirkungen stehen in [docs/ux/step-12/README.md](./ux/step-12/README.md) sowie [UX-Decisions-Schema-Impact](./ux/step-12/UX-Decisions-Schema-Impact.md).
->>>>>>> Stashed changes

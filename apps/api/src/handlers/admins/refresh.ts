@@ -62,7 +62,7 @@ export async function handleAdminRefresh(
     expiresAt,
   });
 
-  deps.auditSink.audit({
+  await Promise.resolve(deps.auditSink.audit({
     event: "admin.token_refresh",
     tenantId: claims.tenantId,
     adminId: claims.adminId,
@@ -70,7 +70,7 @@ export async function handleAdminRefresh(
     ip: normalizeIp(req),
     ua: normalizeUa(req),
     at: Date.now(),
-  });
+  }));
 
   return sendJson(res, 200, {
     accessToken,

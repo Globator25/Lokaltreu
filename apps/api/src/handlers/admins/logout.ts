@@ -36,7 +36,7 @@ export async function handleAdminLogout(
 
   deps.sessionStore.revoke(hashToken(refreshToken));
 
-  deps.auditSink.audit({
+  await Promise.resolve(deps.auditSink.audit({
     event: "admin.logout",
     tenantId: claims.tenantId,
     adminId: claims.adminId,
@@ -44,7 +44,7 @@ export async function handleAdminLogout(
     ip: normalizeIp(req),
     ua: normalizeUa(req),
     at: Date.now(),
-  });
+  }));
 
   res.statusCode = 204;
   res.setHeader(

@@ -40,6 +40,11 @@ import { createPlanUsageTracker, InMemoryActiveDeviceStore } from "./plan/plan-p
 import { InMemoryDeletedSubjectsRepository, createDbDeletedSubjectsRepository } from "./repositories/deleted-subjects-repo.js";
 import { InMemoryDsrRequestRepository, createDbDsrRequestRepository } from "./repositories/dsr-requests-repo.js";
 import { createDsrService } from "./services/dsr-service.js";
+import {
+  InMemoryWormAuditWriter,
+  createDbWormAuditWriter,
+  type WormAuditWriter,
+} from "./modules/audit/worm/worm-writer.js";
 
 type DeviceRegistrationLinkRow = {
   id: string;
@@ -127,6 +132,16 @@ function createInMemoryDeviceRegistrationLinksDbClient(): DbClientLike {
   };
 }
 
+function requireTenantId(value: unknown, isProdLike: boolean): string {
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value;
+  }
+  if (isProdLike) {
+    throw new Error("tenant_id is required for audit");
+  }
+  return "system";
+}
+
 class InMemoryAdminSessionStore implements AdminSessionStore {
   private readonly sessions = new Map<string, AdminSession>();
 
@@ -155,11 +170,26 @@ class InMemoryAdminSessionStore implements AdminSessionStore {
   }
 }
 
+function mapAuditEventToWormInput(event: AuditEvent) {
+  return {
+    tenantId: event.tenantId,
+    ts: new Date(event.at),
+    action: event.event,
+    result: "SUCCESS",
+    deviceId: event.deviceId,
+    cardId: event.cardId,
+    jti: event.jti,
+    correlationId: event.correlationId,
+  };
+}
+
 class InMemoryAuditSink implements AuditSink {
   readonly events: AuditEvent[] = [];
+  constructor(private readonly wormWriter: WormAuditWriter) {}
 
-  audit(event: AuditEvent): void {
+  async audit(event: AuditEvent): Promise<void> {
     this.events.push(event);
+    await this.wormWriter.write(mapAuditEventToWormInput(event));
   }
 }
 
@@ -205,17 +235,16 @@ async function seedDevDevice(repo: InMemoryDeviceRepository): Promise<void> {
 
 export function createAppServer() {
   const sessionStore = new InMemoryAdminSessionStore();
-  const auditSink = new InMemoryAuditSink();
-  const deviceRepository = new InMemoryDeviceRepository();
-  const replayStore = new InMemoryDeviceReplayStore();
-  void seedDevDevice(deviceRepository);
-  const deviceAuth = createDeviceAuthMiddleware({ deviceRepository, replayStore });
-  const stampTokenStore = new InMemoryStampTokenStore();
-  const cardStateStore = new InMemoryCardStateStore();
-  const stampService = createStampService({ tokenStore: stampTokenStore, cardStore: cardStateStore, logger: console });
-  const rewardTokenStore = new InMemoryRewardTokenStore();
-  const rewardCardStore = new InMemoryRewardCardStateStore();
-  const rewardReplayStore = new InMemoryRewardReplayStore();
+  const isProdLike = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
+  const dbClient: DbClientLike = isProdLike
+    ? {
+        query(sql, params) {
+          void sql;
+          void params;
+          return Promise.reject(new Error("Database client not configured"));
+        },
+      }
+    : createInMemoryDeviceRegistrationLinksDbClient();
   const transactionRunner = {
     run: async <T>(fn: () => Promise<T>) => {
       await dbClient.query("BEGIN");
@@ -229,6 +258,20 @@ export function createAppServer() {
       }
     },
   };
+  const wormWriter = isProdLike
+    ? createDbWormAuditWriter({ db: dbClient, transaction: transactionRunner, logger: console })
+    : new InMemoryWormAuditWriter();
+  const auditSink = new InMemoryAuditSink(wormWriter);
+  const deviceRepository = new InMemoryDeviceRepository();
+  const replayStore = new InMemoryDeviceReplayStore();
+  void seedDevDevice(deviceRepository);
+  const deviceAuth = createDeviceAuthMiddleware({ deviceRepository, replayStore });
+  const stampTokenStore = new InMemoryStampTokenStore();
+  const cardStateStore = new InMemoryCardStateStore();
+  const stampService = createStampService({ tokenStore: stampTokenStore, cardStore: cardStateStore, logger: console });
+  const rewardTokenStore = new InMemoryRewardTokenStore();
+  const rewardCardStore = new InMemoryRewardCardStateStore();
+  const rewardReplayStore = new InMemoryRewardReplayStore();
   const rewardService = createRewardService({
     tokenStore: rewardTokenStore,
     cardStore: rewardCardStore,
@@ -237,34 +280,23 @@ export function createAppServer() {
     logger: console,
     audit: {
       log: (event, payload) => {
-        const tenantId = typeof payload.tenant_id === "string" ? payload.tenant_id : "unknown";
-        auditSink.audit({
+        const tenantId = requireTenantId(payload.tenant_id, isProdLike);
+        return Promise.resolve(auditSink.audit({
           event,
           tenantId,
           deviceId: typeof payload.device_id === "string" ? payload.device_id : undefined,
           cardId: typeof payload.card_id === "string" ? payload.card_id : undefined,
           correlationId: "n/a",
           at: Date.now(),
-        } as AuditEvent);
+        } as AuditEvent));
       },
     },
   });
-  const isProdLike = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
   const idempotencyStore = isProdLike ? createRedisIdempotencyStore() : new InMemoryIdempotencyStore();
   // TODO: Wire Redis-backed rate limit store when available.
   const rateLimitStore = new InMemoryRateLimitStore();
   const idempotency = createIdempotencyMiddleware(idempotencyStore);
   const rateLimit = createRateLimitMiddleware(rateLimitStore);
-  
-  const dbClient: DbClientLike = isProdLike
-    ? {
-        query(sql, params) {
-          void sql;
-          void params;
-          return Promise.reject(new Error("Database client not configured"));
-        },
-      }
-    : createInMemoryDeviceRegistrationLinksDbClient();
 
   const planStore = new InMemoryTenantPlanStore();
   const activeDeviceStore = new InMemoryActiveDeviceStore();
@@ -286,7 +318,7 @@ export function createAppServer() {
       }
       const event =
         threshold === 100 ? "plan.limit.upgrade_signal_emitted" : "plan.limit.warning_emitted";
-      auditSink.audit({
+      await Promise.resolve(auditSink.audit({
         event,
         tenantId: params.tenantId,
         correlationId: params.correlationId,
@@ -296,7 +328,7 @@ export function createAppServer() {
           plan_code: plan,
         },
         at: Date.now(),
-      });
+      }));
       console.warn("plan limit signal emitted", {
         tenant_id: params.tenantId,
         correlation_id: params.correlationId,
@@ -313,8 +345,8 @@ export function createAppServer() {
     logger: console,
     audit: {
       log: (event, payload) => {
-        const tenantId = typeof payload.tenant_id === "string" ? payload.tenant_id : "unknown";
-        auditSink.audit({
+        const tenantId = requireTenantId(payload.tenant_id, isProdLike);
+        return Promise.resolve(auditSink.audit({
           event,
           tenantId,
           deviceId: typeof payload.device_id === "string" ? payload.device_id : undefined,
@@ -328,7 +360,7 @@ export function createAppServer() {
                   : undefined,
           correlationId: "n/a",
           at: Date.now(),
-        } as AuditEvent);
+        } as AuditEvent));
       },
     },
   });
@@ -365,15 +397,15 @@ export function createAppServer() {
     planUsage,
     audit: {
       log: (event, payload) => {
-        const tenantId = typeof payload.tenantId === "string" ? payload.tenantId : "unknown";
-        auditSink.audit({
+        const tenantId = requireTenantId(payload.tenantId, isProdLike);
+        return Promise.resolve(auditSink.audit({
           event,
           tenantId,
           deviceId: typeof payload.deviceId === "string" ? payload.deviceId : undefined,
           cardId: typeof payload.cardId === "string" ? payload.cardId : undefined,
           correlationId: "n/a",
           at: Date.now(),
-        } as AuditEvent);
+        } as AuditEvent));
       },
     },
   });

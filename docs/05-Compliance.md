@@ -47,9 +47,8 @@ _Quelle: [DOC:REQ §7], [DOC:LEGAL], [DPIA Lokaltreu]_
   Die Kernfunktion (Stempeln, Prämie einlösen) basiert auf berechtigtem Interesse und benötigt keine Einwilligung.  
   Ein optionaler Hinweistext wird in der PWA angezeigt, aber kein Cookie-Banner.
 
-<<<<<<< Updated upstream
 _Quelle: [DOC:LEGAL], [DPIA Lokaltreu], [EDPB Guidelines]_
-=======
+
 ---
 
 ## 5. Betroffenenrechte & Transparenz
@@ -77,6 +76,6 @@ _Quelle: [DPIA], [Infos-DE], [EDPB-Guidelines 05/2020]_
 - **KPIs:** `audit_gaps = 0`, `gdpr-checks = green`, dokumentierte Restore-Tests inkl. Tombstone.  
 - **Incident-Pfad:** Runbook Incident-Breach (72 h Meldepflicht, interne/öffentliche Kommunikation via Status-Page).  
 _Quelle: [ROADMAP Schritte 41–45], [AGENTS §6–§7], [Runbooks]_
+
 ## UX Prototyping & frühes UAT (Schritt 12)
 Alle Prototyping-Aktivitäten halten sich an DSGVO/Art. 11: keine PII, nur Testdaten, Aufzeichnung in EU. Weitere Hinweise in [docs/ux/step-12/README.md](./ux/step-12/README.md) sowie den Entscheidungs-Notizen [UX-Decisions-Schema-Impact](./ux/step-12/UX-Decisions-Schema-Impact.md) für Compliance-Folgenabschätzungen.
->>>>>>> Stashed changes

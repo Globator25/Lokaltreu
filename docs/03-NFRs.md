@@ -43,26 +43,20 @@ _Quelle: [DOC:SPEC §12], [DOC:ARCH]_
 
 ## 5. Caching-Strategie
 
-<<<<<<< Updated upstream
 - **stale-while-revalidate** für statische Inhalte  
 - **network-first** für API-Aufrufe  
 Implementiert über Service Worker in der PWA.  
 _Quelle: [DOC:SPEC §12], [DOC:ARCH]_
-=======
+
+---
+
+## 6. Datenschutz & Aufbewahrung
+
 - Endkunden bleiben anonym/pseudonym; Logs enthalten nur tenant_id, device_id, card_id.  
 - Retention: 180 Tage, danach Export + Löschung resp. Tombstone.  
 - DSR über Art.-11-Prozess (PWA UI, Schritt 34) ohne zusätzliche Identifizierung.  
 - Backups verbleiben in EU-Regionen; Restore respektiert deleted_subjects-Tabelle.  
 _Quelle: [SPEC §8], [AGENTS §1, §9], [ROADMAP Schritte 2, 34, 48]_
-
----
-
-## 6. PWA-Budgets & Caching
-
-- **LCP ≤ 2,5 s**, **INP ≤ 200 ms**, **CLS ≤ 0,1** (mobile Fokus).  
-- Service Worker: `stale-while-revalidate` (Static Assets), `network-first` (API).  
-- Lighthouse ≥ 90, Installability „yes“.  
-_Quelle: [SPEC §12], [ARCH], [ROADMAP Schritte 33–35]_
 
 ---
 
@@ -92,6 +86,6 @@ _Quelle: [AGENTS §6–§7], [SPEC §19.2], [ROADMAP Schritte 37–42]_
 - Alerts bei Abweichungen > 15 % pro Woche.  
 - Reporting von DB-Storage, Redis-Operationen, CDN-Traffic zur Optimierung der Budgets aus SPEC (Hosting, Storage, Mail).  
 _Quelle: [SPEC Kostenübersicht], [ROADMAP Schritte 8, 25, 47, 48]_
+
 ## UX Prototyping & frühes UAT (Schritt 12)
 Schritt 12 liefert frühe Evidenz, ob die NFR-Annahmen (p95 ≤ 3s, radikale Einfachheit) im Prototyp standhalten. Verweise: [docs/ux/step-12/README.md](./ux/step-12/README.md) für Setup/Artefakte und [UX-Decisions-Schema-Impact](./ux/step-12/UX-Decisions-Schema-Impact.md) für Auswirkungen auf Domain & Schema.
->>>>>>> Stashed changes

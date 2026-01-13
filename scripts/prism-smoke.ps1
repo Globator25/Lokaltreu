@@ -1,87 +1,68 @@
 param(
   [int]$Port = 4013,
+  [string]$ServerHost = "127.0.0.1",
   [switch]$StartPrism,
   [int]$TimeoutSec = 20
 )
 
 $ErrorActionPreference = "Stop"
+$base = "http://$ServerHost`:$Port"
 
-function Test-PortOpen {
-  param(
-    [Parameter(Mandatory = $true)][string]$Host,
-    [Parameter(Mandatory = $true)][int]$Port
-  )
+function Test-Listening {
+  param([string]$ServerHost, [int]$Port)
   try {
-    $client = New-Object System.Net.Sockets.TcpClient
-    $client.Connect($Host, $Port)
-    $client.Close()
-    return $true
-  } catch {
-    return $false
-  }
+    $c = New-Object System.Net.Sockets.TcpClient
+    $iar = $c.BeginConnect($ServerHost, $Port, $null, $null)
+    $ok = $iar.AsyncWaitHandle.WaitOne(200)
+    if ($ok -and $c.Connected) { $c.Close(); return $true }
+    $c.Close(); return $false
+  } catch { return $false }
 }
 
 function Wait-ForPort {
-  param(
-    [Parameter(Mandatory = $true)][string]$Host,
-    [Parameter(Mandatory = $true)][int]$Port,
-    [Parameter(Mandatory = $true)][int]$TimeoutSec
-  )
-  $deadline = (Get-Date).AddSeconds($TimeoutSec)
-  while ((Get-Date) -lt $deadline) {
-    if (Test-PortOpen -Host $Host -Port $Port) {
-      return $true
-    }
-    Start-Sleep -Milliseconds 500
+  param([string]$ServerHost, [int]$Port, [int]$TimeoutSec)
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  while ($sw.Elapsed.TotalSeconds -lt $TimeoutSec) {
+    if (Test-Listening -ServerHost $ServerHost -Port $Port) { return $true }
+    Start-Sleep -Milliseconds 250
   }
   return $false
 }
 
-$baseUrl = "http://localhost:$Port"
-$npmProcess = $null
-$startedByScript = $false
-
-if ($StartPrism -and -not (Test-PortOpen -Host "127.0.0.1" -Port $Port)) {
-  $npmProcess = Start-Process -FilePath "npm" -ArgumentList @(
-    "--workspaces=false",
-    "run",
-    "prism:mock",
-    "--",
-    "$Port"
-  ) -PassThru
-  $startedByScript = $true
-}
+$proc = $null
 
 try {
-  if (-not (Wait-ForPort -Host "127.0.0.1" -Port $Port -TimeoutSec $TimeoutSec)) {
-    throw "Prism not reachable on port $Port within $TimeoutSec seconds."
+  if ($StartPrism) {
+    if (-not (Test-Listening -ServerHost $ServerHost -Port $Port)) {
+      Write-Host "Starting Prism via npm on $ServerHost`:$Port ..."
+      $proc = Start-Process -FilePath "npm" `
+        -ArgumentList @("--workspaces=false","run","prism:mock","--",$Port) `
+        -WorkingDirectory (Get-Location) `
+        -PassThru `
+        -WindowStyle Normal
+    } else {
+      Write-Host "Port $Port is already in use; assuming Prism is running."
+    }
   }
 
-  $summaryUrl = "$baseUrl/admins/reporting/summary"
-  $timeseriesUrl = "$baseUrl/admins/reporting/timeseries?metric=stamps&bucket=day"
+  Write-Host "Smoke: $base"
 
-  $summaryResponse = Invoke-RestMethod -Uri $summaryUrl -Method Get -ContentType "application/json"
-  $timeseriesResponse = Invoke-RestMethod -Uri $timeseriesUrl -Method Get -ContentType "application/json"
-
-  if (-not $summaryResponse.stamps) {
-    throw "Missing summary.stamps"
-  }
-  if ($timeseriesResponse.metric -ne "stamps") {
-    throw "timeseries.metric mismatch"
-  }
-  if ($timeseriesResponse.bucket -ne "day") {
-    throw "timeseries.bucket mismatch"
+  if (-not (Wait-ForPort -ServerHost $ServerHost -Port $Port -TimeoutSec $TimeoutSec)) {
+    throw "Prism not reachable on $ServerHost`:$Port after ${TimeoutSec}s"
   }
 
-  $summaryResponse | ConvertTo-Json -Depth 20
-  $timeseriesResponse | ConvertTo-Json -Depth 20
+  $summary = Invoke-RestMethod "$base/admins/reporting/summary"
+  $ts = Invoke-RestMethod "$base/admins/reporting/timeseries?metric=stamps&bucket=day"
 
-  exit 0
-} catch {
-  Write-Error $_
-  exit 1
-} finally {
-  if ($startedByScript -and $npmProcess -and -not $npmProcess.HasExited) {
-    Stop-Process -Id $npmProcess.Id -Force
+  if (-not $summary.stamps) { throw "Missing summary.stamps" }
+  if ($ts.metric -ne "stamps") { throw "Unexpected metric: $($ts.metric)" }
+  if ($ts.bucket -ne "day") { throw "Unexpected bucket: $($ts.bucket)" }
+
+  Write-Host "OK: summary + timeseries"
+}
+finally {
+  if ($proc) {
+    Write-Host "Stopping Prism (npm PID $($proc.Id))..."
+    try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
   }
 }

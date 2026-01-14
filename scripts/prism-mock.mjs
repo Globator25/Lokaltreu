@@ -42,14 +42,27 @@ text = text.replace(
 
 fs.writeFileSync(dst, text, "utf8");
 
-// Prism executable
-const prismCmd = process.platform === "win32"
-  ? path.join(repoRoot, "node_modules", ".bin", "prism.cmd")
-  : path.join(repoRoot, "node_modules", ".bin", "prism");
+// Prism executable (support Windows without prism.cmd)
+const prismCmdCandidates = process.platform === "win32"
+  ? [
+      path.join(repoRoot, "node_modules", ".bin", "prism.cmd"),
+      path.join(repoRoot, "node_modules", ".bin", "prism"),
+      path.join(repoRoot, "node_modules", "@stoplight", "prism-cli", "dist", "index.js"),
+    ]
+  : [
+      path.join(repoRoot, "node_modules", ".bin", "prism"),
+      path.join(repoRoot, "node_modules", "@stoplight", "prism-cli", "dist", "index.js"),
+    ];
 
+let prismCmd = prismCmdCandidates.find((candidate) => fs.existsSync(candidate));
+if (!prismCmd) {
+  throw new Error("Prism CLI not found in node_modules. Run npm install.");
+}
+
+const isNodeEntry = prismCmd.endsWith(path.join("prism-cli", "dist", "index.js"));
 const child = spawn(
-  prismCmd,
-  ["mock", dst, "-p", String(port)],
+  isNodeEntry ? process.execPath : prismCmd,
+  isNodeEntry ? [prismCmd, "mock", dst, "-p", String(port)] : ["mock", dst, "-p", String(port)],
   { stdio: "inherit", cwd: repoRoot, shell: process.platform === "win32" }
 );
 

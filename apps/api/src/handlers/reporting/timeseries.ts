@@ -27,15 +27,15 @@ function isBucket(value: string | null): value is ReportingBucketSize {
   return value != null && BUCKETS.includes(value as ReportingBucketSize);
 }
 
-function parseDate(value: string | null): Date | null {
+function parseDate(value: string | null): { date: Date | null; invalid: boolean } {
   if (!value) {
-    return null;
+    return { date: null, invalid: false };
   }
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    return null;
+    return { date: null, invalid: true };
   }
-  return parsed;
+  return { date: parsed, invalid: false };
 }
 
 export async function handleReportingTimeseries(
@@ -69,8 +69,22 @@ export async function handleReportingTimeseries(
   }
 
   const now = new Date();
-  const from = parseDate(url.searchParams.get("from")) ?? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const to = parseDate(url.searchParams.get("to")) ?? now;
+  const fromResult = parseDate(url.searchParams.get("from"));
+  if (fromResult.invalid) {
+    return sendProblem(
+      res,
+      problem(400, "Bad Request", "Invalid from", req.url ?? "/admins/reporting/timeseries"),
+    );
+  }
+  const toResult = parseDate(url.searchParams.get("to"));
+  if (toResult.invalid) {
+    return sendProblem(
+      res,
+      problem(400, "Bad Request", "Invalid to", req.url ?? "/admins/reporting/timeseries"),
+    );
+  }
+  const from = fromResult.date ?? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const to = toResult.date ?? now;
 
   if (from.getTime() >= to.getTime()) {
     return sendProblem(
@@ -80,7 +94,7 @@ export async function handleReportingTimeseries(
   }
 
   try {
-    const payload = deps.service.getTimeseries({
+    const payload = await deps.service.getTimeseries({
       tenantId: adminContext.tenantId,
       metric: metricParam,
       bucket: bucketParam,

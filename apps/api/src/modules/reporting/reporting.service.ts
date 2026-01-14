@@ -1,4 +1,5 @@
 import { resolvePlanLimits, resolveTenantPlan, type ActiveDeviceStore, type TenantPlanStore } from "../../plan/plan-policy.js";
+import type { DeletedSubjectsRepository } from "../../repositories/deleted-subjects-repo.js";
 
 export type ReportingMetric =
   | "stamps"
@@ -22,6 +23,7 @@ export type ReportingEvent = {
   tenantId: string;
   event: ReportingEventName;
   at: number;
+  subjectId?: string;
 };
 
 export type ReportingCounts = {
@@ -74,7 +76,7 @@ export type ReportingTimeseries = {
 };
 
 export interface ReportingStore {
-  recordEvent: (event: { tenantId: string; event: string; at: number }) => void;
+  recordEvent: (event: { tenantId: string; event: string; at: number; subjectId?: string }) => void;
   listEvents: (params: {
     tenantId: string;
     from: number;
@@ -104,7 +106,7 @@ const METRIC_EVENT_MAP: Record<ReportingMetric, ReportingEventName> = {
 export class InMemoryReportingStore implements ReportingStore {
   private readonly eventsByTenant = new Map<string, ReportingEvent[]>();
 
-  recordEvent(event: { tenantId: string; event: string; at: number }): void {
+  recordEvent(event: { tenantId: string; event: string; at: number; subjectId?: string }): void {
     if (!REPORTING_EVENTS.has(event.event)) {
       return;
     }
@@ -113,6 +115,7 @@ export class InMemoryReportingStore implements ReportingStore {
       tenantId: event.tenantId,
       event: event.event as ReportingEventName,
       at: event.at,
+      subjectId: event.subjectId,
     });
     this.eventsByTenant.set(event.tenantId, existing);
   }
@@ -144,6 +147,7 @@ export function createReportingService(deps: {
   store: ReportingStore;
   planStore: TenantPlanStore;
   activeDeviceStore: ActiveDeviceStore;
+  tombstoneRepo?: DeletedSubjectsRepository;
   now?: () => Date;
 }) {
   const nowFn = deps.now ?? (() => new Date());
@@ -154,16 +158,34 @@ export function createReportingService(deps: {
     const weekStart = startOfWeek(now);
     const monthStart = startOfMonth(now);
     const nowMs = now.getTime();
+    const tombstonedSubjects = await listTombstonedSubjects(params.tenantId);
 
-    const stamps = buildCounts(params.tenantId, "stamps.claimed", dayStart, weekStart, monthStart, nowMs);
-    const rewards = buildCounts(params.tenantId, "reward.redeemed", dayStart, weekStart, monthStart, nowMs);
+    const stamps = buildCounts(
+      params.tenantId,
+      "stamps.claimed",
+      dayStart,
+      weekStart,
+      monthStart,
+      nowMs,
+      tombstonedSubjects
+    );
+    const rewards = buildCounts(
+      params.tenantId,
+      "reward.redeemed",
+      dayStart,
+      weekStart,
+      monthStart,
+      nowMs,
+      tombstonedSubjects
+    );
     const referralLinks = buildCounts(
       params.tenantId,
       "referral.link.issued",
       dayStart,
       weekStart,
       monthStart,
-      nowMs
+      nowMs,
+      tombstonedSubjects
     );
     const referralQualified = buildCounts(
       params.tenantId,
@@ -171,7 +193,8 @@ export function createReportingService(deps: {
       dayStart,
       weekStart,
       monthStart,
-      nowMs
+      nowMs,
+      tombstonedSubjects
     );
     const referralBonus = buildCounts(
       params.tenantId,
@@ -179,7 +202,8 @@ export function createReportingService(deps: {
       dayStart,
       weekStart,
       monthStart,
-      nowMs
+      nowMs,
+      tombstonedSubjects
     );
 
     const conversionRate = {
@@ -199,13 +223,15 @@ export function createReportingService(deps: {
       params.tenantId,
       "plan.limit.warning_emitted",
       monthStart.getTime(),
-      nowMs
+      nowMs,
+      tombstonedSubjects
     );
     const upgradeSignalEmitted = hasEvent(
       params.tenantId,
       "plan.limit.upgrade_signal_emitted",
       monthStart.getTime(),
-      nowMs
+      nowMs,
+      tombstonedSubjects
     );
 
     const activeDevices = await deps.activeDeviceStore.countActive(params.tenantId);
@@ -241,30 +267,44 @@ export function createReportingService(deps: {
     dayStart: Date,
     weekStart: Date,
     monthStart: Date,
-    nowMs: number
+    nowMs: number,
+    tombstonedSubjects: Set<string>
   ): ReportingCounts {
     return {
-      day: countEvents(tenantId, eventName, dayStart.getTime(), nowMs),
-      week: countEvents(tenantId, eventName, weekStart.getTime(), nowMs),
-      month: countEvents(tenantId, eventName, monthStart.getTime(), nowMs),
+      day: countEvents(tenantId, eventName, dayStart.getTime(), nowMs, tombstonedSubjects),
+      week: countEvents(tenantId, eventName, weekStart.getTime(), nowMs, tombstonedSubjects),
+      month: countEvents(tenantId, eventName, monthStart.getTime(), nowMs, tombstonedSubjects),
     };
   }
 
-  function countEvents(tenantId: string, eventName: ReportingEventName, from: number, to: number): number {
-    return deps.store.listEvents({ tenantId, from, to, eventNames: [eventName] }).length;
+  function countEvents(
+    tenantId: string,
+    eventName: ReportingEventName,
+    from: number,
+    to: number,
+    tombstonedSubjects: Set<string>
+  ): number {
+    const events = deps.store.listEvents({ tenantId, from, to, eventNames: [eventName] });
+    return filterTombstoned(events, tombstonedSubjects).length;
   }
 
-  function hasEvent(tenantId: string, eventName: ReportingEventName, from: number, to: number): boolean {
-    return countEvents(tenantId, eventName, from, to) > 0;
+  function hasEvent(
+    tenantId: string,
+    eventName: ReportingEventName,
+    from: number,
+    to: number,
+    tombstonedSubjects: Set<string>
+  ): boolean {
+    return countEvents(tenantId, eventName, from, to, tombstonedSubjects) > 0;
   }
 
-  function getTimeseries(params: {
+  async function getTimeseries(params: {
     tenantId: string;
     metric: ReportingMetric;
     bucket: ReportingBucketSize;
     from: Date;
     to: Date;
-  }): ReportingTimeseries {
+  }): Promise<ReportingTimeseries> {
     const fromMs = params.from.getTime();
     const toMs = params.to.getTime();
     const eventName = METRIC_EVENT_MAP[params.metric];
@@ -274,6 +314,8 @@ export function createReportingService(deps: {
       to: toMs,
       eventNames: [eventName],
     });
+    const tombstonedSubjects = await listTombstonedSubjects(params.tenantId);
+    const filteredEvents = filterTombstoned(events, tombstonedSubjects);
 
     const alignedStart = alignToBucket(params.from, params.bucket);
     const series: ReportingTimeseriesBucket[] = [];
@@ -284,7 +326,7 @@ export function createReportingService(deps: {
       const bucketStart = cursor.getTime() < fromMs ? new Date(fromMs) : cursor;
       const bucketEnd = next.getTime() > toMs ? new Date(toMs) : next;
       if (bucketStart.getTime() < bucketEnd.getTime()) {
-        const count = events.filter(
+        const count = filteredEvents.filter(
           (event) => event.at >= bucketStart.getTime() && event.at < bucketEnd.getTime()
         ).length;
         series.push({
@@ -329,6 +371,22 @@ export function createReportingService(deps: {
     getSummary,
     getTimeseries,
   };
+
+  function filterTombstoned(events: ReportingEvent[], tombstonedSubjects: Set<string>): ReportingEvent[] {
+    if (!tombstonedSubjects.size) {
+      return events;
+    }
+    return events.filter((event) => !event.subjectId || !tombstonedSubjects.has(event.subjectId));
+  }
+
+  async function listTombstonedSubjects(tenantId: string): Promise<Set<string>> {
+    if (!deps.tombstoneRepo) {
+      return new Set();
+    }
+    const tombstones = await deps.tombstoneRepo.listTombstones(tenantId);
+    const set = new Set(tombstones.map((record) => record.subjectId));
+    return set;
+  }
 }
 
 function computeRate(qualified: number, links: number): number {

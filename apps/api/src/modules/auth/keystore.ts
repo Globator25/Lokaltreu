@@ -34,6 +34,10 @@ const PRIVATE_FIELDS = new Set(["d", "p", "q", "dp", "dq", "qi", "oth"]);
 
 let adminSigningContext: AdminSigningContext | null = null;
 
+export function resetAdminKeystoreCache() {
+  adminSigningContext = null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -2,7 +2,7 @@ param(
   [int]$Port = 4013,
   [string]$ServerHost = "127.0.0.1",
   [switch]$StartPrism,
-  [int]$TimeoutSec = 20
+  [int]$TimeoutSec = 60
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,9 +34,10 @@ $proc = $null
 try {
   if ($StartPrism) {
     if (-not (Test-Listening -ServerHost $ServerHost -Port $Port)) {
-      Write-Host "Starting Prism via npm on $ServerHost`:$Port ..."
-      $proc = Start-Process -FilePath "npm" `
-        -ArgumentList @("--workspaces=false","run","prism:mock","--",$Port) `
+      Write-Host "Starting Prism via node on $ServerHost`:$Port ..."
+      # WICHTIG: Kein npm run (Workspace-Fanout). Direkt node-Script ausführen.
+      $proc = Start-Process -FilePath "node" `
+        -ArgumentList @(".\scripts\prism-mock.mjs", "$Port") `
         -WorkingDirectory (Get-Location) `
         -PassThru `
         -WindowStyle Normal
@@ -51,6 +52,7 @@ try {
     throw "Prism not reachable on $ServerHost`:$Port after ${TimeoutSec}s"
   }
 
+  # REST Checks
   $summary = Invoke-RestMethod "$base/admins/reporting/summary"
   $ts = Invoke-RestMethod "$base/admins/reporting/timeseries?metric=stamps&bucket=day"
 
@@ -62,7 +64,7 @@ try {
 }
 finally {
   if ($proc) {
-    Write-Host "Stopping Prism (npm PID $($proc.Id))..."
+    Write-Host "Stopping Prism (node PID $($proc.Id))..."
     try { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue } catch {}
   }
 }

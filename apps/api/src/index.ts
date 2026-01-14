@@ -312,10 +312,17 @@ export function createAppServer() {
 
   const planStore = new InMemoryTenantPlanStore();
   const activeDeviceStore = new InMemoryActiveDeviceStore();
+  const dsrRequestRepo = isProdLike
+    ? createDbDsrRequestRepository(dbClient)
+    : new InMemoryDsrRequestRepository();
+  const deletedSubjectsRepo = isProdLike
+    ? createDbDeletedSubjectsRepository(dbClient)
+    : new InMemoryDeletedSubjectsRepository();
   const reportingService = createReportingService({
     store: reportingStore,
     planStore,
     activeDeviceStore,
+    tombstoneRepo: deletedSubjectsRepo,
   });
   const planUsageTracker = createPlanUsageTracker({ planStore });
   const planUsage = {
@@ -382,12 +389,6 @@ export function createAppServer() {
     },
   });
 
-  const dsrRequestRepo = isProdLike
-    ? createDbDsrRequestRepository(dbClient)
-    : new InMemoryDsrRequestRepository();
-  const deletedSubjectsRepo = isProdLike
-    ? createDbDeletedSubjectsRepository(dbClient)
-    : new InMemoryDeletedSubjectsRepository();
   const dsrService = createDsrService({
     repo: dsrRequestRepo,
     tombstoneRepo: deletedSubjectsRepo,

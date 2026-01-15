@@ -199,6 +199,7 @@ class InMemoryAuditSink implements AuditSink {
       tenantId: event.tenantId,
       event: event.event,
       at: event.at,
+      subjectId: typeof event.cardId === "string" ? event.cardId : undefined,
     });
     await this.wormWriter.write(mapAuditEventToWormInput(event));
   }

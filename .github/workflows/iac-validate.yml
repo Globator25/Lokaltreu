@@ -1,3 +1,5 @@
+name: IaC Validate (dev)
+
 on:
   push:
     branches: [main]

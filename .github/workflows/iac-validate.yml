@@ -9,6 +9,7 @@ on:
     paths:
       - "infra/terraform/**"
       - ".github/workflows/iac-validate.yml"
+  workflow_dispatch:
 
 concurrency:
   group: iac-validate-${{ github.ref }}

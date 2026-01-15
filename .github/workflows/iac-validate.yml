@@ -1,11 +1,12 @@
 name: IaC Validate (dev)
 
 on:
-  pull_request:
+  push:
+    branches: [main]
     paths:
       - "infra/terraform/**"
-  push:
-    branches: [ main ]
+  pull_request:
+    branches: [main]
     paths:
       - "infra/terraform/**"
 

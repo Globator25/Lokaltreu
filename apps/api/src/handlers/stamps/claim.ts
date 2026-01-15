@@ -33,6 +33,10 @@ function readCardId(req: StampClaimRequest): string {
   if (typeof fromContext === "string" && fromContext.trim()) {
     return fromContext.trim();
   }
+  const headerValue = req.headers["x-card-id"];
+  if (typeof headerValue === "string" && headerValue.trim()) {
+    return headerValue.trim();
+  }
   return "card-anon";
 }
 

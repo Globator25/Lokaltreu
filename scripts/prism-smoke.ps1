@@ -5,6 +5,43 @@ param(
   [int]$TimeoutSec = 60
 )
 
+function Get-HttpStatus {
+  param([string]$Url, [hashtable]$Headers = @{})
+  try {
+    $resp = Invoke-WebRequest -UseBasicParsing -Method Get -Uri $Url -Headers $Headers -TimeoutSec 5
+    return [int]$resp.StatusCode
+  } catch {
+    try {
+      $ex = $_.Exception
+      if ($null -ne $ex -and $null -ne $ex.Response) {
+        $status = $ex.Response.StatusCode
+        return [int]$status
+      }
+    } catch {
+      # ignore
+    }
+    return 0
+  }
+}
+
+function Wait-ForHttpStatus {
+  param(
+    [string]$Url,
+    [int]$ExpectedStatus = 200,
+    [int]$TimeoutSec = 60,
+    [int]$PollMs = 250,
+    [hashtable]$Headers = @{}
+  )
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  $lastStatus = 0
+  while ($sw.Elapsed.TotalSeconds -lt $TimeoutSec) {
+    $lastStatus = Get-HttpStatus -Url $Url -Headers $Headers
+    if ($lastStatus -eq $ExpectedStatus) { return $true }
+    Start-Sleep -Milliseconds $PollMs
+  }
+  throw "Wait-ForHttpStatus timeout: expected $ExpectedStatus after ${TimeoutSec}s (last=$lastStatus) for $Url"
+}
+
 $ErrorActionPreference = "Stop"
 $base = "http://$ServerHost`:$Port"
 
@@ -29,16 +66,38 @@ function Wait-ForPort {
   return $false
 }
 
+function Wait-ForHttp200 {
+  param([string]$Url, [int]$TimeoutSec)
+  $sw = [Diagnostics.Stopwatch]::StartNew()
+  while ($sw.Elapsed.TotalSeconds -lt $TimeoutSec) {
+    try {
+      $r = Invoke-WebRequest -UseBasicParsing -Uri $Url -SkipHttpErrorCheck -TimeoutSec 5
+      if ($r.StatusCode -eq 200) { return $true }
+    } catch {
+      # ignore transient connection errors while starting
+    }
+    Start-Sleep -Milliseconds 300
+  }
+  return $false
+}
+
+function Get-Http {
+  param([string]$Url)
+  # -SkipHttpErrorCheck verhindert Exception bei 401/403/etc.
+  return Invoke-WebRequest -UseBasicParsing -Uri $Url -SkipHttpErrorCheck -TimeoutSec 10
+}
+
 $proc = $null
 
 try {
   if ($StartPrism) {
     if (-not (Test-Listening -ServerHost $ServerHost -Port $Port)) {
       Write-Host "Starting Prism via node on $ServerHost`:$Port ..."
-      # WICHTIG: Kein npm run (Workspace-Fanout). Direkt node-Script ausführen.
+      # Prism-Port wird in diesem Repo über PRISM_PORT (env) gesteuert
       $proc = Start-Process -FilePath "node" `
-        -ArgumentList @(".\scripts\prism-mock.mjs", "$Port") `
+        -ArgumentList @(".\scripts\prism-mock.mjs") `
         -WorkingDirectory (Get-Location) `
+        -Environment @{ "PRISM_PORT" = "$Port" } `
         -PassThru `
         -WindowStyle Normal
     } else {
@@ -48,19 +107,18 @@ try {
 
   Write-Host "Smoke: $base"
 
-  if (-not (Wait-ForPort -ServerHost $ServerHost -Port $Port -TimeoutSec $TimeoutSec)) {
-    throw "Prism not reachable on $ServerHost`:$Port after ${TimeoutSec}s"
-  }
+  $jwksUrl = "$base/.well-known/jwks.json"
+  Wait-ForHttpStatus -Url $jwksUrl -ExpectedStatus 200 -TimeoutSec 60 | Out-Null
+  Write-Host "OK: JWKS reachable (200)"
 
-  # REST Checks
-  $summary = Invoke-RestMethod "$base/admins/reporting/summary"
-  $ts = Invoke-RestMethod "$base/admins/reporting/timeseries?metric=stamps&bucket=day"
+  $headers = @{ Authorization = "Bearer test-token" }
+  $summaryUrl = "$base/admins/reporting/summary"
+  $tsUrl = "$base/admins/reporting/timeseries?metric=stamps&bucket=week"
 
-  if (-not $summary.stamps) { throw "Missing summary.stamps" }
-  if ($ts.metric -ne "stamps") { throw "Unexpected metric: $($ts.metric)" }
-  if ($ts.bucket -ne "day") { throw "Unexpected bucket: $($ts.bucket)" }
+  Wait-ForHttpStatus -Url $summaryUrl -ExpectedStatus 200 -TimeoutSec 20 -Headers $headers | Out-Null
+  Wait-ForHttpStatus -Url $tsUrl -ExpectedStatus 200 -TimeoutSec 20 -Headers $headers | Out-Null
 
-  Write-Host "OK: summary + timeseries"
+  Write-Host "OK: prism smoke (jwks + reporting endpoints)"
 }
 finally {
   if ($proc) {

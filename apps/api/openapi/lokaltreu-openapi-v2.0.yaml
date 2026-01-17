@@ -38,6 +38,8 @@ tags:
     description: Public keys for token verification.
   - name: DSR
     description: Data subject requests (DSR) and tombstone workflow.
+  - name: Reporting
+    description: Aggregated KPIs and time series for admin dashboards.
 
 security: []
 
@@ -442,6 +444,174 @@ components:
           type: string
           format: uri
           nullable: true
+    ReportingCounts:
+      type: object
+      additionalProperties: false
+      required:
+        - day
+        - week
+        - month
+      properties:
+        day:
+          type: integer
+          minimum: 0
+        week:
+          type: integer
+          minimum: 0
+        month:
+          type: integer
+          minimum: 0
+    ReportingRates:
+      type: object
+      additionalProperties: false
+      required:
+        - day
+        - week
+        - month
+      properties:
+        day:
+          type: number
+          minimum: 0
+          maximum: 100
+        week:
+          type: number
+          minimum: 0
+          maximum: 100
+        month:
+          type: number
+          minimum: 0
+          maximum: 100
+    ReportingReferralKpis:
+      type: object
+      additionalProperties: false
+      required:
+        - linksIssued
+        - qualified
+        - bonusStamps
+        - conversionRate
+      properties:
+        linksIssued:
+          $ref: "#/components/schemas/ReportingCounts"
+        qualified:
+          $ref: "#/components/schemas/ReportingCounts"
+        bonusStamps:
+          $ref: "#/components/schemas/ReportingCounts"
+        conversionRate:
+          $ref: "#/components/schemas/ReportingRates"
+    ReportingDeviceActivity:
+      type: object
+      additionalProperties: false
+      required:
+        - activeDevices
+      properties:
+        activeDevices:
+          type: integer
+          minimum: 0
+    ReportingPlanUsage:
+      type: object
+      additionalProperties: false
+      required:
+        - period
+        - stampsUsed
+        - stampsLimit
+        - usagePercent
+        - warningEmitted
+        - upgradeSignalEmitted
+      properties:
+        period:
+          type: string
+          pattern: "^[0-9]{4}-[0-9]{2}$"
+        stampsUsed:
+          type: integer
+          minimum: 0
+        stampsLimit:
+          type: integer
+          minimum: 0
+          nullable: true
+        usagePercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        warningEmitted:
+          type: boolean
+        upgradeSignalEmitted:
+          type: boolean
+    ReportingSummaryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - stamps
+        - rewards
+        - referrals
+        - deviceActivity
+        - planUsage
+        - activeCampaigns
+      properties:
+        stamps:
+          $ref: "#/components/schemas/ReportingCounts"
+        rewards:
+          $ref: "#/components/schemas/ReportingCounts"
+        referrals:
+          $ref: "#/components/schemas/ReportingReferralKpis"
+        deviceActivity:
+          $ref: "#/components/schemas/ReportingDeviceActivity"
+        planUsage:
+          $ref: "#/components/schemas/ReportingPlanUsage"
+        activeCampaigns:
+          type: integer
+          minimum: 0
+    ReportingTimeseriesBucket:
+      type: object
+      additionalProperties: false
+      required:
+        - start
+        - end
+        - count
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        count:
+          type: integer
+          minimum: 0
+    ReportingTimeseriesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - metric
+        - bucket
+        - from
+        - to
+        - series
+      properties:
+        metric:
+          type: string
+          enum:
+            - stamps
+            - rewards
+            - referral_links
+            - referral_qualified
+            - referral_bonus_stamps
+        bucket:
+          type: string
+          enum:
+            - day
+            - week
+            - month
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        series:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportingTimeseriesBucket"
 
   responses:
     400BadRequest:
@@ -604,32 +774,168 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
+  /admins/reporting/summary:
+    get:
+      summary: Liefert aggregierte KPIs fuer das Admin-Dashboard
+      description: Aggregated stamps/rewards/referral KPIs and plan usage.
+      tags:
+        - Reporting
+      operationId: getReportingSummary
+      security:
+        - AdminAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportingSummaryResponse"
               examples:
-                unauthorized:
-                  summary: Missing or invalid auth context
+                summary:
+                  summary: Aggregated KPIs
                   value:
-                    type: "https://errors.lokaltreu.example/auth/unauthorized"
-                    title: "Unauthorized"
-                    status: 401
-                    error_code: "TOKEN_EXPIRED"
-                    correlation_id: "11111111-2222-3333-4444-555555555555"
-        "403":
-          description: PLAN_NOT_ALLOWED
+                    stamps:
+                      day: 3
+                      week: 14
+                      month: 45
+                    rewards:
+                      day: 1
+                      week: 4
+                      month: 9
+                    referrals:
+                      linksIssued:
+                        day: 2
+                        week: 7
+                        month: 18
+                      qualified:
+                        day: 1
+                        week: 3
+                        month: 8
+                      bonusStamps:
+                        day: 0
+                        week: 2
+                        month: 5
+                      conversionRate:
+                        day: 50
+                        week: 43
+                        month: 44
+                    deviceActivity:
+                      activeDevices: 2
+                    planUsage:
+                      period: "2025-09"
+                      stampsUsed: 45
+                      stampsLimit: 120
+                      usagePercent: 38
+                      warningEmitted: false
+                      upgradeSignalEmitted: false
+                    activeCampaigns: 1
+        "401":
+          description: Unauthorized
           content:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal Server Error
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /admins/reporting/timeseries:
+    get:
+      summary: Liefert Zeitreihen fuer Reporting-Metriken
+      description: Time series buckets for stamps, rewards, and referral metrics.
+      tags:
+        - Reporting
+      operationId: getReportingTimeseries
+      security:
+        - AdminAuth: []
+      parameters:
+        - name: metric
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - stamps
+              - rewards
+              - referral_links
+              - referral_qualified
+              - referral_bonus_stamps
+        - name: bucket
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - day
+              - week
+              - month
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportingTimeseriesResponse"
               examples:
-                plan_not_allowed:
-                  summary: Plan gate enforced
+                stamps_daily:
+                  summary: Daily stamp counts
                   value:
-                    type: "https://errors.lokaltreu.example/plan/not-allowed"
-                    title: "Plan not allowed"
-                    status: 403
-                    error_code: "PLAN_NOT_ALLOWED"
-                    correlation_id: "11111111-2222-3333-4444-555555555555"
-        "429":
-          description: Rate limited
+                    metric: "stamps"
+                    bucket: "day"
+                    from: "2025-09-01T00:00:00.000Z"
+                    to: "2025-09-04T00:00:00.000Z"
+                    series:
+                      - start: "2025-09-01T00:00:00.000Z"
+                        end: "2025-09-02T00:00:00.000Z"
+                        count: 4
+                      - start: "2025-09-02T00:00:00.000Z"
+                        end: "2025-09-03T00:00:00.000Z"
+                        count: 6
+                      - start: "2025-09-03T00:00:00.000Z"
+                        end: "2025-09-04T00:00:00.000Z"
+                        count: 2
+        "400":
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "401":
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          description: Internal Server Error
           content:
             application/problem+json:
               schema:

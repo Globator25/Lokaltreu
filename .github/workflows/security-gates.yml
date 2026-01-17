@@ -10,22 +10,45 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
 
-      - name: Install
-        run: npm ci
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Wichtig: Workspaces explizit installieren (inkl. workspace-root)
+      - name: Install (workspaces)
+        run: npm ci --workspaces --include-workspace-root
+
+      # Schlanker Diagnose-Step: zeigt sofort, ob @lokaltreu/types im Runner auflösbar ist
+      - name: Diagnose workspace types
+        run: |
+          ls -la packages/types || true
+          cat packages/types/package.json || true
+          node -p "require('node:fs').existsSync('packages/types/package.json')"
+          node -p "require.resolve('@lokaltreu/types/package.json')"
+          npm -w apps/api ls @lokaltreu/types || true
+
+      - name: Build types
+        run: npm run -w packages/types build
+
+      - name: Build API
+        run: npm run -w apps/api build
 
       - name: Start API (test profile)
-        run: npm run -w apps/api start:test &
+        run: |
+          npm run -w apps/api start:test &
+          echo "API_PID=$!" >> $GITHUB_ENV
+
       - name: Wait for API
         run: npx wait-on http://localhost:3001/health
 
-      - name: Anti-Replay
-        run: npm run test:security:replay
-
-      - name: Device-Proof
-        run: npm run test:security:device-proof
-
       - name: Plan-Gate
-        run: npm run test:security:plan-gate
+        run: npm run -w apps/api test:plan
+
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -n "${API_PID:-}" ]; then
+            kill "$API_PID" || true
+          fi

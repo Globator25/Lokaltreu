@@ -16,8 +16,13 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install
-        run: npm ci
+      - name: Install (workspaces)
+        run: npm ci --workspaces --include-workspace-root
+
+      - name: Diagnose workspace types
+        run: |
+          npm ls @lokaltreu/types -w apps/api
+          node -e "console.log(require('path').resolve('packages/types'))"
 
       - name: Build API
         run: npm run -w apps/api build

@@ -16,13 +16,21 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Wichtig: Workspaces explizit installieren (inkl. workspace-root)
       - name: Install (workspaces)
+        env:
+          NPM_CONFIG_WORKSPACES: "true"
         run: npm ci --workspaces --include-workspace-root
 
+      # Schlanker Diagnose-Step: zeigt sofort, ob @lokaltreu/types im Runner auflösbar ist
       - name: Diagnose workspace types
         run: |
-          npm ls @lokaltreu/types -w apps/api
-          node -e "console.log(require('path').resolve('packages/types'))"
+          node -v
+          npm -v
+          echo "Resolve package.json:"
+          node -p "require.resolve('@lokaltreu/types/package.json')"
+          echo "List scope dir:"
+          ls -la node_modules/@lokaltreu || true
 
       - name: Build API
         run: npm run -w apps/api build

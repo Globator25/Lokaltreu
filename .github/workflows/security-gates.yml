@@ -24,6 +24,7 @@ jobs:
       - name: Diagnose workspace types
         run: |
           ls -la packages/types || true
+          cat packages/types/package.json || true
           node -p "require('node:fs').existsSync('packages/types/package.json')"
           node -p "require.resolve('@lokaltreu/types/package.json')"
           npm -w apps/api ls @lokaltreu/types || true

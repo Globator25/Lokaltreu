@@ -66,17 +66,58 @@ type DsrRequestRow = {
   fulfilled_at: string | Date | null;
 };
 
-const mapRow = (row: DsrRequestRow): DsrRequestRecord => ({
-  id: row.id,
-  tenantId: row.tenant_id,
-  requestType: row.request_type as DsrRequestType,
-  subjectType: row.subject_type as DsrSubjectType,
-  subjectId: row.subject_id,
-  reason: row.reason,
-  status: row.status as DsrRequestStatus,
-  createdAt: new Date(row.created_at),
-  fulfilledAt: row.fulfilled_at ? new Date(row.fulfilled_at) : null,
-});
+const requestTypes: readonly DsrRequestType[] = ["DELETE", "ERASURE"];
+const subjectTypes: readonly DsrSubjectType[] = ["card_id", "device_id", "subject_id"];
+const statusTypes: readonly DsrRequestStatus[] = ["PENDING", "FULFILLED", "REJECTED"];
+
+function parseRequestType(value: string): DsrRequestType {
+  if (requestTypes.includes(value as DsrRequestType)) {
+    return value as DsrRequestType;
+  }
+  throw new Error(`Invalid request_type: ${value}`);
+}
+
+function parseSubjectType(value: string): DsrSubjectType {
+  if (subjectTypes.includes(value as DsrSubjectType)) {
+    return value as DsrSubjectType;
+  }
+  throw new Error(`Invalid subject_type: ${value}`);
+}
+
+function parseStatus(value: string): DsrRequestStatus {
+  if (statusTypes.includes(value as DsrRequestStatus)) {
+    return value as DsrRequestStatus;
+  }
+  throw new Error(`Invalid status: ${value}`);
+}
+
+function parseDate(value: string | Date): Date {
+  if (value instanceof Date) {
+    return new Date(value);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return new Date(value);
+  }
+  throw new Error("Invalid date value");
+}
+
+const mapRow = (row: DsrRequestRow): DsrRequestRecord => {
+  if (!row.id || !row.tenant_id || !row.subject_id) {
+    throw new Error("Invalid DSR row payload");
+  }
+
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    requestType: parseRequestType(row.request_type),
+    subjectType: parseSubjectType(row.subject_type),
+    subjectId: row.subject_id,
+    reason: row.reason,
+    status: parseStatus(row.status),
+    createdAt: parseDate(row.created_at),
+    fulfilledAt: row.fulfilled_at ? parseDate(row.fulfilled_at) : null,
+  };
+};
 
 const getClient = (db: DbClientLike, tx?: DbTransactionLike): DbClientLike => (tx ?? db);
 

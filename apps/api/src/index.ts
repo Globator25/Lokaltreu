@@ -41,7 +41,7 @@ import { createReferralService } from "./services/referrals.service.js";
 import { createPlanUsageTracker, InMemoryActiveDeviceStore } from "./plan/plan-policy.js";
 import { InMemoryDeletedSubjectsRepository, createDbDeletedSubjectsRepository } from "./repositories/deleted-subjects-repo.js";
 import { InMemoryDsrRequestRepository, createDbDsrRequestRepository } from "./repositories/dsr-requests-repo.js";
-import { createDsrService } from "./services/dsr-service.js";
+import { createDsrService, type DsrApplyDeletionParams } from "./services/dsr-service.js";
 import { createReportingService, InMemoryReportingStore, type ReportingStore } from "./modules/reporting/reporting.service.js";
 import {
   InMemoryWormAuditWriter,
@@ -394,7 +394,7 @@ export function createAppServer() {
     repo: dsrRequestRepo,
     tombstoneRepo: deletedSubjectsRepo,
     transaction: transactionRunner,
-    applyDeletion: (params) => {
+    applyDeletion: (params: DsrApplyDeletionParams) => {
       console.warn("dsr deletion applied", {
         tenant_id: params.tenantId,
         subject_id: params.subjectId,

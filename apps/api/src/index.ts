@@ -485,6 +485,13 @@ export function createAppServer() {
       const isRedeemRoute = req.method === "POST" && path === "/rewards/redeem";
       const isHotRoute = isClaimRoute || isRedeemRoute;
 
+      if (req.method === "GET" && (path === "/health" || path === "/ready")) {
+        res.statusCode = 200;
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify({ status: path === "/ready" ? "ready" : "ok" }));
+        return;
+      }
+
       if (isHotRoute) {
         if (req.headers["content-type"]?.includes("application/json") && !("body" in req)) {
           (req as { body?: unknown }).body = await readJsonBody(req);

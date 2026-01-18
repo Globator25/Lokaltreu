@@ -16,29 +16,43 @@ jobs:
           node-version: 20
           cache: npm
 
-      # Wichtig: Workspaces explizit installieren (inkl. workspace-root)
+      # 1) Installiere ALLE Workspaces deterministisch
       - name: Install (workspaces)
         run: npm ci --workspaces --include-workspace-root
 
-      # Schlanker Diagnose-Step: zeigt sofort, ob @lokaltreu/types im Runner auflösbar ist
-      - name: Diagnose workspace types
+      # 2) Diagnose: ist packages/types da und wird es von Node aufgelöst?
+      - name: Diagnose @lokaltreu/types resolution
         run: |
+          set -euxo pipefail
           ls -la packages/types || true
           cat packages/types/package.json || true
-          node -p "require('node:fs').existsSync('packages/types/package.json')"
-          node -p "require.resolve('@lokaltreu/types/package.json')"
-          npm -w apps/api ls @lokaltreu/types || true
 
+          # Node-Auflösung (muss funktionieren, sonst ist Linking kaputt)
+          node -p "require.resolve('@lokaltreu/types/package.json')"
+
+          # Zeige, wo es wirklich liegt
+          node -p "require('@lokaltreu/types/package.json').name"
+          node -p "require.resolve('@lokaltreu/types/package.json')"
+
+          # Sichtbarkeit in API-Workspace
+          npm -w apps/api ls @lokaltreu/types || true
+          ls -la apps/api/node_modules/@lokaltreu || true
+          ls -la apps/api/node_modules/@lokaltreu/types || true
+
+      # 3) Baue @lokaltreu/types (damit dist + d.ts existieren, wenn Package darauf verweist)
       - name: Build types
         run: npm run -w packages/types build
 
+      # 4) Baue API
       - name: Build API
         run: npm run -w apps/api build
 
+      # 5) Starte API + wait-on health
       - name: Start API (test profile)
         run: |
+          set -euxo pipefail
           npm run -w apps/api start:test &
-          echo "API_PID=$!" >> $GITHUB_ENV
+          echo $! > api.pid
 
       - name: Wait for API
         run: npx wait-on http://localhost:3001/health
@@ -46,9 +60,11 @@ jobs:
       - name: Plan-Gate
         run: npm run -w apps/api test:plan
 
+      # 6) Stop API (immer ausführen)
       - name: Stop API
         if: always()
         run: |
-          if [ -n "${API_PID:-}" ]; then
-            kill "$API_PID" || true
+          set -euxo pipefail
+          if [ -f api.pid ]; then
+            kill "$(cat api.pid)" || true
           fi

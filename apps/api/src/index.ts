@@ -16,6 +16,8 @@ import {
 import { handleGetJwks } from "./handlers/jwks/get-jwks.js";
 import { handleGetReferralLink } from "./handlers/referrals/link.js";
 import { handleRewardRedeem } from "./handlers/rewards/redeem.js";
+import { handleReportingSummary } from "./handlers/reporting/summary.js";
+import { handleReportingTimeseries } from "./handlers/reporting/timeseries.js";
 import { handleStampClaim } from "./handlers/stamps/claim.js";
 import { handleStampTokens } from "./handlers/stamps/tokens.js";
 import type { AdminSession, AdminSessionStore, AuditEvent, AuditSink } from "./handlers/admins/types.js";
@@ -39,7 +41,8 @@ import { createReferralService } from "./services/referrals.service.js";
 import { createPlanUsageTracker, InMemoryActiveDeviceStore } from "./plan/plan-policy.js";
 import { InMemoryDeletedSubjectsRepository, createDbDeletedSubjectsRepository } from "./repositories/deleted-subjects-repo.js";
 import { InMemoryDsrRequestRepository, createDbDsrRequestRepository } from "./repositories/dsr-requests-repo.js";
-import { createDsrService } from "./services/dsr-service.js";
+import { createDsrService, type DsrApplyDeletionParams } from "./services/dsr-service.js";
+import { createReportingService, InMemoryReportingStore, type ReportingStore } from "./modules/reporting/reporting.service.js";
 import {
   InMemoryWormAuditWriter,
   createDbWormAuditWriter,
@@ -185,10 +188,19 @@ function mapAuditEventToWormInput(event: AuditEvent) {
 
 class InMemoryAuditSink implements AuditSink {
   readonly events: AuditEvent[] = [];
-  constructor(private readonly wormWriter: WormAuditWriter) {}
+  constructor(
+    private readonly wormWriter: WormAuditWriter,
+    private readonly reportingStore?: ReportingStore,
+  ) {}
 
   async audit(event: AuditEvent): Promise<void> {
     this.events.push(event);
+    this.reportingStore?.recordEvent({
+      tenantId: event.tenantId,
+      event: event.event,
+      at: event.at,
+      subjectId: typeof event.cardId === "string" ? event.cardId : undefined,
+    });
     await this.wormWriter.write(mapAuditEventToWormInput(event));
   }
 }
@@ -261,7 +273,8 @@ export function createAppServer() {
   const wormWriter = isProdLike
     ? createDbWormAuditWriter({ db: dbClient, transaction: transactionRunner, logger: console })
     : new InMemoryWormAuditWriter();
-  const auditSink = new InMemoryAuditSink(wormWriter);
+  const reportingStore = new InMemoryReportingStore();
+  const auditSink = new InMemoryAuditSink(wormWriter, reportingStore);
   const deviceRepository = new InMemoryDeviceRepository();
   const replayStore = new InMemoryDeviceReplayStore();
   void seedDevDevice(deviceRepository);
@@ -300,6 +313,18 @@ export function createAppServer() {
 
   const planStore = new InMemoryTenantPlanStore();
   const activeDeviceStore = new InMemoryActiveDeviceStore();
+  const dsrRequestRepo = isProdLike
+    ? createDbDsrRequestRepository(dbClient)
+    : new InMemoryDsrRequestRepository();
+  const deletedSubjectsRepo = isProdLike
+    ? createDbDeletedSubjectsRepository(dbClient)
+    : new InMemoryDeletedSubjectsRepository();
+  const reportingService = createReportingService({
+    store: reportingStore,
+    planStore,
+    activeDeviceStore,
+    tombstoneRepo: deletedSubjectsRepo,
+  });
   const planUsageTracker = createPlanUsageTracker({ planStore });
   const planUsage = {
     recordStamp: async (params: { tenantId: string; correlationId: string }) => {
@@ -365,17 +390,11 @@ export function createAppServer() {
     },
   });
 
-  const dsrRequestRepo = isProdLike
-    ? createDbDsrRequestRepository(dbClient)
-    : new InMemoryDsrRequestRepository();
-  const deletedSubjectsRepo = isProdLike
-    ? createDbDeletedSubjectsRepository(dbClient)
-    : new InMemoryDeletedSubjectsRepository();
   const dsrService = createDsrService({
     repo: dsrRequestRepo,
     tombstoneRepo: deletedSubjectsRepo,
     transaction: transactionRunner,
-    applyDeletion: (params) => {
+    applyDeletion: (params: DsrApplyDeletionParams) => {
       console.warn("dsr deletion applied", {
         tenant_id: params.tenantId,
         subject_id: params.subjectId,
@@ -465,6 +484,13 @@ export function createAppServer() {
       const isClaimRoute = req.method === "POST" && path === "/stamps/claim";
       const isRedeemRoute = req.method === "POST" && path === "/rewards/redeem";
       const isHotRoute = isClaimRoute || isRedeemRoute;
+
+      if (req.method === "GET" && (path === "/health" || path === "/ready")) {
+        res.statusCode = 200;
+        res.setHeader("content-type", "application/json");
+        res.end(JSON.stringify({ status: path === "/ready" ? "ready" : "ok" }));
+        return;
+      }
 
       if (isHotRoute) {
         if (req.headers["content-type"]?.includes("application/json") && !("body" in req)) {
@@ -612,6 +638,26 @@ export function createAppServer() {
         await handleGetReferralLink(req, res, {
           service: referralService,
           logger: console,
+        });
+        return;
+      }
+      if (req.method === "GET" && path === "/admins/reporting/summary") {
+        const allowed = await requireAdmin(req, res);
+        if (!allowed) {
+          return;
+        }
+        await handleReportingSummary(req, res, {
+          service: reportingService,
+        });
+        return;
+      }
+      if (req.method === "GET" && path === "/admins/reporting/timeseries") {
+        const allowed = await requireAdmin(req, res);
+        if (!allowed) {
+          return;
+        }
+        await handleReportingTimeseries(req, res, {
+          service: reportingService,
         });
         return;
       }

@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import type { components } from "@lokaltreu/types";
 import type {
   DeletedSubjectsRepository,
 } from "../repositories/deleted-subjects-repo.js";
@@ -10,7 +9,7 @@ import type {
   DsrSubjectType,
 } from "../repositories/dsr-requests-repo.js";
 
-export type DsrFulfillAction = NonNullable<components["schemas"]["DsrFulfillRequest"]["action"]>;
+export type DsrFulfillAction = "DELETE" | "PSEUDONYMIZE";
 
 export class DsrRequestNotFoundError extends Error {
   constructor(message = "DSR request not found") {

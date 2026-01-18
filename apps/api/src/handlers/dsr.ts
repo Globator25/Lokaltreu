@@ -85,6 +85,10 @@ function readHeader(req: IncomingMessage, name: string): string | undefined {
   return undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 function resolveTenantId(req: DsrRequest, res: ServerResponse): string | null {
   const adminTenantId = req.context?.admin?.tenantId;
   if (!adminTenantId) {
@@ -176,14 +180,14 @@ export async function handleCreateDsrRequest(
   }
 
   const body = await readJsonBody(req);
-  if (!body) {
+  if (!isRecord(body)) {
     return sendProblem(
       res,
       problem(400, "Bad Request", "Invalid JSON body", req.url ?? "/dsr/requests"),
     );
   }
 
-  const requestType = parseRequestType(body["requestType"]);
+  const requestType = parseRequestType(body.requestType);
   if (!requestType) {
     return sendProblem(
       res,
@@ -191,7 +195,7 @@ export async function handleCreateDsrRequest(
     );
   }
 
-  const subject = parseSubject(body["subject"]);
+  const subject = parseSubject(body.subject);
   if (!subject) {
     return sendProblem(
       res,
@@ -199,7 +203,7 @@ export async function handleCreateDsrRequest(
     );
   }
 
-  const reasonValue = body["reason"];
+  const reasonValue = body.reason;
   if (reasonValue !== undefined && typeof reasonValue !== "string") {
     return sendProblem(
       res,
@@ -367,14 +371,14 @@ export async function handleFulfillDsrRequest(
   }
 
   const body = await readJsonBody(req);
-  if (body && (typeof body !== "object" || Array.isArray(body))) {
+  if (body !== undefined && body !== null && !isRecord(body)) {
     return sendProblem(
       res,
       problem(400, "Bad Request", "Invalid JSON body", req.url ?? "/dsr/requests/{dsr_id}/fulfill"),
     );
   }
 
-  const actionRaw = body?.["action"];
+  const actionRaw = isRecord(body) ? body.action : undefined;
   const action = parseAction(actionRaw);
   if (action === "invalid") {
     return sendProblem(

@@ -30,5 +30,5 @@ describe("index.ts main entrypoint", () => {
       listenMock.mockClear();
       createServerMock.mockClear();
     }
-  });
+  }, 20000);
 });

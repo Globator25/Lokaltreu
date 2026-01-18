@@ -2,10 +2,22 @@
   "name": "@lokaltreu/types",
   "version": "0.0.0",
   "type": "module",
-  "types": "src/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "lint": "node -e \"console.log('lint: skip @lokaltreu/types')\"",
-    "build": "node -e \"console.log('build: skip @lokaltreu/types')\"",
+    "gen:openapi": "openapi-typescript ../../apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o src/openapi.ts",
+    "build": "npm run gen:openapi && tsc -p tsconfig.json",
     "test": "node -e \"console.log('test: skip @lokaltreu/types')\" --",
     "test:plan": "node -e \"console.log('test:plan: skip @lokaltreu/types')\"",
     "test:plan:file": "node -e \"console.log('test:plan:file: skip @lokaltreu/types')\""

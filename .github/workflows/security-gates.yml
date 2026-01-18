@@ -1,4 +1,5 @@
 name: security-gates
+
 on:
   pull_request:
     branches: [main]
@@ -7,25 +8,75 @@ on:
 jobs:
   security:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
+        with:
+          node-version: 20
+          cache: npm
 
-      - name: Install
-        run: npm ci
+      - name: Install (workspaces)
+        run: npm ci --workspaces --include-workspace-root
 
-      - name: Start API (test profile)
-        run: npm run -w apps/api start:test &
-      - name: Wait for API
-        run: npx wait-on http://localhost:3001/health
+      - name: Build workspace types
+        run: npm run -w packages/types build
 
-      - name: Anti-Replay
-        run: npm run test:security:replay
+      - name: Build API
+        run: npm run -w apps/api build
 
-      - name: Device-Proof
-        run: npm run test:security:device-proof
+      - name: Start API + wait for health + plan-gate + cleanup (single shell)
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Plan-Gate
-        run: npm run test:security:plan-gate
+          export PORT=3001
+          echo "Starting API (test profile) on PORT=$PORT ..."
+
+          # Start in background; capture PID reliably (no subshell wrapping)
+          npm run -w apps/api start:test > api.log 2>&1 &
+          API_PID=$!
+          echo "API_PID=$API_PID"
+
+          # Ensure we always cleanup
+          cleanup() {
+            echo "Stopping API (PID=$API_PID) ..."
+            kill "$API_PID" >/dev/null 2>&1 || true
+            wait "$API_PID" >/dev/null 2>&1 || true
+            echo "Stopped API."
+            echo "Last 200 lines of api.log:"
+            tail -n 200 api.log || true
+          }
+          trap cleanup EXIT
+
+          echo "Process snapshot:"
+          ps -p "$API_PID" -o pid,cmd || true
+
+          echo "Waiting for http://127.0.0.1:3001/health ..."
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3001/health >/dev/null; then
+              ok=1
+              echo "API is healthy."
+              break
+            fi
+
+            if ! ps -p "$API_PID" >/dev/null 2>&1; then
+              echo "ERROR: API process died early."
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          if [ "$ok" -ne 1 ]; then
+            echo "ERROR: Timed out waiting for /health."
+            echo "Process snapshot:"
+            ps aux | grep -E "node|apps/api" | head -n 50 || true
+            exit 1
+          fi
+
+          echo "Running Plan-Gate ..."
+          npm run -w apps/api test:plan

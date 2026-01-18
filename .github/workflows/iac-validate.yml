@@ -1,13 +1,17 @@
 name: IaC Validate (dev)
 
 on:
-  pull_request:
-    paths:
-      - "infra/terraform/**"
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "infra/terraform/**"
+      - ".github/workflows/iac-validate.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/iac-validate.yml"
+  workflow_dispatch:
 
 concurrency:
   group: iac-validate-${{ github.ref }}

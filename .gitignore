@@ -61,3 +61,6 @@ packages/types/src/index.d.ts
 agents-sentinel.log
 contract-check.log
 
+# OpenAPI Prism mock specs
+apps/api/openapi/*.mock.yaml
+

@@ -7,7 +7,8 @@ on:
 jobs:
   security:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
 
@@ -16,55 +17,38 @@ jobs:
           node-version: 20
           cache: npm
 
-      # 1) Installiere ALLE Workspaces deterministisch
       - name: Install (workspaces)
         run: npm ci --workspaces --include-workspace-root
 
-      # 2) Diagnose: ist packages/types da und wird es von Node aufgelöst?
-      - name: Diagnose @lokaltreu/types resolution
-        run: |
-          set -euxo pipefail
-          ls -la packages/types || true
-          cat packages/types/package.json || true
-
-          # Node-Auflösung (muss funktionieren, sonst ist Linking kaputt)
-          node -p "require.resolve('@lokaltreu/types/package.json')"
-
-          # Zeige, wo es wirklich liegt
-          node -p "require('@lokaltreu/types/package.json').name"
-          node -p "require.resolve('@lokaltreu/types/package.json')"
-
-          # Sichtbarkeit in API-Workspace
-          npm -w apps/api ls @lokaltreu/types || true
-          ls -la apps/api/node_modules/@lokaltreu || true
-          ls -la apps/api/node_modules/@lokaltreu/types || true
-
-      # 3) Baue @lokaltreu/types (damit dist + d.ts existieren, wenn Package darauf verweist)
-      - name: Build types
+      - name: Build workspace types
         run: npm run -w packages/types build
 
-      # 4) Baue API
       - name: Build API
         run: npm run -w apps/api build
 
-      # 5) Starte API + wait-on health
       - name: Start API (test profile)
+        shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           npm run -w apps/api start:test &
-          echo $! > api.pid
+          echo $! > /tmp/api.pid
+          sleep 1
+          ps -p "$(cat /tmp/api.pid)" || true
 
-      - name: Wait for API
-        run: npx wait-on http://localhost:3001/health
+      - name: Wait for API (hard timeout)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # maximal 90s warten (sonst hängt der Job bis zum GH Timeout)
+          npx --yes wait-on@9.0.3 --timeout 90000 --interval 250 http://127.0.0.1:3001/health
 
       - name: Plan-Gate
         run: npm run -w apps/api test:plan
 
-      # 6) Stop API (immer ausführen)
       - name: Stop API
         if: always()
+        shell: bash
         run: |
-          set -euxo pipefail
-          if [ -f api.pid ]; then
-            kill "$(cat api.pid)" || true
+          if [ -f /tmp/api.pid ]; then
+            kill "$(cat /tmp/api.pid)" || true
           fi

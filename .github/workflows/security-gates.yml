@@ -30,17 +30,40 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm run -w apps/api start:test &
-          echo $! > /tmp/api.pid
-          sleep 1
-          ps -p "$(cat /tmp/api.pid)" || true
+          export PORT=3001
+          (npm run -w apps/api start:test > api.log 2>&1 &)
+          echo $! > api.pid
+          echo "API PID: $(cat api.pid)"
+          sleep 2
+          ps -p "$(cat api.pid)" -o pid,cmd || true
 
-      - name: Wait for API (hard timeout)
+      - name: Wait for API health (curl polling)
         shell: bash
         run: |
           set -euo pipefail
-          # maximal 90s warten (sonst hängt der Job bis zum GH Timeout)
-          npx --yes wait-on@9.0.3 --timeout 90000 --interval 250 http://127.0.0.1:3001/health
+          echo "Waiting for http://127.0.0.1:3001/health ..."
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3001/health >/dev/null; then
+              ok=1
+              echo "API is healthy."
+              break
+            fi
+            if ! ps -p "$(cat api.pid)" >/dev/null 2>&1; then
+              echo "API process died early. Showing logs:"
+              tail -n 200 api.log || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          if [ "$ok" -ne 1 ]; then
+            echo "Timed out waiting for /health. Showing logs:"
+            tail -n 200 api.log || true
+            echo "Process snapshot:"
+            ps aux | grep -E "node|apps/api" | head -n 50 || true
+            exit 1
+          fi
 
       - name: Plan-Gate
         run: npm run -w apps/api test:plan
@@ -49,6 +72,8 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ -f /tmp/api.pid ]; then
-            kill "$(cat /tmp/api.pid)" || true
+          set -euo pipefail
+          if [ -f api.pid ]; then
+            kill "$(cat api.pid)" >/dev/null 2>&1 || true
           fi
+          echo "Stopped API."

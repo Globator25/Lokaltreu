@@ -1,4 +1,5 @@
 name: security-gates
+
 on:
   pull_request:
     branches: [main]
@@ -26,21 +27,33 @@ jobs:
       - name: Build API
         run: npm run -w apps/api build
 
-      - name: Start API (test profile)
+      - name: Start API + wait for health + plan-gate + cleanup (single shell)
         shell: bash
         run: |
           set -euo pipefail
-          export PORT=3001
-          (npm run -w apps/api start:test > api.log 2>&1 &)
-          echo $! > api.pid
-          echo "API PID: $(cat api.pid)"
-          sleep 2
-          ps -p "$(cat api.pid)" -o pid,cmd || true
 
-      - name: Wait for API health (curl polling)
-        shell: bash
-        run: |
-          set -euo pipefail
+          export PORT=3001
+          echo "Starting API (test profile) on PORT=$PORT ..."
+
+          # Start in background; capture PID reliably (no subshell wrapping)
+          npm run -w apps/api start:test > api.log 2>&1 &
+          API_PID=$!
+          echo "API_PID=$API_PID"
+
+          # Ensure we always cleanup
+          cleanup() {
+            echo "Stopping API (PID=$API_PID) ..."
+            kill "$API_PID" >/dev/null 2>&1 || true
+            wait "$API_PID" >/dev/null 2>&1 || true
+            echo "Stopped API."
+            echo "Last 200 lines of api.log:"
+            tail -n 200 api.log || true
+          }
+          trap cleanup EXIT
+
+          echo "Process snapshot:"
+          ps -p "$API_PID" -o pid,cmd || true
+
           echo "Waiting for http://127.0.0.1:3001/health ..."
           ok=0
           for i in $(seq 1 60); do
@@ -49,31 +62,21 @@ jobs:
               echo "API is healthy."
               break
             fi
-            if ! ps -p "$(cat api.pid)" >/dev/null 2>&1; then
-              echo "API process died early. Showing logs:"
-              tail -n 200 api.log || true
+
+            if ! ps -p "$API_PID" >/dev/null 2>&1; then
+              echo "ERROR: API process died early."
               exit 1
             fi
+
             sleep 2
           done
 
           if [ "$ok" -ne 1 ]; then
-            echo "Timed out waiting for /health. Showing logs:"
-            tail -n 200 api.log || true
+            echo "ERROR: Timed out waiting for /health."
             echo "Process snapshot:"
             ps aux | grep -E "node|apps/api" | head -n 50 || true
             exit 1
           fi
 
-      - name: Plan-Gate
-        run: npm run -w apps/api test:plan
-
-      - name: Stop API
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f api.pid ]; then
-            kill "$(cat api.pid)" >/dev/null 2>&1 || true
-          fi
-          echo "Stopped API."
+          echo "Running Plan-Gate ..."
+          npm run -w apps/api test:plan

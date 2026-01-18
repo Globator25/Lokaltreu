@@ -1,4 +1,5 @@
 name: ci
+
 on:
   pull_request:
     branches: [main]
@@ -11,8 +12,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
+        with:
+          node-version: 20
+          cache: npm
 
       - name: AGENTS.md sentinels
         shell: pwsh
@@ -20,18 +24,20 @@ jobs:
 
       - name: Install
         run: npm ci
-        
+
       - name: Build workspace types
         run: npm run -w packages/types build
 
       - name: Lint
         run: npm run lint
 
-      - name: OpenAPI Lint
-        run: npx @stoplight/spectral-cli lint apps/api/openapi/lokaltreu-openapi-v2.0.yaml
+      - name: OpenAPI Lint (Spectral)
+        run: npx @stoplight/spectral-cli lint --ruleset "$GITHUB_WORKSPACE/.spectral.yaml" "$GITHUB_WORKSPACE/apps/api/openapi/lokaltreu-openapi-v2.0.yaml"
 
-      - name: Contract types
-        run: npx openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts
+      # Wichtig:
+      # packages/types build erzeugt bereits die generierten OpenAPI-Types (packages/types/src/openapi.ts).
+      # Daher hier KEIN zusätzlicher "Contract types" Step, der ins Repo schreibt (z.B. index.d.ts),
+      # um Drift/Untracked Changes im CI zu vermeiden.
 
       - name: Build
         run: npm run build

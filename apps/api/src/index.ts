@@ -245,7 +245,17 @@ async function seedDevDevice(repo: InMemoryDeviceRepository): Promise<void> {
   console.warn(`DEV_SEED applied for ${tenantId}/${deviceId}`);
 }
 
-export function createAppServer() {
+export function createAppServer(deps?: {
+  mail?: {
+    sendPlanLimitWarning: (params: {
+      tenantId: string;
+      threshold: 80 | 100;
+      usagePercent: number;
+      planCode: string;
+      correlationId: string;
+    }) => Promise<void> | void;
+  };
+}) {
   const sessionStore = new InMemoryAdminSessionStore();
   const isProdLike = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "staging";
   const dbClient: DbClientLike = isProdLike
@@ -325,6 +335,7 @@ export function createAppServer() {
     activeDeviceStore,
     tombstoneRepo: deletedSubjectsRepo,
   });
+  const mail = deps?.mail;
   const planUsageTracker = createPlanUsageTracker({ planStore });
   const planUsage = {
     recordStamp: async (params: { tenantId: string; correlationId: string }) => {
@@ -354,6 +365,26 @@ export function createAppServer() {
         },
         at: Date.now(),
       }));
+      void Promise.resolve(mail?.sendPlanLimitWarning({
+        tenantId: params.tenantId,
+        threshold,
+        usagePercent: usage.usagePercent,
+        planCode: plan,
+        correlationId: params.correlationId,
+      })).catch(() => {
+        void Promise.resolve(auditSink.audit({
+          event: "mail.send_failed",
+          tenantId: params.tenantId,
+          correlationId: params.correlationId,
+          meta: {
+            template: "plan_limit_warning",
+            threshold,
+            usage_percent: usage.usagePercent,
+            plan_code: plan,
+          },
+          at: Date.now(),
+        } as AuditEvent));
+      });
       console.warn("plan limit signal emitted", {
         tenant_id: params.tenantId,
         correlation_id: params.correlationId,

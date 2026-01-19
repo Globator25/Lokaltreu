@@ -15,8 +15,14 @@ import {
 } from "../../modules/devices/deviceRegistrationLinks.db.js";
 import type { DbClientLike } from "../../modules/devices/deviceRegistrationLinks.repo.js";
 
-type DeviceRegistrationConfirmDeps = Omit<DeviceOnboardingServiceDeps, "repo"> & {
+type DeviceRegistrationConfirmDeps = Omit<
+  DeviceOnboardingServiceDeps,
+  "repo" | "mail" | "audit" | "logger"
+> & {
   db: DbClientLike;
+  mail?: DeviceOnboardingServiceDeps["mail"];
+  audit?: DeviceOnboardingServiceDeps["audit"];
+  logger?: DeviceOnboardingServiceDeps["logger"];
 };
 
 export async function handleDeviceRegistrationConfirm(

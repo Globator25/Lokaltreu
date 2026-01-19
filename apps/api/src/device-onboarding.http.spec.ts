@@ -96,7 +96,15 @@ function createInMemoryDbClient(): DbClientLike {
   };
 }
 
-async function startDeviceOnboardingServer(db: DbClientLike, idempotencyStore: InMemoryIdempotencyStore): Promise<ServerHandle> {
+async function startDeviceOnboardingServer(
+  db: DbClientLike,
+  idempotencyStore: InMemoryIdempotencyStore,
+  opts?: {
+    mail?: {
+      sendDeviceBoundAlert: (params: { tenantId: string; deviceId: string }) => Promise<void> | void;
+    };
+  },
+): Promise<ServerHandle> {
   const server = createServer((req, res) => {
     const path = req.url?.split("?")[0] ?? "/";
     if (req.method === "POST" && path === "/devices/registration-links") {
@@ -112,7 +120,7 @@ async function startDeviceOnboardingServer(db: DbClientLike, idempotencyStore: I
       return;
     }
     if (req.method === "POST" && path === "/devices/register/confirm") {
-      void handleDeviceRegistrationConfirm(req, res, { db });
+      void handleDeviceRegistrationConfirm(req, res, { db, ...(opts ?? {}) });
       return;
     }
     res.statusCode = 404;
@@ -256,5 +264,35 @@ describe("device onboarding http integration", () => {
 
     expect(firstBody.token).toBe(secondBody.token);
     expect(firstBody.expiresAt).toBe(secondBody.expiresAt);
+  });
+
+  it("confirms registration even if mail send fails", async () => {
+    const db = createInMemoryDbClient();
+    const idempotencyStore = new InMemoryIdempotencyStore();
+    serverHandle = await startDeviceOnboardingServer(db, idempotencyStore, {
+      mail: {
+        sendDeviceBoundAlert: () => {
+          throw new Error("boom");
+        },
+      },
+    });
+
+    const createRes = await fetch(`${serverHandle.baseUrl}/devices/registration-links`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-create-00000005" },
+      body: JSON.stringify({}),
+    });
+
+    expect(createRes.status).toBe(201);
+    const createBody = await readJson(createRes);
+    const token = createBody.token;
+
+    const confirmRes = await fetch(`${serverHandle.baseUrl}/devices/register/confirm`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "device-onboarding-confirm-00000005" },
+      body: JSON.stringify({ token }),
+    });
+
+    expect(confirmRes.status).toBe(204);
   });
 });

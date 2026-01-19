@@ -169,10 +169,22 @@ export function createDeviceOnboardingService(
         await deps.activeDeviceStore.markActive({ tenantId, deviceId });
       }
 
-      await mail?.sendDeviceBoundAlert({
-        tenantId,
-        deviceId,
-      });
+      try {
+        await mail?.sendDeviceBoundAlert({ tenantId, deviceId });
+      } catch {
+        logger?.warn?.("mail send failed", {
+          tenantId,
+          deviceId,
+          template: "device_bound_alert",
+        });
+        await Promise.resolve(
+          audit?.log("mail.send_failed", {
+            tenantId,
+            deviceId,
+            template: "device_bound_alert",
+          }),
+        );
+      }
 
       await audit?.log("device.registration.confirmed", {
         tenantId,

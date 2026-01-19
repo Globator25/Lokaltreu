@@ -3,1030 +3,1444 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "/admins/register": {
-    /**
-     * Registriert Admin+Mandant
-     * @description Creates the initial admin account and tenant.
-     */
-    post: operations["registerAdmin"];
-  };
-  "/admins/login": {
-    /**
-     * Admin login
-     * @description Issues a new admin session for valid credentials.
-     */
-    post: operations["loginAdmin"];
-  };
-  "/admins/reporting/summary": {
-    /**
-     * Liefert aggregierte KPIs fuer das Admin-Dashboard
-     * @description Aggregated stamps/rewards/referral KPIs and plan usage.
-     */
-    get: operations["getReportingSummary"];
-  };
-  "/admins/reporting/timeseries": {
-    /**
-     * Liefert Zeitreihen fuer Reporting-Metriken
-     * @description Time series buckets for stamps, rewards, and referral metrics.
-     */
-    get: operations["getReportingTimeseries"];
-  };
-  "/admins/refresh": {
-    /**
-     * Refresh admin session
-     * @description Refreshes an admin session using a refresh token.
-     */
-    post: operations["refreshAdminSession"];
-  };
-  "/admins/logout": {
-    /**
-     * Logout admin session
-     * @description Revokes the current admin session.
-     */
-    post: operations["logoutAdmin"];
-  };
-  "/.well-known/jwks.json": {
-    /**
-     * JWKS
-     * @description Returns the public JWKS for token verification.
-     */
-    get: operations["getJwks"];
-  };
-  "/devices/registration-links": {
-    /**
-     * Erzeugt einmaligen Registrierungslink (TTL 15 Min)
-     * @description Idempotent. Link ist einmalig und zeitlich begrenzt.
-     */
-    post: operations["createDeviceRegistrationLink"];
-  };
-  "/devices/register/confirm": {
-    /**
-     * Bestätigt Gerätebindung
-     * @description Einmalig verwendbar. Idempotent. Sicherheits-E-Mail wird versendet.
-     */
-    post: operations["confirmDeviceRegistration"];
-  };
-  "/dsr/requests": {
-    /**
-     * Create DSR request
-     * @description Creates a DSR request and records a tombstone on fulfillment.
-     */
-    post: operations["createDsrRequest"];
-  };
-  "/dsr/requests/{dsr_id}": {
-    /**
-     * Get DSR request status
-     * @description Returns status and metadata for a DSR request.
-     */
-    get: operations["getDsrRequest"];
-  };
-  "/dsr/requests/{dsr_id}/fulfill": {
-    /**
-     * Fulfill DSR request
-     * @description Triggers deletion/pseudonymization and inserts tombstone records.
-     */
-    post: operations["fulfillDsrRequest"];
-  };
-  "/stamps/tokens": {
-    /**
-     * Erzeugt einmaligen Stempel-Token (QR)
-     * @description Issues a one-time stamp token for client scan.
-     */
-    post: operations["createStampToken"];
-  };
-  "/stamps/claim": {
-    /**
-     * Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
-     * @description Claims a stamp and applies referral rules if eligible.
-     */
-    post: operations["claimStamp"];
-  };
-  "/rewards/redeem": {
-    /**
-     * Löst eine Prämie ein
-     * @description Redeems a reward for a valid redemption token.
-     */
-    post: operations["redeemReward"];
-  };
-  "/referrals/link": {
-    /**
-     * Liefert personalisierten Referral-Link (Werber)
-     * @description Returns the referral link for an existing customer.
-     */
-    get: operations["getReferralLink"];
-  };
+    "/admins/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registriert Admin+Mandant
+         * @description Creates the initial admin account and tenant.
+         */
+        post: operations["registerAdmin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admins/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin login
+         * @description Issues a new admin session for valid credentials.
+         */
+        post: operations["loginAdmin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admins/reporting/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liefert aggregierte KPIs fuer das Admin-Dashboard
+         * @description Aggregated stamps/rewards/referral KPIs and plan usage.
+         */
+        get: operations["getReportingSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admins/reporting/timeseries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liefert Zeitreihen fuer Reporting-Metriken
+         * @description Time series buckets for stamps, rewards, and referral metrics.
+         */
+        get: operations["getReportingTimeseries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admins/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh admin session
+         * @description Refreshes an admin session using a refresh token.
+         */
+        post: operations["refreshAdminSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admins/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout admin session
+         * @description Revokes the current admin session.
+         */
+        post: operations["logoutAdmin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/jwks.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * JWKS
+         * @description Returns the public JWKS for token verification.
+         */
+        get: operations["getJwks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/registration-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Erzeugt einmaligen Registrierungslink (TTL 15 Min)
+         * @description Idempotent. Link ist einmalig und zeitlich begrenzt.
+         */
+        post: operations["createDeviceRegistrationLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/register/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bestätigt Gerätebindung
+         * @description Einmalig verwendbar. Idempotent. Sicherheits-E-Mail wird versendet.
+         */
+        post: operations["confirmDeviceRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsr/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create DSR request
+         * @description Creates a DSR request and records a tombstone on fulfillment.
+         */
+        post: operations["createDsrRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsr/requests/{dsr_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get DSR request status
+         * @description Returns status and metadata for a DSR request.
+         */
+        get: operations["getDsrRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsr/requests/{dsr_id}/fulfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fulfill DSR request
+         * @description Triggers deletion/pseudonymization and inserts tombstone records.
+         */
+        post: operations["fulfillDsrRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stamps/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Erzeugt einmaligen Stempel-Token (QR)
+         * @description Issues a one-time stamp token for client scan.
+         */
+        post: operations["createStampToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/stamps/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
+         * @description Claims a stamp and applies referral rules if eligible.
+         */
+        post: operations["claimStamp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rewards/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Löst eine Prämie ein
+         * @description Redeems a reward for a valid redemption token.
+         */
+        post: operations["redeemReward"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/referrals/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liefert personalisierten Referral-Link (Werber)
+         * @description Returns the referral link for an existing customer.
+         */
+        get: operations["getReferralLink"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
-
 export type webhooks = Record<string, never>;
-
 export interface components {
-  schemas: {
-    Problem: {
-      /** Format: uri */
-      type: string;
-      title: string;
-      status: number;
-      detail?: string;
-      instance?: string;
-      /** @enum {string} */
-      error_code?: "TOKEN_EXPIRED" | "TOKEN_REUSE" | "SELF_REFERRAL_BLOCKED" | "REFERRAL_LIMIT_REACHED" | "REFERRAL_TENANT_MISMATCH" | "REFERRAL_CODE_INVALID" | "PLAN_NOT_ALLOWED" | "RATE_LIMITED" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_INVALID";
-      correlation_id?: string;
-      retry_after?: number;
-      [key: string]: unknown;
-    };
-    AdminLoginRequest: {
-      /** Format: email */
-      email: string;
-      password: string;
-    };
-    AdminRefreshRequest: {
-      refreshToken: string;
-    };
-    AdminSessionResponse: {
-      accessToken: string;
-      refreshToken: string;
-      expiresIn: number;
-    };
-    AdminRegistrationResponse: {
-      /** Format: uuid */
-      adminId: string;
-      /** Format: uuid */
-      tenantId: string;
-      accessToken: string;
-      refreshToken: string;
-      expiresIn: number;
-    };
-    JwksResponse: {
-      keys: Record<string, never>[];
-    };
-    DsrSubject: {
-      /** @enum {string} */
-      subject_type: "card_id" | "device_id" | "subject_id";
-      subject_id: string;
-    };
-    DsrRequestCreateRequest: {
-      /** @enum {string} */
-      requestType: "DELETE" | "ERASURE";
-      subject: components["schemas"]["DsrSubject"];
-      reason?: string;
-    };
-    DsrRequestResponse: {
-      /** Format: uuid */
-      dsrRequestId: string;
-      /** @enum {string} */
-      status: "PENDING" | "FULFILLED" | "REJECTED";
-      /** @enum {string} */
-      requestType: "DELETE" | "ERASURE";
-      subject: components["schemas"]["DsrSubject"];
-      /** Format: date-time */
-      createdAt: string;
-    };
-    DsrRequestStatusResponse: {
-      /** Format: uuid */
-      dsrRequestId: string;
-      /** @enum {string} */
-      status: "PENDING" | "FULFILLED" | "REJECTED";
-      /** @enum {string} */
-      requestType: "DELETE" | "ERASURE";
-      subject: components["schemas"]["DsrSubject"];
-      /** Format: date-time */
-      createdAt: string;
-      /** Format: date-time */
-      fulfilledAt?: string | null;
-    };
-    DsrFulfillRequest: {
-      /** @enum {string} */
-      action?: "DELETE" | "PSEUDONYMIZE";
-    };
-    StampTokenResponse: {
-      qrToken: string;
-      jti: string;
-      /** Format: date-time */
-      expiresAt: string;
-    };
-    StampClaimRequest: {
-      qrToken: string;
-      ref?: string | null;
-    };
-    CardState: {
-      currentStamps: number;
-      stampsRequired: number;
-      rewardsAvailable: number;
-    };
-    OfferSnippet: {
-      title: string;
-      body?: string | null;
-    };
-    StampClaimResponse: components["schemas"]["StampClaimResponsePayload"];
-    StampClaimResponsePayload: {
-      cardState: components["schemas"]["CardState"];
-      offer?: components["schemas"]["OfferSnippet"] | null;
-    };
-    RedeemResponse: {
-      cardState: components["schemas"]["CardState"];
-    };
-    DeviceRegistrationLinkResponse: {
-      /** Format: uri */
-      linkUrl: string;
-      token: string;
-      /** Format: date-time */
-      expiresAt: string;
-      /** Format: uri */
-      qrImageUrl?: string | null;
-    };
-    ReportingCounts: {
-      day: number;
-      week: number;
-      month: number;
-    };
-    ReportingRates: {
-      day: number;
-      week: number;
-      month: number;
-    };
-    ReportingReferralKpis: {
-      linksIssued: components["schemas"]["ReportingCounts"];
-      qualified: components["schemas"]["ReportingCounts"];
-      bonusStamps: components["schemas"]["ReportingCounts"];
-      conversionRate: components["schemas"]["ReportingRates"];
-    };
-    ReportingDeviceActivity: {
-      activeDevices: number;
-    };
-    ReportingPlanUsage: {
-      period: string;
-      stampsUsed: number;
-      stampsLimit: number | null;
-      usagePercent: number | null;
-      warningEmitted: boolean;
-      upgradeSignalEmitted: boolean;
-    };
-    ReportingSummaryResponse: {
-      stamps: components["schemas"]["ReportingCounts"];
-      rewards: components["schemas"]["ReportingCounts"];
-      referrals: components["schemas"]["ReportingReferralKpis"];
-      deviceActivity: components["schemas"]["ReportingDeviceActivity"];
-      planUsage: components["schemas"]["ReportingPlanUsage"];
-      activeCampaigns: number;
-    };
-    ReportingTimeseriesBucket: {
-      /** Format: date-time */
-      start: string;
-      /** Format: date-time */
-      end: string;
-      count: number;
-    };
-    ReportingTimeseriesResponse: {
-      /** @enum {string} */
-      metric: "stamps" | "rewards" | "referral_links" | "referral_qualified" | "referral_bonus_stamps";
-      /** @enum {string} */
-      bucket: "day" | "week" | "month";
-      /** Format: date-time */
-      from: string;
-      /** Format: date-time */
-      to: string;
-      series: components["schemas"]["ReportingTimeseriesBucket"][];
-    };
-  };
-  responses: {
-    /** @description Ungültige Anfrage */
-    "400BadRequest": {
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-    /** @description Nicht autorisiert */
-    "401Unauthorized": {
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-    /** @description Verboten */
-    "403Forbidden": {
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-    /** @description Konflikt */
-    "409Conflict": {
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-    /** @description Semantisch fehlerhaft */
-    "422Unprocessable": {
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-    /** @description Rate-Limit erreicht */
-    "429RateLimited": {
-      headers: {
-        "Retry-After": components["headers"]["Retry-After"];
-      };
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-    /** @description Interner Serverfehler */
-    "500ServerError": {
-      content: {
-        "application/problem+json": components["schemas"]["Problem"];
-      };
-    };
-  };
-  parameters: {
-    /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
-    IdempotencyKey: string;
-    /** @description Tenant context for anonymous customer flows (pseudonymous, no PII). */
-    XTenantId: string;
-    /** @description Pseudonymous customer card id (no PII). */
-    XCardId?: string;
-    /** @description Pseudonymous customer card id (no PII). */
-    XCardIdRequired: string;
-    XDeviceProof: string;
-    /** @description Unix timestamp in seconds (allowed skew ±30s). */
-    XDeviceTimestamp: string;
-    DsrRequestId: string;
-  };
-  requestBodies: never;
-  headers: {
-    /** @description Echo des Idempotenz-Schlüssels. Gültigkeit 24 h. Scope {tenantId,route,bodyHash}. */
-    "Idempotency-Key": string;
-    /** @description Seconds until the client may retry. */
-    "Retry-After": number;
-  };
-  pathItems: never;
-}
-
-export type $defs = Record<string, never>;
-
-export type external = Record<string, never>;
-
-export interface operations {
-
-  /**
-   * Registriert Admin+Mandant
-   * @description Creates the initial admin account and tenant.
-   */
-  registerAdmin: {
-    requestBody: {
-      content: {
-        "application/json": {
-          /** Format: email */
-          email: string;
-          password: string;
-        };
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        content: {
-          "application/json": components["schemas"]["AdminRegistrationResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Admin login
-   * @description Issues a new admin session for valid credentials.
-   */
-  loginAdmin: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["AdminLoginRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["AdminSessionResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Liefert aggregierte KPIs fuer das Admin-Dashboard
-   * @description Aggregated stamps/rewards/referral KPIs and plan usage.
-   */
-  getReportingSummary: {
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ReportingSummaryResponse"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Internal Server Error */
-      500: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Liefert Zeitreihen fuer Reporting-Metriken
-   * @description Time series buckets for stamps, rewards, and referral metrics.
-   */
-  getReportingTimeseries: {
-    parameters: {
-      query: {
-        metric: "stamps" | "rewards" | "referral_links" | "referral_qualified" | "referral_bonus_stamps";
-        bucket: "day" | "week" | "month";
-        from?: string;
-        to?: string;
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["ReportingTimeseriesResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Internal Server Error */
-      500: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Refresh admin session
-   * @description Refreshes an admin session using a refresh token.
-   */
-  refreshAdminSession: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["AdminRefreshRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["AdminSessionResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Rate limited */
-      429: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Logout admin session
-   * @description Revokes the current admin session.
-   */
-  logoutAdmin: {
-    requestBody: {
-      content: {
-        "application/json": {
-          refreshToken: string;
-        };
-      };
-    };
-    responses: {
-      /** @description No Content */
-      204: {
-        content: never;
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Rate limited */
-      429: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * JWKS
-   * @description Returns the public JWKS for token verification.
-   */
-  getJwks: {
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["JwksResponse"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Erzeugt einmaligen Registrierungslink (TTL 15 Min)
-   * @description Idempotent. Link ist einmalig und zeitlich begrenzt.
-   */
-  createDeviceRegistrationLink: {
-    parameters: {
-      header: {
-        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-      };
-    };
-    responses: {
-      /** @description Link erstellt */
-      201: {
-        headers: {
-          "Idempotency-Key": components["headers"]["Idempotency-Key"];
-        };
-        content: {
-          "application/json": components["schemas"]["DeviceRegistrationLinkResponse"];
-        };
-      };
-      400: components["responses"]["400BadRequest"];
-      401: components["responses"]["401Unauthorized"];
-      403: components["responses"]["403Forbidden"];
-      409: components["responses"]["409Conflict"];
-      429: components["responses"]["429RateLimited"];
-      500: components["responses"]["500ServerError"];
-    };
-  };
-  /**
-   * Bestätigt Gerätebindung
-   * @description Einmalig verwendbar. Idempotent. Sicherheits-E-Mail wird versendet.
-   */
-  confirmDeviceRegistration: {
-    parameters: {
-      header: {
-        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": {
-          token: string;
-        };
-      };
-    };
-    responses: {
-      /** @description Bestätigt */
-      204: {
-        headers: {
-          "Idempotency-Key": components["headers"]["Idempotency-Key"];
-        };
-        content: never;
-      };
-      400: components["responses"]["400BadRequest"];
-      /** @description PLAN_NOT_ALLOWED */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      409: components["responses"]["409Conflict"];
-      429: components["responses"]["429RateLimited"];
-      500: components["responses"]["500ServerError"];
-    };
-  };
-  /**
-   * Create DSR request
-   * @description Creates a DSR request and records a tombstone on fulfillment.
-   */
-  createDsrRequest: {
-    parameters: {
-      header: {
-        "X-Tenant-Id": components["parameters"]["XTenantId"];
-        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["DsrRequestCreateRequest"];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          "Idempotency-Key": components["headers"]["Idempotency-Key"];
-        };
-        content: {
-          "application/json": components["schemas"]["DsrRequestResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description PLAN_NOT_ALLOWED */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Rate limited */
-      429: {
-        headers: {
-          "Retry-After": components["headers"]["Retry-After"];
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Internal Server Error */
-      500: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Get DSR request status
-   * @description Returns status and metadata for a DSR request.
-   */
-  getDsrRequest: {
-    parameters: {
-      header: {
-        "X-Tenant-Id": components["parameters"]["XTenantId"];
-      };
-      path: {
-        dsr_id: components["parameters"]["DsrRequestId"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["DsrRequestStatusResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description PLAN_NOT_ALLOWED */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Rate limited */
-      429: {
-        headers: {
-          "Retry-After": components["headers"]["Retry-After"];
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Internal Server Error */
-      500: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Fulfill DSR request
-   * @description Triggers deletion/pseudonymization and inserts tombstone records.
-   */
-  fulfillDsrRequest: {
-    parameters: {
-      header: {
-        "X-Tenant-Id": components["parameters"]["XTenantId"];
-        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-      };
-      path: {
-        dsr_id: components["parameters"]["DsrRequestId"];
-      };
-    };
-    requestBody?: {
-      content: {
-        "application/json": components["schemas"]["DsrFulfillRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          "Idempotency-Key": components["headers"]["Idempotency-Key"];
-        };
-        content: {
-          "application/json": components["schemas"]["DsrRequestStatusResponse"];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description PLAN_NOT_ALLOWED */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Rate limited */
-      429: {
-        headers: {
-          "Retry-After": components["headers"]["Retry-After"];
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Internal Server Error */
-      500: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Erzeugt einmaligen Stempel-Token (QR)
-   * @description Issues a one-time stamp token for client scan.
-   */
-  createStampToken: {
-    parameters: {
-      header: {
-        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          "Idempotency-Key": components["headers"]["Idempotency-Key"];
-        };
-        content: {
-          "application/json": components["schemas"]["StampTokenResponse"];
-        };
-      };
-      /** @description RATE_LIMITED */
-      429: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Löst Stempel ein; qualifiziert ggf. Referral und bucht Bonus
-   * @description Claims a stamp and applies referral rules if eligible.
-   */
-  claimStamp: {
-    parameters: {
-      header: {
-        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-        "X-Card-Id"?: components["parameters"]["XCardId"];
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["StampClaimRequest"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["StampClaimResponse"];
-        };
-      };
-      /** @description TOKEN_EXPIRED */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description PLAN_NOT_ALLOWED */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description TOKEN_REUSE | REFERRAL_TENANT_MISMATCH */
-      409: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      422: components["responses"]["422Unprocessable"];
-      /** @description RATE_LIMITED */
-      429: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-    };
-  };
-  /**
-   * Löst eine Prämie ein
-   * @description Redeems a reward for a valid redemption token.
-   */
-  redeemReward: {
-    parameters: {
-      header: {
-        "X-Device-Proof": components["parameters"]["XDeviceProof"];
-        "X-Device-Timestamp": components["parameters"]["XDeviceTimestamp"];
-        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": {
-          redeemToken: string;
-        };
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": components["schemas"]["RedeemResponse"];
-        };
-      };
-      /** @description TOKEN_EXPIRED */
-      400: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description PLAN_NOT_ALLOWED */
-      403: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      /** @description TOKEN_REUSE */
-      409: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
-        };
-      };
-      429: components["responses"]["429RateLimited"];
-      500: components["responses"]["500ServerError"];
-    };
-  };
-  /**
-   * Liefert personalisierten Referral-Link (Werber)
-   * @description Returns the referral link for an existing customer.
-   */
-  getReferralLink: {
-    parameters: {
-      header: {
-        "X-Tenant-Id": components["parameters"]["XTenantId"];
-        "X-Card-Id": components["parameters"]["XCardIdRequired"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        content: {
-          "application/json": {
+    schemas: {
+        Problem: {
             /** Format: uri */
-            refCodeURL: string;
-          };
+            type: string;
+            title: string;
+            status: number;
+            detail?: string;
+            instance?: string;
+            /** @enum {string} */
+            error_code?: "TOKEN_EXPIRED" | "TOKEN_REUSE" | "SELF_REFERRAL_BLOCKED" | "REFERRAL_LIMIT_REACHED" | "REFERRAL_TENANT_MISMATCH" | "REFERRAL_CODE_INVALID" | "PLAN_NOT_ALLOWED" | "RATE_LIMITED" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_INVALID";
+            correlation_id?: string;
+            retry_after?: number;
+        } & {
+            [key: string]: unknown;
         };
-      };
-      /** @description Unauthorized */
-      401: {
-        content: {
-          "application/problem+json": components["schemas"]["Problem"];
+        AdminLoginRequest: {
+            /** Format: email */
+            email: string;
+            password: string;
         };
-      };
+        AdminRefreshRequest: {
+            refreshToken: string;
+        };
+        AdminSessionResponse: {
+            accessToken: string;
+            refreshToken: string;
+            expiresIn: number;
+        };
+        AdminRegistrationResponse: {
+            /** Format: uuid */
+            adminId: string;
+            /** Format: uuid */
+            tenantId: string;
+            accessToken: string;
+            refreshToken: string;
+            expiresIn: number;
+        };
+        JwksResponse: {
+            keys: Record<string, never>[];
+        };
+        DsrSubject: {
+            /** @enum {string} */
+            subject_type: "card_id" | "device_id" | "subject_id";
+            subject_id: string;
+        };
+        DsrRequestCreateRequest: {
+            /** @enum {string} */
+            requestType: "DELETE" | "ERASURE";
+            subject: components["schemas"]["DsrSubject"];
+            reason?: string;
+        };
+        DsrRequestResponse: {
+            /** Format: uuid */
+            dsrRequestId: string;
+            /** @enum {string} */
+            status: "PENDING" | "FULFILLED" | "REJECTED";
+            /** @enum {string} */
+            requestType: "DELETE" | "ERASURE";
+            subject: components["schemas"]["DsrSubject"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DsrRequestStatusResponse: {
+            /** Format: uuid */
+            dsrRequestId: string;
+            /** @enum {string} */
+            status: "PENDING" | "FULFILLED" | "REJECTED";
+            /** @enum {string} */
+            requestType: "DELETE" | "ERASURE";
+            subject: components["schemas"]["DsrSubject"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            fulfilledAt?: string | null;
+        };
+        DsrFulfillRequest: {
+            /** @enum {string} */
+            action?: "DELETE" | "PSEUDONYMIZE";
+        };
+        StampTokenResponse: {
+            qrToken: string;
+            jti: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        StampClaimRequest: {
+            qrToken: string;
+            ref?: string | null;
+        };
+        CardState: {
+            currentStamps: number;
+            stampsRequired: number;
+            rewardsAvailable: number;
+        };
+        OfferSnippet: {
+            title: string;
+            body?: string | null;
+        };
+        StampClaimResponse: components["schemas"]["StampClaimResponsePayload"];
+        StampClaimResponsePayload: {
+            cardState: components["schemas"]["CardState"];
+            offer?: components["schemas"]["OfferSnippet"] | null;
+        };
+        RedeemResponse: {
+            cardState: components["schemas"]["CardState"];
+        };
+        DeviceRegistrationLinkResponse: {
+            /** Format: uri */
+            linkUrl: string;
+            token: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uri */
+            qrImageUrl?: string | null;
+        };
+        ReportingCounts: {
+            day: number;
+            week: number;
+            month: number;
+        };
+        ReportingRates: {
+            day: number;
+            week: number;
+            month: number;
+        };
+        ReportingReferralKpis: {
+            linksIssued: components["schemas"]["ReportingCounts"];
+            qualified: components["schemas"]["ReportingCounts"];
+            bonusStamps: components["schemas"]["ReportingCounts"];
+            conversionRate: components["schemas"]["ReportingRates"];
+        };
+        ReportingDeviceActivity: {
+            activeDevices: number;
+        };
+        ReportingPlanUsage: {
+            period: string;
+            stampsUsed: number;
+            stampsLimit: number | null;
+            usagePercent: number | null;
+            warningEmitted: boolean;
+            upgradeSignalEmitted: boolean;
+        };
+        ReportingSummaryResponse: {
+            stamps: components["schemas"]["ReportingCounts"];
+            rewards: components["schemas"]["ReportingCounts"];
+            referrals: components["schemas"]["ReportingReferralKpis"];
+            deviceActivity: components["schemas"]["ReportingDeviceActivity"];
+            planUsage: components["schemas"]["ReportingPlanUsage"];
+            activeCampaigns: number;
+        };
+        ReportingTimeseriesBucket: {
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            count: number;
+        };
+        ReportingTimeseriesResponse: {
+            /** @enum {string} */
+            metric: "stamps" | "rewards" | "referral_links" | "referral_qualified" | "referral_bonus_stamps";
+            /** @enum {string} */
+            bucket: "day" | "week" | "month";
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            series: components["schemas"]["ReportingTimeseriesBucket"][];
+        };
     };
-  };
+    responses: {
+        /** @description Ungültige Anfrage */
+        "400BadRequest": {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Nicht autorisiert */
+        "401Unauthorized": {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Verboten */
+        "403Forbidden": {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Konflikt */
+        "409Conflict": {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Semantisch fehlerhaft */
+        "422Unprocessable": {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Rate-Limit erreicht */
+        "429RateLimited": {
+            headers: {
+                "Retry-After": components["headers"]["Retry-After"];
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Interner Serverfehler */
+        "500ServerError": {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+    };
+    parameters: {
+        /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+        IdempotencyKey: string;
+        /** @description Tenant context for anonymous customer flows (pseudonymous, no PII). */
+        XTenantId: string;
+        /** @description Pseudonymous customer card id (no PII). */
+        XCardId: string;
+        /** @description Pseudonymous customer card id (no PII). */
+        XCardIdRequired: string;
+        XDeviceProof: string;
+        /** @description Unix timestamp in seconds (allowed skew ±30s). */
+        XDeviceTimestamp: string;
+        DsrRequestId: string;
+    };
+    requestBodies: never;
+    headers: {
+        /** @description Echo des Idempotenz-Schlüssels. Gültigkeit 24 h. Scope {tenantId,route,bodyHash}. */
+        "Idempotency-Key": string;
+        /** @description Seconds until the client may retry. */
+        "Retry-After": number;
+    };
+    pathItems: never;
+}
+export type $defs = Record<string, never>;
+export interface operations {
+    registerAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRegistrationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    loginAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSessionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getReportingSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingSummaryResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getReportingTimeseries: {
+        parameters: {
+            query: {
+                metric: "stamps" | "rewards" | "referral_links" | "referral_qualified" | "referral_bonus_stamps";
+                bucket: "day" | "week" | "month";
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingTimeseriesResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refreshAdminSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminSessionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    logoutAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    refreshToken: string;
+                };
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getJwks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JwksResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createDeviceRegistrationLink: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link erstellt */
+            201: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceRegistrationLinkResponse"];
+                };
+            };
+            400: components["responses"]["400BadRequest"];
+            401: components["responses"]["401Unauthorized"];
+            403: components["responses"]["403Forbidden"];
+            409: components["responses"]["409Conflict"];
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    confirmDeviceRegistration: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Bestätigt */
+            204: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["400BadRequest"];
+            /** @description PLAN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            409: components["responses"]["409Conflict"];
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    createDsrRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Tenant context for anonymous customer flows (pseudonymous, no PII). */
+                "X-Tenant-Id": components["parameters"]["XTenantId"];
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DsrRequestCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsrRequestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description PLAN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getDsrRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Tenant context for anonymous customer flows (pseudonymous, no PII). */
+                "X-Tenant-Id": components["parameters"]["XTenantId"];
+            };
+            path: {
+                dsr_id: components["parameters"]["DsrRequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsrRequestStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description PLAN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    fulfillDsrRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Tenant context for anonymous customer flows (pseudonymous, no PII). */
+                "X-Tenant-Id": components["parameters"]["XTenantId"];
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                dsr_id: components["parameters"]["DsrRequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DsrFulfillRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DsrRequestStatusResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description PLAN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createStampToken: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StampTokenResponse"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    claimStamp: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Pseudonymous customer card id (no PII). */
+                "X-Card-Id"?: components["parameters"]["XCardId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StampClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StampClaimResponse"];
+                };
+            };
+            /** @description TOKEN_EXPIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description PLAN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description TOKEN_REUSE | REFERRAL_TENANT_MISMATCH */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["422Unprocessable"];
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    redeemReward: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Device-Proof": components["parameters"]["XDeviceProof"];
+                /** @description Unix timestamp in seconds (allowed skew ±30s). */
+                "X-Device-Timestamp": components["parameters"]["XDeviceTimestamp"];
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    redeemToken: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedeemResponse"];
+                };
+            };
+            /** @description TOKEN_EXPIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description PLAN_NOT_ALLOWED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description TOKEN_REUSE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    getReferralLink: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Tenant context for anonymous customer flows (pseudonymous, no PII). */
+                "X-Tenant-Id": components["parameters"]["XTenantId"];
+                /** @description Pseudonymous customer card id (no PII). */
+                "X-Card-Id": components["parameters"]["XCardIdRequired"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        refCodeURL: string;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
 }

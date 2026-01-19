@@ -11,7 +11,7 @@
     "build:api": "npm -w apps/api run build",
     "build": "npm run build:web && npm run build:api",
     "dev": "powershell -NoProfile -Command \"$env:LOKALTREU_API_UPSTREAM='http://127.0.0.1:3001'; npm -w apps/web run dev\"",
-    "dev:mock": "concurrently -k -n PRISM,WEB \"npm --workspaces=false run mock:api:4013\" \"powershell -NoProfile -Command \\\"$env:LOKALTREU_API_UPSTREAM='http://127.0.0.1:4013'; npm -w apps/web run dev\\\"\"",
+    "dev:mock": "concurrently --kill-others-on-fail -n PRISM,WEB \"npm --workspaces=false run mock:api:4013\" \"powershell -NoProfile -Command \\\"$env:LOKALTREU_API_UPSTREAM='http://127.0.0.1:4013'; npm -w apps/web run dev\\\"\"",
     "prelint": "node ./scripts/gen-openapi-types.mjs",
     "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
     "start:web": "node apps/web/.next/standalone/server.js",

@@ -1,6 +1,4 @@
-"use client";
-
-import type { paths, components } from "@lokaltreu/types/src/openapi";
+import type { paths, components } from "@lokaltreu/types";
 
 export type RegisterAdminRequest =
   paths["/admins/register"]["post"]["requestBody"]["content"]["application/json"];

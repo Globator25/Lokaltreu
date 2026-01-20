@@ -73,6 +73,13 @@ export default function OnboardingPage() {
   const apiBaseEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
   const isPrismMock = apiBaseEnv?.includes("4010") ?? false;
 
+  const updateFormField = (key: keyof WizardForm, value: string) => {
+    setState((prev) => ({
+      ...prev,
+      form: { ...prev.form, [key]: value },
+    }));
+  };
+
   const stepValid = useMemo(() => {
     if (state.step === 1) {
       return isEmailValid(state.form.email) && isPasswordValid(state.form.password);
@@ -87,24 +94,27 @@ export default function OnboardingPage() {
     if (!stepValid || isSubmitting) return;
     if (state.step === 1) {
       setIsSubmitting(true);
-      const result = await registerAdmin({
-        email: state.form.email,
-        password: state.form.password,
-      });
-      if (result.ok) {
-        setState((prev) => ({
-          ...prev,
-          step: 2,
-          registration: result.data,
-          problem: undefined,
-        }));
-      } else {
-        setState((prev) => ({
-          ...prev,
-          problem: result.problem,
-        }));
+      try {
+        const result = await registerAdmin({
+          email: state.form.email,
+          password: state.form.password,
+        });
+        if (result.ok) {
+          setState((prev) => ({
+            ...prev,
+            step: 2,
+            registration: result.data,
+            problem: undefined,
+          }));
+        } else {
+          setState((prev) => ({
+            ...prev,
+            problem: result.problem,
+          }));
+        }
+      } finally {
+        setIsSubmitting(false);
       }
-      setIsSubmitting(false);
       return;
     }
 
@@ -156,12 +166,7 @@ export default function OnboardingPage() {
                 <input
                   type="email"
                   value={state.form.email}
-                  onChange={(event) =>
-                    setState((prev) => ({
-                      ...prev,
-                      form: { ...prev.form, email: event.target.value },
-                    }))
-                  }
+                  onChange={(event) => updateFormField("email", event.currentTarget.value)}
                   className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
                   placeholder="admin@example.com"
                   required
@@ -176,12 +181,7 @@ export default function OnboardingPage() {
                 <input
                   type="password"
                   value={state.form.password}
-                  onChange={(event) =>
-                    setState((prev) => ({
-                      ...prev,
-                      form: { ...prev.form, password: event.target.value },
-                    }))
-                  }
+                  onChange={(event) => updateFormField("password", event.currentTarget.value)}
                   className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
                   placeholder="mindestens 12 Zeichen"
                   minLength={12}
@@ -231,10 +231,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={state.form.businessName}
                   onChange={(event) =>
-                    setState((prev) => ({
-                      ...prev,
-                      form: { ...prev.form, businessName: event.target.value },
-                    }))
+                    updateFormField("businessName", event.currentTarget.value)
                   }
                   className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
                   placeholder="z. B. Studio Bella"
@@ -247,10 +244,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={state.form.businessCity}
                   onChange={(event) =>
-                    setState((prev) => ({
-                      ...prev,
-                      form: { ...prev.form, businessCity: event.target.value },
-                    }))
+                    updateFormField("businessCity", event.currentTarget.value)
                   }
                   className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
                   placeholder="z. B. Hamburg"

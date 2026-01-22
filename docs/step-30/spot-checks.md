@@ -36,3 +36,14 @@ Nur Aggregates, keine PII.
 - Observability-Metrik: referrals.qualified.count (aggregiert)
 - Erwartung: Summe der weekly buckets entspricht der Observability-Summe
   fuer denselben Zeitraum.
+
+## Durchfuehrung (Nachweis) – Prism Mock + Admin Dashboard
+
+- Datum/Zeit: 2025-09-30 14:30
+- Modus: Mock/Demo via Prism
+- Prism Mock: Spec `apps/api/openapi/lokaltreu-openapi-v2.0.yaml`, Host/Port `127.0.0.1:4010`
+- Web UI: `http://localhost:3000/admin/dashboard`
+- Env: `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:4010`, `NEXT_PUBLIC_ADMIN_MOCK_TOKEN=test`
+- Ergebnis: `GET /admins/reporting/summary` -> 200, `GET /admins/reporting/timeseries` -> 200
+- Prism Validator: "request passed validation rules" (keine Missing metric/bucket, keine Invalid security scheme)
+- Screenshot vorhanden

@@ -124,6 +124,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admins/audit/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listet Audit-Events
+         * @description Read-only audit feed for admin. Filterable by device_id and optional event_type.
+         */
+        get: operations["listAdminAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/.well-known/jwks.json": {
         parameters: {
             query?: never;
@@ -139,6 +159,86 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listet Mitarbeiter-Geraete
+         * @description Returns devices for the current tenant.
+         */
+        get: operations["listDevices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/{device_id}/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sperrt ein Geraet
+         * @description Idempotent.
+         */
+        post: operations["blockDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/{device_id}/unblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reaktiviert ein Geraet
+         * @description Idempotent.
+         */
+        post: operations["unblockDevice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/devices/{device_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Entfernt ein Geraet
+         * @description Idempotent.
+         */
+        delete: operations["removeDevice"];
         options?: never;
         head?: never;
         patch?: never;
@@ -328,6 +428,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description RFC7807 Problem Details. In Lokaltreu responses, error_code is always present for application-level errors; correlation_id is optional and provided for support/debugging. */
         Problem: {
             /** Format: uri */
             type: string;
@@ -336,7 +437,7 @@ export interface components {
             detail?: string;
             instance?: string;
             /** @enum {string} */
-            error_code?: "TOKEN_EXPIRED" | "TOKEN_REUSE" | "SELF_REFERRAL_BLOCKED" | "REFERRAL_LIMIT_REACHED" | "REFERRAL_TENANT_MISMATCH" | "REFERRAL_CODE_INVALID" | "PLAN_NOT_ALLOWED" | "RATE_LIMITED" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_INVALID";
+            error_code?: "TOKEN_EXPIRED" | "TOKEN_REUSE" | "SELF_REFERRAL_BLOCKED" | "REFERRAL_LIMIT_REACHED" | "REFERRAL_TENANT_MISMATCH" | "REFERRAL_CODE_INVALID" | "PLAN_NOT_ALLOWED" | "RATE_LIMITED" | "IDEMPOTENCY_KEY_REQUIRED" | "IDEMPOTENCY_KEY_INVALID" | "DEVICE_NOT_FOUND" | "DEVICE_STATUS_CONFLICT";
             correlation_id?: string;
             retry_after?: number;
         } & {
@@ -441,6 +542,48 @@ export interface components {
             expiresAt: string;
             /** Format: uri */
             qrImageUrl?: string | null;
+        };
+        /** @enum {string} */
+        DeviceStatus: "ACTIVE" | "BLOCKED";
+        Device: {
+            /** Format: uuid */
+            deviceId: string;
+            label?: string | null;
+            status: components["schemas"]["DeviceStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastSeenAt?: string | null;
+        };
+        DeviceListResponse: {
+            devices: components["schemas"]["Device"][];
+        };
+        /** @enum {string} */
+        AuditActorType: "ADMIN" | "SYSTEM";
+        /** @enum {string} */
+        AuditEventType: "device.registration_link.created" | "device.register" | "device.blocked" | "device.unblocked" | "device.removed";
+        AuditEvent: {
+            /** @description UUIDv7 recommended */
+            eventId: string;
+            eventType: components["schemas"]["AuditEventType"];
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: uuid */
+            tenantId: string;
+            /** Format: uuid */
+            deviceId?: string | null;
+            actorType: components["schemas"]["AuditActorType"];
+            /** Format: uuid */
+            actorId?: string | null;
+            correlation_id?: string | null;
+            /** @description Must not contain PII. Only pseudonymous identifiers and non-sensitive event context (e.g., deviceId, routeId, status transitions, correlation_id, rate-limit dimensions). */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        AuditEventListResponse: {
+            events: components["schemas"]["AuditEvent"][];
+            nextCursor: string | null;
         };
         ReportingCounts: {
             day: number;
@@ -575,6 +718,7 @@ export interface components {
         /** @description Unix timestamp in seconds (allowed skew ±30s). */
         XDeviceTimestamp: string;
         DsrRequestId: string;
+        DeviceId: string;
     };
     requestBodies: never;
     headers: {
@@ -885,6 +1029,60 @@ export interface operations {
             };
         };
     };
+    listAdminAuditEvents: {
+        parameters: {
+            query?: {
+                device_id?: string;
+                event_type?: components["schemas"]["AuditEventType"];
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Audit events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            500: components["responses"]["500ServerError"];
+        };
+    };
     getJwks: {
         parameters: {
             query?: never;
@@ -912,6 +1110,188 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listDevices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate limited */
+            429: {
+                headers: {
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    blockDevice: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                device_id: components["parameters"]["DeviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Device"];
+                };
+            };
+            401: components["responses"]["401Unauthorized"];
+            403: components["responses"]["403Forbidden"];
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    unblockDevice: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                device_id: components["parameters"]["DeviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Device"];
+                };
+            };
+            401: components["responses"]["401Unauthorized"];
+            403: components["responses"]["403Forbidden"];
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    removeDevice: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                device_id: components["parameters"]["DeviceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["401Unauthorized"];
+            403: components["responses"]["403Forbidden"];
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
         };
     };
     createDeviceRegistrationLink: {

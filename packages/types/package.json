@@ -20,7 +20,8 @@
     "build": "npm run gen:openapi && tsc -p tsconfig.json",
     "test": "node -e \"console.log('test: skip @lokaltreu/types')\" --",
     "test:plan": "node -e \"console.log('test:plan: skip @lokaltreu/types')\"",
-    "test:plan:file": "node -e \"console.log('test:plan:file: skip @lokaltreu/types')\""
+    "test:plan:file": "node -e \"console.log('test:plan:file: skip @lokaltreu/types')\"",
+    "gdpr:dsr": "node -e \"console.log('gdpr:dsr: skip @lokaltreu/types')\""
   },
   "private": true,
   "dependencies": {

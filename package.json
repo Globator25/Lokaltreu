@@ -41,7 +41,7 @@
     "types:gen": "openapi-typescript apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o packages/types/src/index.d.ts",
     "gdpr:docs:present": "test -f docs/compliance/step-18-device-onboarding.md",
     "test": "vitest run",
-    "gdpr:dsr": "vitest run tests/security/idempotency.test.ts",
+    "gdpr:dsr": "npm -ws run gdpr:dsr",
     "gdpr:logs": "node ./tools/gdpr/log-pii-retention.cjs",
     "enforce:coverage": "vitest run --coverage",
     "terraform:ci": "cd infra/terraform && terraform fmt -check && terraform init -backend=false -upgrade && terraform validate"

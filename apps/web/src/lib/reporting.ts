@@ -11,6 +11,7 @@ export type Timeseries200 =
 export type Problem = components["schemas"]["Problem"];
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
+const adminMockToken = process.env.NEXT_PUBLIC_ADMIN_MOCK_TOKEN;
 const timeoutMs = 8000;
 
 const networkProblem: Problem = {
@@ -61,18 +62,32 @@ async function parseProblemResponse(res: Response): Promise<Problem> {
 
 function buildTimeseriesQuery(query: TimeseriesQuery): string {
   const params = new URLSearchParams();
-  params.set("metric", query.metric);
-  params.set("bucket", query.bucket);
+  const metric = query.metric ?? "stamps";
+  const bucket = query.bucket ?? "day";
+  params.set("metric", metric);
+  params.set("bucket", bucket);
   if (query.from) params.set("from", query.from);
   if (query.to) params.set("to", query.to);
   return params.toString();
+}
+
+function buildAuthHeaders(): HeadersInit | undefined {
+  if (!adminMockToken) return undefined;
+  return {
+    Authorization: `Bearer ${adminMockToken}`,
+  };
+}
+
+function buildRequestInit(): RequestInit {
+  const headers = buildAuthHeaders();
+  return headers ? { method: "GET", headers } : { method: "GET" };
 }
 
 export async function getAdminReportingSummary(): Promise<Summary200> {
   try {
     const res = await fetchWithTimeout(
       `${baseUrl}/admins/reporting/summary`,
-      { method: "GET" },
+      buildRequestInit(),
       timeoutMs,
     );
 
@@ -97,7 +112,7 @@ export async function getAdminReportingTimeseries(
   try {
     const res = await fetchWithTimeout(
       `${baseUrl}/admins/reporting/timeseries?${qs}`,
-      { method: "GET" },
+      buildRequestInit(),
       timeoutMs,
     );
 

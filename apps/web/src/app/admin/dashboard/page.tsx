@@ -133,7 +133,10 @@ export default function AdminDashboardPage() {
             ? error.status
             : 500;
         const parsed = parseProblem(error, status);
-        const message = toUserMessage(parsed);
+        const message =
+          parsed.correlation_id === "string"
+            ? toUserMessage({ ...parsed, correlation_id: undefined })
+            : toUserMessage(parsed);
         setState({ status: "error", message });
       });
 

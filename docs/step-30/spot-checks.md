@@ -23,6 +23,7 @@ Nur Aggregates, keine PII.
 - Observability-Metrik: rewards.redeemed.count (aggregiert)
 - Erwartung: Summe der daily buckets entspricht der Observability-Summe
   fuer denselben Zeitraum.
+- Prism-Check: Keine Query-Validation-Errors im Prism-Log (metric/bucket gesetzt).
 
 ## Spot-Check 3: Referral Qualified (Timeseries vs. Observability)
 

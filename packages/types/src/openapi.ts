@@ -570,18 +570,22 @@ export interface components {
             title: string;
             body?: string | null;
         };
-        AdminOffer: components["schemas"]["OfferSnippet"] & {
+        AdminOffer: {
+            title: string;
+            body?: string | null;
             active?: boolean | null;
             /** Format: date-time */
             activeFrom?: string | null;
             /** Format: date-time */
             activeTo?: string | null;
         };
+        NullValue: null;
+        NullableAdminOffer: components["schemas"]["AdminOffer"] | components["schemas"]["NullValue"];
         OfferUpsertRequest: {
-            offer: components["schemas"]["AdminOffer"] | null;
+            offer: components["schemas"]["NullableAdminOffer"];
         };
         OfferCurrentResponse: {
-            offer: components["schemas"]["AdminOffer"] | null;
+            offer: components["schemas"]["NullableAdminOffer"];
             /** Format: date-time */
             updatedAt: string;
         };
@@ -601,11 +605,12 @@ export interface components {
             /** Format: uri */
             ctaUrl?: string | null;
         };
+        NullableAdminUpgradeHint: components["schemas"]["AdminUpgradeHint"] | components["schemas"]["NullValue"];
         AdminPlanResponse: {
             planCode: components["schemas"]["PlanCode"];
             features: components["schemas"]["PlanFeatures"];
             limits: components["schemas"]["PlanLimits"];
-            upgradeHint: components["schemas"]["AdminUpgradeHint"] | null;
+            upgradeHint: components["schemas"]["NullableAdminUpgradeHint"];
         };
         StampClaimResponse: components["schemas"]["StampClaimResponsePayload"];
         StampClaimResponsePayload: {

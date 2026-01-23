@@ -414,22 +414,33 @@ components:
           type: string
           nullable: true
     AdminOffer:
-      allOf:
-        - $ref: "#/components/schemas/OfferSnippet"
-        - type: object
-          additionalProperties: false
-          properties:
-            active:
-              type: boolean
-              nullable: true
-            activeFrom:
-              type: string
-              format: date-time
-              nullable: true
-            activeTo:
-              type: string
-              format: date-time
-              nullable: true
+      type: object
+      additionalProperties: false
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+          nullable: true
+        activeFrom:
+          type: string
+          format: date-time
+          nullable: true
+        activeTo:
+          type: string
+          format: date-time
+          nullable: true
+    NullValue:
+      type: "null"
+    NullableAdminOffer:
+      anyOf:
+        - $ref: "#/components/schemas/AdminOffer"
+        - $ref: "#/components/schemas/NullValue"
     OfferUpsertRequest:
       type: object
       additionalProperties: false
@@ -437,9 +448,7 @@ components:
         - offer
       properties:
         offer:
-          allOf:
-            - $ref: "#/components/schemas/AdminOffer"
-          nullable: true
+          $ref: "#/components/schemas/NullableAdminOffer"
     OfferCurrentResponse:
       type: object
       additionalProperties: false
@@ -448,9 +457,7 @@ components:
         - updatedAt
       properties:
         offer:
-          allOf:
-            - $ref: "#/components/schemas/AdminOffer"
-          nullable: true
+          $ref: "#/components/schemas/NullableAdminOffer"
         updatedAt:
           type: string
           format: date-time
@@ -501,6 +508,10 @@ components:
           type: string
           format: uri
           nullable: true
+    NullableAdminUpgradeHint:
+      oneOf:
+        - $ref: "#/components/schemas/AdminUpgradeHint"
+        - $ref: "#/components/schemas/NullValue"
     AdminPlanResponse:
       type: object
       additionalProperties: false
@@ -517,9 +528,7 @@ components:
         limits:
           $ref: "#/components/schemas/PlanLimits"
         upgradeHint:
-          allOf:
-            - $ref: "#/components/schemas/AdminUpgradeHint"
-          nullable: true
+          $ref: "#/components/schemas/NullableAdminUpgradeHint"
 
     StampClaimResponse:
       $ref: "#/components/schemas/StampClaimResponsePayload"

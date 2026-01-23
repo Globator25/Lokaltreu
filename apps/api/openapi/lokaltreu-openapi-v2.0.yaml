@@ -413,6 +413,122 @@ components:
         body:
           type: string
           nullable: true
+    AdminOffer:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+          nullable: true
+        activeFrom:
+          type: string
+          format: date-time
+          nullable: true
+        activeTo:
+          type: string
+          format: date-time
+          nullable: true
+    NullValue:
+      type: "null"
+    NullableAdminOffer:
+      anyOf:
+        - $ref: "#/components/schemas/AdminOffer"
+        - $ref: "#/components/schemas/NullValue"
+    OfferUpsertRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - offer
+      properties:
+        offer:
+          $ref: "#/components/schemas/NullableAdminOffer"
+    OfferCurrentResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - offer
+        - updatedAt
+      properties:
+        offer:
+          $ref: "#/components/schemas/NullableAdminOffer"
+        updatedAt:
+          type: string
+          format: date-time
+    PlanCode:
+      type: string
+      enum:
+        - starter
+        - plus
+        - premium
+    PlanFeatures:
+      type: object
+      additionalProperties: false
+      required:
+        - referral
+        - offers
+      properties:
+        referral:
+          type: boolean
+        offers:
+          type: boolean
+    PlanLimits:
+      type: object
+      additionalProperties: false
+      required:
+        - stampsPerMonth
+        - devicesAllowed
+      properties:
+        stampsPerMonth:
+          type: integer
+          minimum: 0
+          nullable: true
+        devicesAllowed:
+          type: integer
+          minimum: 0
+          nullable: true
+    AdminUpgradeHint:
+      type: object
+      additionalProperties: false
+      required:
+        - usage
+        - message
+      properties:
+        usage:
+          $ref: "#/components/schemas/ReportingPlanUsage"
+        message:
+          type: string
+        ctaUrl:
+          type: string
+          format: uri
+          nullable: true
+    NullableAdminUpgradeHint:
+      oneOf:
+        - $ref: "#/components/schemas/AdminUpgradeHint"
+        - $ref: "#/components/schemas/NullValue"
+    AdminPlanResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - planCode
+        - features
+        - limits
+        - upgradeHint
+      properties:
+        planCode:
+          $ref: "#/components/schemas/PlanCode"
+        features:
+          $ref: "#/components/schemas/PlanFeatures"
+        limits:
+          $ref: "#/components/schemas/PlanLimits"
+        upgradeHint:
+          $ref: "#/components/schemas/NullableAdminUpgradeHint"
 
     StampClaimResponse:
       $ref: "#/components/schemas/StampClaimResponsePayload"
@@ -1099,6 +1215,161 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+
+  /admins/plan:
+    get:
+      summary: Liefert aktuellen Plan inkl. Limits und Feature-Flags
+      description: Admin endpoint for plan overview and upgrade hints.
+      tags:
+        - Admins
+      operationId: getAdminPlan
+      security:
+        - AdminAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPlanResponse"
+              examples:
+                starter_plan:
+                  summary: Starter plan
+                  value:
+                    planCode: starter
+                    features:
+                      referral: false
+                      offers: true
+                    limits:
+                      stampsPerMonth: 120
+                      devicesAllowed: 2
+                    upgradeHint:
+                      usage:
+                        period: "2026-01"
+                        stampsUsed: 45
+                        stampsLimit: 120
+                        usagePercent: 38
+                        warningEmitted: false
+                        upgradeSignalEmitted: false
+                      message: "You are within your plan limits."
+                      ctaUrl: null
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "429":
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
+
+  /admins/offers/current:
+    get:
+      summary: Liefert aktuelles Angebot
+      description: Admin endpoint to read the current offer snippet.
+      tags:
+        - Admins
+      operationId: getCurrentOffer
+      security:
+        - AdminAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferCurrentResponse"
+              examples:
+                with_offer:
+                  summary: Offer configured
+                  value:
+                    offer:
+                      title: "10% off this week"
+                      body: "Valid Mon-Fri. Ask at the counter."
+                      active: true
+                      activeFrom: "2026-01-23T00:00:00Z"
+                      activeTo: "2026-01-30T23:59:59Z"
+                    updatedAt: "2026-01-23T10:00:00Z"
+                no_offer:
+                  summary: No offer configured
+                  value:
+                    offer: null
+                    updatedAt: "2026-01-20T08:30:00Z"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "429":
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
+    put:
+      summary: Setzt oder aktualisiert aktuelles Angebot (idempotent)
+      description: Admin endpoint to upsert the current offer snippet.
+      tags:
+        - Admins
+      operationId: upsertCurrentOffer
+      security:
+        - AdminAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferUpsertRequest"
+            examples:
+              set_offer:
+                summary: Set offer
+                value:
+                  offer:
+                    title: "Free upgrade"
+                    body: "Buy 1 service, get an upgrade for free this month."
+                    active: true
+                    activeFrom: "2026-01-23T00:00:00Z"
+                    activeTo: "2026-02-01T23:59:59Z"
+              clear_offer:
+                summary: Clear offer
+                value:
+                  offer: null
+      responses:
+        "200":
+          description: OK
+          headers:
+            Idempotency-Key:
+              $ref: "#/components/headers/Idempotency-Key"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferCurrentResponse"
+              examples:
+                updated:
+                  summary: Offer updated
+                  value:
+                    offer:
+                      title: "Free upgrade"
+                      body: "Buy 1 service, get an upgrade for free this month."
+                      active: true
+                      activeFrom: "2026-01-23T00:00:00Z"
+                      activeTo: "2026-02-01T23:59:59Z"
+                    updatedAt: "2026-01-23T10:05:00Z"
+                cleared:
+                  summary: Offer cleared
+                  value:
+                    offer: null
+                    updatedAt: "2026-01-23T10:06:00Z"
+        "400":
+          $ref: "#/components/responses/400BadRequest"
+        "401":
+          $ref: "#/components/responses/401Unauthorized"
+        "403":
+          $ref: "#/components/responses/403Forbidden"
+        "422":
+          $ref: "#/components/responses/422Unprocessable"
+        "429":
+          $ref: "#/components/responses/429RateLimited"
+        "500":
+          $ref: "#/components/responses/500ServerError"
 
   /admins/refresh:
     post:

@@ -64,3 +64,8 @@ contract-check.log
 # OpenAPI Prism mock specs
 apps/api/openapi/*.mock.yaml
 
+# Tool artifacts (npx/redocly/openapi-typescript)
+apps/*/tmp/
+apps/*/packages/
+packages/*/tmp/
+packages/*/packages/

@@ -84,6 +84,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admins/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liefert aktuellen Plan inkl. Limits und Feature-Flags
+         * @description Admin endpoint for plan overview and upgrade hints.
+         */
+        get: operations["getAdminPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admins/offers/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liefert aktuelles Angebot
+         * @description Admin endpoint to read the current offer snippet.
+         */
+        get: operations["getCurrentOffer"];
+        /**
+         * Setzt oder aktualisiert aktuelles Angebot (idempotent)
+         * @description Admin endpoint to upsert the current offer snippet.
+         */
+        put: operations["upsertCurrentOffer"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admins/refresh": {
         parameters: {
             query?: never;
@@ -526,6 +570,43 @@ export interface components {
             title: string;
             body?: string | null;
         };
+        AdminOffer: components["schemas"]["OfferSnippet"] & {
+            active?: boolean | null;
+            /** Format: date-time */
+            activeFrom?: string | null;
+            /** Format: date-time */
+            activeTo?: string | null;
+        };
+        OfferUpsertRequest: {
+            offer: components["schemas"]["AdminOffer"] | null;
+        };
+        OfferCurrentResponse: {
+            offer: components["schemas"]["AdminOffer"] | null;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @enum {string} */
+        PlanCode: "starter" | "plus" | "premium";
+        PlanFeatures: {
+            referral: boolean;
+            offers: boolean;
+        };
+        PlanLimits: {
+            stampsPerMonth: number | null;
+            devicesAllowed: number | null;
+        };
+        AdminUpgradeHint: {
+            usage: components["schemas"]["ReportingPlanUsage"];
+            message: string;
+            /** Format: uri */
+            ctaUrl?: string | null;
+        };
+        AdminPlanResponse: {
+            planCode: components["schemas"]["PlanCode"];
+            features: components["schemas"]["PlanFeatures"];
+            limits: components["schemas"]["PlanLimits"];
+            upgradeHint: components["schemas"]["AdminUpgradeHint"] | null;
+        };
         StampClaimResponse: components["schemas"]["StampClaimResponsePayload"];
         StampClaimResponsePayload: {
             cardState: components["schemas"]["CardState"];
@@ -925,6 +1006,88 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getAdminPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPlanResponse"];
+                };
+            };
+            401: components["responses"]["401Unauthorized"];
+            403: components["responses"]["403Forbidden"];
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    getCurrentOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferCurrentResponse"];
+                };
+            };
+            401: components["responses"]["401Unauthorized"];
+            403: components["responses"]["403Forbidden"];
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
+        };
+    };
+    upsertCurrentOffer: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Idempotency-Key": components["headers"]["Idempotency-Key"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OfferCurrentResponse"];
+                };
+            };
+            400: components["responses"]["400BadRequest"];
+            401: components["responses"]["401Unauthorized"];
+            403: components["responses"]["403Forbidden"];
+            422: components["responses"]["422Unprocessable"];
+            429: components["responses"]["429RateLimited"];
+            500: components["responses"]["500ServerError"];
         };
     };
     refreshAdminSession: {

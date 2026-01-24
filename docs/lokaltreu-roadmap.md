@@ -1325,27 +1325,34 @@ Kompakter Überblick über wichtigste KPIs und Trends.
 
 **Schritt 31: Admin -- Plan-Management & Angebote (US-5)**
 
+**Status**
+DONE (2026-01-24) – PR #46 (OpenAPI) + PR #47 (Web UI) gemerged; Spot-Checks dokumentiert.
+
 **Ziel/Kontext**
 
 Pläne verwalten, Upgrade-Optionen und „aktuelles Angebot" steuern.
 
 **Ergebnisse / Artefakte**
 
- • Plan-Übersicht mit Limits und Features.
- • UI für Upgrade-Flow und Angebots-Feature.
+ • OpenAPI: Admin Plan & Offers Endpunkte (Mock-first / Contract-first).
+ • Web UI: `/admin/plan` mit Plan-Übersicht + Offer Editor (save/clear).
+ • Spot-Checks: `docs/step-31/spot-checks.md` (Prism Mock 127.0.0.1:4010).
 
 **Definition of Done (DoD)**
 
-  • Plan-Limits werden verständlich visualisiert.
-  • Referral-Features nur bei berechtigtem Plan aktiv (Backend-Gates
-     sichtbar).
+  • Plan-Übersicht zeigt Plan-Code, Limits und Features verständlich.
+  • Referral/Offers-Features sind entsprechend Plan/Backend-Gates transparent sichtbar.
+  • Offer kann gespeichert und gelöscht werden; `offer: null` wird akzeptiert.
+  • PUT nutzt Idempotency-Key (replay-sicher).
+  • Qualitätsgates grün: `npm run lint`, `npm run test`, `npm run build`.
 
 **Security / Compliance**
 
-  • Transparenz zu möglichen Mehrkosten bei Upgrade.
+  • Transparenz zu möglichen Mehrkosten bei Upgrade (UI-Hinweise vorhanden).
 
 **Umsetzungshinweise**
 
+  • Prism Mock für UAT/Spot-Checks: Spec `apps/api/openapi/lokaltreu-openapi-v2.0.yaml` auf `127.0.0.1:4010`.
   • E-Mail-Warnungen aus Schritt 26 konsistent verlinken.
 
 **Owner**

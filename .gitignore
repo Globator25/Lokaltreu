@@ -69,3 +69,10 @@ apps/*/tmp/
 apps/*/packages/
 packages/*/tmp/
 packages/*/packages/
+
+# Playwright artifacts
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/.playwright/
+apps/web/blob-report/
+

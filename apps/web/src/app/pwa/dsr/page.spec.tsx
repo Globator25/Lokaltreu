@@ -44,10 +44,10 @@ describe("PwaDsrPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "DSR-Anfrage senden" }));
 
-    expect(await screen.findByText("Anfrage eingegangen")).toBeInTheDocument();
-    expect(
-      await screen.findByText("DSR-ID: 11111111-2222-3333-4444-555555555555"),
-    ).toBeInTheDocument();
+    expect(await screen.findByTestId("dsr-confirmation")).toBeInTheDocument();
+    expect(await screen.findByTestId("dsr-request-id")).toHaveTextContent(
+      "11111111-2222-3333-4444-555555555555",
+    );
   });
 
   it("loads status by DSR id", async () => {

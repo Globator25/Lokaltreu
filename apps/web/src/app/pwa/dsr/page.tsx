@@ -167,6 +167,7 @@ export default function PwaDsrPage() {
           <label className="flex flex-col gap-2 text-sm font-medium">
             Card-ID
             <input
+              data-testid="dsr-card-id"
               value={createForm.cardId}
               onChange={(event) =>
                 setCreateForm((prev) => ({ ...prev, cardId: event.target.value }))
@@ -225,6 +226,7 @@ export default function PwaDsrPage() {
 
           <button
             type="submit"
+            data-testid="dsr-submit"
             disabled={!canSubmitCreate}
             className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
@@ -233,9 +235,14 @@ export default function PwaDsrPage() {
         </form>
 
         {createResult ? (
-          <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          <div
+            data-testid="dsr-confirmation"
+            className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900"
+          >
             <p className="font-semibold">Anfrage eingegangen</p>
-            <p className="mt-1 text-xs">DSR-ID: {createResult.dsrRequestId}</p>
+            <p className="mt-1 text-xs" data-testid="dsr-request-id">
+              {createResult.dsrRequestId}
+            </p>
             <p className="mt-1 text-xs">Status: {createResult.status}</p>
             <p className="mt-1 text-xs">Erstellt: {formatDate(createResult.createdAt)}</p>
           </div>
@@ -254,6 +261,7 @@ export default function PwaDsrPage() {
           <label className="flex flex-col gap-2 text-sm font-medium">
             DSR-ID
             <input
+              data-testid="dsr-status-request-id"
               value={statusId}
               onChange={(event) => setStatusId(event.target.value)}
               className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
@@ -264,6 +272,7 @@ export default function PwaDsrPage() {
 
           <button
             type="submit"
+            data-testid="dsr-status-submit"
             disabled={loadingStatus || !statusId.trim()}
             className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
@@ -272,7 +281,10 @@ export default function PwaDsrPage() {
         </form>
 
         {statusResult ? (
-          <div className="mt-4 rounded-md border border-neutral-200 bg-white p-3 text-xs text-neutral-800">
+          <div
+            data-testid="dsr-status-result"
+            className="mt-4 rounded-md border border-neutral-200 bg-white p-3 text-xs text-neutral-800"
+          >
             <div>DSR-ID: {statusResult.dsrRequestId}</div>
             <div>Status: {statusResult.status}</div>
             <div>Typ: {statusResult.requestType}</div>

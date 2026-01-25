@@ -20,6 +20,14 @@ const nextConfig: NextConfig = {
         source: "/staff-api/:path*",
         destination: `${staffUpstream}/:path*`,
       },
+      {
+        source: "/dsr/:path*",
+        destination: `${upstream}/dsr/:path*`,
+      },
+      {
+        source: "/dsr",
+        destination: `${upstream}/dsr`,
+      },
     ];
   },
 };

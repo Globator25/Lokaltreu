@@ -82,6 +82,15 @@ components:
         type: string
         minLength: 8
         maxLength: 128
+    XCaptchaToken:
+      name: X-Captcha-Token
+      in: header
+      required: false
+      description: Optional CAPTCHA proof token for abuse protection (public endpoints).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 4096
     XTenantId:
       name: X-Tenant-Id
       in: header
@@ -1997,11 +2006,10 @@ paths:
       tags:
         - DSR
       operationId: createDsrRequest
-      security:
-        - AdminAuth: []
       parameters:
         - $ref: "#/components/parameters/XTenantId"
         - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/XCaptchaToken"
       requestBody:
         required: true
         content:
@@ -2139,8 +2147,6 @@ paths:
       tags:
         - DSR
       operationId: getDsrRequest
-      security:
-        - AdminAuth: []
       parameters:
         - $ref: "#/components/parameters/DsrRequestId"
         - $ref: "#/components/parameters/XTenantId"

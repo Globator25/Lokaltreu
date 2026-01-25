@@ -794,6 +794,8 @@ export interface components {
     parameters: {
         /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
         IdempotencyKey: string;
+        /** @description Optional CAPTCHA proof token for abuse protection (public endpoints). */
+        XCaptchaToken: string;
         /** @description Tenant context for anonymous customer flows (pseudonymous, no PII). */
         XTenantId: string;
         /** @description Pseudonymous customer card id (no PII). */
@@ -1541,6 +1543,8 @@ export interface operations {
                 "X-Tenant-Id": components["parameters"]["XTenantId"];
                 /** @description Idempotenz für Schreibaktionen. 24 h gültig. */
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Optional CAPTCHA proof token for abuse protection (public endpoints). */
+                "X-Captcha-Token"?: components["parameters"]["XCaptchaToken"];
             };
             path?: never;
             cookie?: never;

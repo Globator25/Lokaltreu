@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "lint": "node -e \"console.log('lint: skip @lokaltreu/types')\"",
+    "lint:openapi": "node -e \"console.log('lint:openapi: skip @lokaltreu/types')\"",
     "gen:openapi": "npx openapi-typescript ../../apps/api/openapi/lokaltreu-openapi-v2.0.yaml -o src/openapi.ts",
     "build": "npm run gen:openapi && tsc -p tsconfig.json",
     "test": "node -e \"console.log('test: skip @lokaltreu/types')\" --",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@stoplight/prism-cli": "^5.14.2",
+    "@stoplight/spectral-cli": "^6.15.0",
     "@typescript-eslint/eslint-plugin": "^8.52.0",
     "@typescript-eslint/parser": "^8.52.0",
     "typescript-eslint": "^8.52.0"

@@ -12,7 +12,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "start:test": "node --input-type=module -e \"process.env.PORT='3001'; const { spawn } = await import('node:child_process'); const child = spawn(process.execPath, ['./dist/index.js'], { stdio: 'inherit', env: process.env }); child.on('exit', (code) => process.exit(code ?? 0));\"",
-    "lint": "eslint .",
+    "lint": "eslint src tests vitest.config.ts vitest.setup.ts --ignore-pattern \"packages/types/**\"",
     "dev": "node --loader ts-node/esm --watch src/index.ts",
     "gdpr:dsr": "vitest run tests/dsr/dsr.http.spec.ts",
     "audit:export:worm": "node --loader ts-node/esm src/jobs/audit-export-worm.ts",

@@ -1366,6 +1366,9 @@ Pläne verwalten, Upgrade-Optionen und „aktuelles Angebot" steuern.
 
 **Schritt 32: Mitarbeiter-UI (2 Kernaktionen)**
 
+**Status**
+DONE (2026-01-25) – PR #49 gemerged; Lint/Test/Build grün; Prism-UAT erfolgreich.
+
 **Ziel/Kontext**
 
 Ultrasimple UI für Mitarbeiter mit genau zwei Aktionen: Stempel

@@ -1440,6 +1440,9 @@ Einfache PWA für Endkunden: Kampagnensicht, QR-Scan, Referral-Links.
 
 **Schritt 34: UI für DSR-Anfragen (Art. 11)**
 
+**Status**
+DONE (2026-01-25) – PWA DSR UI (Create + Status) umgesetzt; public DSR OpenAPI (ohne AdminAuth) + optionaler X-Captcha-Token Header; OpenAPI-Lint integriert; Tests/Build grün.
+
 **Ziel/Kontext**
 
 Endkunden-UI für DSR-Anfragen über pseudonyme Card-IDs.

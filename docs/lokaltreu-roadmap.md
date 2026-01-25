@@ -1404,6 +1404,9 @@ vergeben, Prämie einlösen.
 
 **Schritt 33: Endkunden-PWA**
 
+**Status**
+DONE (2026-01-25) – PWA-Context/Client + Referral/Scan UI + Tests umgesetzt; Mock-First/Prism-konform.
+
 **Ziel/Kontext**
 
 Einfache PWA für Endkunden: Kampagnensicht, QR-Scan, Referral-Links.

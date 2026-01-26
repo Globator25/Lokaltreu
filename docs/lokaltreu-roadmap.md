@@ -1476,6 +1476,10 @@ Endkunden-UI für DSR-Anfragen über pseudonyme Card-IDs.
 
 **Schritt 35: Service-Worker**
 
+**Status**
+DONE (2026-01-26) – PWA Service Worker + Manifest + Offline-Fallback umgesetzt (Scope: /pwa); Update-Flow („Neue Version verfügbar“) integriert; Spot-Checks dokumentiert (docs/step-35/spot-checks.md); Tests/Lint/Build grün.
+
+
 **Ziel/Kontext**
 
 PWA-Caching-Strategie definieren und implementieren.

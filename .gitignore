@@ -76,3 +76,6 @@ apps/web/playwright-report/
 apps/web/.playwright/
 apps/web/blob-report/
 
+# local lighthouse reports
+*.report.html
+lighthouse*.html

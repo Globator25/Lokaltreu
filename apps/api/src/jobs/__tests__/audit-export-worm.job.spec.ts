@@ -60,7 +60,7 @@ describe("jobs/audit-export-worm", () => {
 
     const exitSpy = vi
       .spyOn(process, "exit")
-      .mockImplementation(((code?: number) => undefined) as any);
+      .mockImplementation((() => undefined) as unknown as typeof process.exit);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await import("../audit-export-worm.js");
@@ -92,7 +92,7 @@ describe("jobs/audit-export-worm", () => {
 
     const exitSpy = vi
       .spyOn(process, "exit")
-      .mockImplementation(((code?: number) => undefined) as any);
+      .mockImplementation((() => undefined) as unknown as typeof process.exit);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await import("../audit-export-worm.js");

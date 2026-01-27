@@ -14,13 +14,25 @@ type DbStub = {
   wormRows: Array<{ tenantId: string; seq: number; prevHash: string; hash: string }>;
 };
 
+type TransactionRunner = {
+  run: <T>(fn: () => Promise<T>) => Promise<T>;
+};
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
 function makeDbStub(): DbStub {
   const state = new Map<string, ChainState>();
   const wormRows: Array<{ tenantId: string; seq: number; prevHash: string; hash: string }> = [];
 
   const query = vi.fn(async (sql: string, params?: unknown[]) => {
     if (sql.includes("INSERT INTO audit_chain_state")) {
-      const tenantId = String(params?.[0] ?? "");
+      const tenantId = asString(params?.[0]);
       if (!state.has(tenantId)) {
         state.set(tenantId, { lastSeq: 0, lastHash: "" });
       }
@@ -28,7 +40,7 @@ function makeDbStub(): DbStub {
     }
 
     if (sql.includes("SELECT last_seq, last_hash") && sql.includes("FOR UPDATE")) {
-      const tenantId = String(params?.[0] ?? "");
+      const tenantId = asString(params?.[0]);
       const current = state.get(tenantId);
       if (!current) {
         return { rows: [], rowCount: 0 };
@@ -40,18 +52,18 @@ function makeDbStub(): DbStub {
     }
 
     if (sql.includes("INSERT INTO audit_log_worm")) {
-      const tenantId = String(params?.[0] ?? "");
-      const seq = Number(params?.[1] ?? 0);
-      const prevHash = String(params?.[9] ?? "");
-      const hash = String(params?.[10] ?? "");
+      const tenantId = asString(params?.[0]);
+      const seq = asNumber(params?.[1]);
+      const prevHash = asString(params?.[9]);
+      const hash = asString(params?.[10]);
       wormRows.push({ tenantId, seq, prevHash, hash });
       return { rows: [], rowCount: 1 };
     }
 
     if (sql.includes("UPDATE audit_chain_state")) {
-      const tenantId = String(params?.[0] ?? "");
-      const lastSeq = Number(params?.[1] ?? 0);
-      const lastHash = String(params?.[2] ?? "");
+      const tenantId = asString(params?.[0]);
+      const lastSeq = asNumber(params?.[1]);
+      const lastHash = asString(params?.[2]);
       state.set(tenantId, { lastSeq, lastHash });
       return { rows: [], rowCount: 1 };
     }
@@ -60,6 +72,15 @@ function makeDbStub(): DbStub {
   });
 
   return { query, state, wormRows };
+}
+
+function makeTransactionStub(): TransactionRunner & { runMock: ReturnType<typeof vi.fn> } {
+  const runImpl: TransactionRunner["run"] = async <T>(fn: () => Promise<T>) => fn();
+  const runMock = vi.fn(runImpl);
+  return {
+    run: runMock as TransactionRunner["run"],
+    runMock,
+  };
 }
 
 function baseInput(overrides?: Partial<WormAuditInput>): WormAuditInput {
@@ -114,7 +135,7 @@ describe("worm audit writer", () => {
   it("db writer writes multiple rows, advances chain, and logs", async () => {
     const db = makeDbStub();
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-    const transaction = { run: vi.fn(async (fn: () => Promise<unknown>) => fn()) };
+    const transaction = makeTransactionStub();
     const writer = createDbWormAuditWriter({ db: { query: db.query }, transaction, logger });
 
     const first = await writer.write(baseInput({ tenantId: "tenant-a", correlationId: "corr-a" }));
@@ -132,7 +153,7 @@ describe("worm audit writer", () => {
 
   it("db writer stores nullable fields as null in INSERT params", async () => {
     const db = makeDbStub();
-    const transaction = { run: vi.fn(async (fn: () => Promise<unknown>) => fn()) };
+    const transaction = makeTransactionStub();
     const writer = createDbWormAuditWriter({ db: { query: db.query }, transaction });
 
     await writer.write(
@@ -156,20 +177,20 @@ describe("worm audit writer", () => {
 
   it("db writer throws on missing tenantId before touching the db", async () => {
     const db = makeDbStub();
-    const transaction = { run: vi.fn(async (fn: () => Promise<unknown>) => fn()) };
+    const transaction = makeTransactionStub();
     const writer = createDbWormAuditWriter({ db: { query: db.query }, transaction });
 
     expect(() => writer.write(baseInput({ tenantId: "" }))).toThrow(
       "audit_log_worm requires tenantId",
     );
 
-    expect(transaction.run).not.toHaveBeenCalled();
+    expect(transaction.runMock).not.toHaveBeenCalled();
     expect(db.query).not.toHaveBeenCalled();
   });
 
   it("db writer surfaces errors when chain state cannot be loaded", async () => {
     const db = makeDbStub();
-    const transaction = { run: vi.fn(async (fn: () => Promise<unknown>) => fn()) };
+    const transaction = makeTransactionStub();
     const writer = createDbWormAuditWriter({ db: { query: db.query }, transaction });
 
     db.query.mockImplementationOnce(async () => ({ rows: [], rowCount: 1 }));
@@ -182,7 +203,7 @@ describe("worm audit writer", () => {
 
   it("db writer does not swallow sink errors during INSERT", async () => {
     const db = makeDbStub();
-    const transaction = { run: vi.fn(async (fn: () => Promise<unknown>) => fn()) };
+    const transaction = makeTransactionStub();
     const writer = createDbWormAuditWriter({ db: { query: db.query }, transaction });
 
     const originalImpl = db.query.getMockImplementation();

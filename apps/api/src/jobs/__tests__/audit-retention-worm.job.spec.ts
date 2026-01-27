@@ -41,7 +41,7 @@ describe("jobs/audit-retention-worm", () => {
 
     const exitSpy = vi
       .spyOn(process, "exit")
-      .mockImplementation(((code?: number) => undefined) as any);
+      .mockImplementation((() => undefined) as unknown as typeof process.exit);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -68,7 +68,7 @@ describe("jobs/audit-retention-worm", () => {
 
     const exitSpy = vi
       .spyOn(process, "exit")
-      .mockImplementation(((code?: number) => undefined) as any);
+      .mockImplementation((() => undefined) as unknown as typeof process.exit);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await import("../audit-retention-worm.js");

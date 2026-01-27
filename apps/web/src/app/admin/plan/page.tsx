@@ -8,7 +8,7 @@ import {
   putCurrentOffer,
   type OfferUpsertRequest,
 } from "../../../lib/api/adminOffer";
-import { toUserMessage, type Problem } from "../../../lib/api/problem";
+import { defaultProblemType, toUserMessage, type Problem } from "../../../lib/api/problem";
 
 type AdminPlanResponse = components["schemas"]["AdminPlanResponse"];
 type OfferCurrentResponse = components["schemas"]["OfferCurrentResponse"];
@@ -85,7 +85,7 @@ export default function AdminPlanPage() {
         if (!plan || !offer) {
           setState({
             status: "error",
-            error: { status: 500, title: "Unexpected response" },
+            error: { type: defaultProblemType, status: 500, title: "Unexpected response" },
           });
           return;
         }
@@ -107,7 +107,12 @@ export default function AdminPlanPage() {
         if (!mounted) return;
         setState({
           status: "error",
-          error: { status: 503, title: "Network error", detail: "Service not reachable." },
+          error: {
+            type: defaultProblemType,
+            status: 503,
+            title: "Network error",
+            detail: "Service not reachable.",
+          },
         });
       });
 

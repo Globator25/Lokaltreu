@@ -1,6 +1,6 @@
 import type { paths } from "@lokaltreu/types";
 import { fetchWithTimeout } from "./fetch-with-timeout";
-import { parseProblem, type Problem } from "./problem";
+import { defaultProblemType, parseProblem, type Problem } from "./problem";
 
 export type AdminPlanResponse =
   paths["/admins/plan"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -14,6 +14,7 @@ const timeoutMs = 8000;
 const adminMockToken = process.env.NEXT_PUBLIC_ADMIN_MOCK_TOKEN;
 
 const networkProblem: Problem = {
+  type: defaultProblemType,
   status: 503,
   title: "Network error",
   detail: "Service not reachable. Please try again.",

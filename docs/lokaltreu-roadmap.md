@@ -1512,27 +1512,37 @@ PWA-Caching-Strategie definieren und implementieren.
 
 **Schritt 36: Fehler-Handling (Problem+JSON-Mapping)**
 
+**Status**
+DONE (2026-01-27) – UI-weites Problem+JSON (RFC7807) Error-Mapping umgesetzt; Support-Code via correlation_id sichtbar; ProblemToast-Komponente integriert; Mock-First via Prism/rewrites verifiziert; Tests/Lint/Build grün.
+
 **Ziel/Kontext**
 
-UI-weit konsistente Fehleranzeige auf Basis von Problem+JSON.
+UI-weit konsistente Fehleranzeige auf Basis von Problem+JSON, ohne Detail-Leaks und mit Support-fähigem correlation_id.
 
 **Ergebnisse / Artefakte**
 
-  • Mapper von error_code → UI-Messages. 
-  • Einheitskomponenten für Modals/Toasts.
+  • Zentrale SSOT für Problem+JSON Parsing + UI-Mapping: /apps/web/src/lib/api/problem.ts (+ Tests).
+  • Problem-Mapping Utilities: /apps/web/src/lib/problem/* (Problem-Typen + Mapping).
+  • UI-Komponente: /apps/web/src/components/problem/ProblemToast.tsx (+ Spec).
+  • Wiring in Clients/Pages (PWA/Admin/Staff): u. a. pwa-api.ts, reporting.ts, diverse API-Clients.
 
 **Definition of Done (DoD)**
 
-  • Alle relevanten Error-Codes haben UI-Texte. 
-  • correlation_id sichtbar für Support.
+  • Einheitliches Mapping von error_code → UI-Texte für relevante Fehlerfälle.
+  • correlation_id wird als Support-Code angezeigt.
+  • Keine sensiblen Detailinformationen in UI-Fehlermeldungen.
+  • Mock-First Nachweis: /api/* rewrites → Prism Mock (401 ohne Security scheme expected).
+  • Tests/Lint/Build grün.
 
 **Security / Compliance**
 
-  • Keine sensiblen Detailinformationen in UI-Fehlern.
+  • Keine sensiblen Detailinformationen in UI-Fehlern; Fehlertexte bewusst abstrahiert.
+  • Support-Code (correlation_id) für Incident-Triage.
 
 **Umsetzungshinweise**
 
-  • Mapping aus SPEC/AGENTS-Fehlerkatalog ableiten.
+  • Error-Code Mapping konsistent halten (keine ad-hoc Texte in Pages/Clients).
+  • Neue error_codes stets im SSOT-Mapping ergänzen + Test hinzufügen.
 
 **Owner**
 
@@ -1541,6 +1551,7 @@ UI-weit konsistente Fehleranzeige auf Basis von Problem+JSON.
 **Voraussetzungen**
 
   • Schritte 25, 27--35
+
 
 **Phase 4 -- Qualität, Performance &Nachweise**
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createDsrRequest, getDsrRequest } from "../../../lib/api/pwa/dsr";
 import { applyFromQuery, getOrCreateCardId, getOrCreateTenantId } from "../../../lib/pwa-context";
-import { toUserMessage, type Problem } from "../../../lib/api/problem";
+import { defaultProblemType, toUserMessage, type Problem } from "../../../lib/api/problem";
 import type { DsrCreateResponse, DsrStatusResponse } from "../../../lib/api/pwa/dsr";
 
 const networkMessage =
@@ -104,6 +104,7 @@ export default function PwaDsrPage() {
     } catch {
       setStatusError(
         toDsrUserMessage({
+          type: defaultProblemType,
           status: 503,
           title: "Network error",
           detail: "Service not reachable. Please try again.",

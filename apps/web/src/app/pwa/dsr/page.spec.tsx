@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import PwaDsrPage from "./page";
 import { createDsrRequest, getDsrRequest } from "../../../lib/api/pwa/dsr";
+import { defaultProblemType } from "../../../lib/api/problem";
 
 vi.mock("../../../lib/api/pwa/dsr", () => ({
   createDsrRequest: vi.fn(),
@@ -83,6 +84,7 @@ describe("PwaDsrPage", () => {
     createMock.mockResolvedValue({
       ok: false,
       problem: {
+        type: defaultProblemType,
         status: 503,
         title: "Network error",
         detail: "Service not reachable. Please try again.",

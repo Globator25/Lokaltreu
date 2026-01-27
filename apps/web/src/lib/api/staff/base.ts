@@ -1,5 +1,5 @@
 import { fetchWithTimeout } from "../fetch-with-timeout";
-import { parseProblem, type Problem } from "../problem";
+import { defaultProblemType, parseProblem, type Problem } from "../problem";
 
 export const staffBaseUrl = "/staff-api";
 
@@ -17,6 +17,7 @@ export function isProblemJson(res: Response): boolean {
 
 export function buildBadRequestProblem(detail: string): Problem {
   return {
+    type: defaultProblemType,
     status: 400,
     title: "Bad Request",
     detail,

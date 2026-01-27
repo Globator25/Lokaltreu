@@ -1,7 +1,8 @@
 "use client";
 
-import type { components, paths } from "@lokaltreu/types";
+import type { paths } from "@lokaltreu/types";
 import { fetchWithTimeout } from "./api/fetch-with-timeout";
+import { defaultProblemType, parseProblem, type Problem } from "./api/problem";
 import { getOrCreateCardId, getOrCreateTenantId } from "./pwa-context";
 
 export type ReferralLinkResponse =
@@ -10,15 +11,13 @@ export type ReferralLinkResponse =
 export type ClaimStampResponse =
   paths["/stamps/claim"]["post"]["responses"]["200"]["content"]["application/json"];
 
-type Problem = components["schemas"]["Problem"];
-
 export type PwaApiResult<T> = { ok: true; data: T } | { ok: false; problem: Problem };
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const timeoutMs = 8000;
 
 const networkProblem: Problem = {
-  type: "https://errors.lokaltreu.example/network",
+  type: defaultProblemType,
   title: "Network error",
   status: 503,
   detail: "Service not reachable. Please try again.",
@@ -46,50 +45,18 @@ export function buildHeaders(extra?: Record<string, string>): Record<string, str
   return { ...base, ...(extra ?? {}) };
 }
 
-function toStringField(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
-}
-
-function toNumberField(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
 async function parseProblemResponse(res: Response): Promise<Problem> {
   const contentType = res.headers.get("content-type") ?? "";
   if (contentType.includes("application/problem+json")) {
     try {
-      const raw = (await res.json()) as unknown;
-      const data = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-
-      const type = toStringField(data.type) ?? "about:blank";
-      const title = toStringField(data.title) ?? (res.statusText || "Request failed");
-      const status = toNumberField(data.status) ?? res.status;
-      const detail = toStringField(data.detail);
-      const correlation_id = toStringField(data.correlation_id);
-
-      // Keep additional fields if present (e.g. error_code, retry_after) without inventing new schema.
-      return {
-        ...(data as Record<string, unknown>),
-        type,
-        title,
-        status,
-        ...(detail ? { detail } : {}),
-        ...(correlation_id ? { correlation_id } : {}),
-      } as Problem;
+      const data = await res.json();
+      return parseProblem(data, res.status);
     } catch {
-      return {
-        type: "about:blank",
-        title: res.statusText || "Request failed",
-        status: res.status,
-      };
+      return parseProblem({ status: res.status, title: res.statusText || "Request failed" }, res.status);
     }
   }
 
-  return {
-    type: "about:blank",
-    title: res.statusText || "Request failed",
-    status: res.status,
-  };
+  return parseProblem({ status: res.status, title: res.statusText || "Request failed" }, res.status);
 }
 
 export async function getReferralLink(): Promise<PwaApiResult<ReferralLinkResponse>> {

@@ -1,6 +1,6 @@
 import type { paths } from "@lokaltreu/types";
 import { fetchWithTimeout } from "./fetch-with-timeout";
-import { parseProblem, type Problem } from "./problem";
+import { defaultProblemType, parseProblem, type Problem } from "./problem";
 
 export type ReportingSummaryResponse =
   paths["/admins/reporting/summary"]["get"]["responses"]["200"]["content"]["application/json"];
@@ -23,6 +23,7 @@ const baseUrl = "/api";
 const timeoutMs = 8000;
 
 const networkProblem: Problem = {
+  type: defaultProblemType,
   status: 503,
   title: "Network error",
   detail: "Service not reachable. Please try again.",

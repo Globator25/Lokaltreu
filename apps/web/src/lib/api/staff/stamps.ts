@@ -1,5 +1,5 @@
 import type { paths } from "@lokaltreu/types";
-import type { Problem } from "../problem";
+import { defaultProblemType, type Problem } from "../problem";
 import {
   buildBadRequestProblem,
   fetchStaffWithTimeout,
@@ -17,6 +17,7 @@ export type CreateStampTokenResult =
 const timeoutMs = 8000;
 
 const networkProblem: Problem = {
+  type: defaultProblemType,
   status: 503,
   title: "Service nicht erreichbar. Bitte Prism/Backend starten und erneut versuchen.",
   detail: "Network error",

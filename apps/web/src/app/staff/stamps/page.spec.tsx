@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import StaffStampsPage from "./page";
 import { createStampToken } from "../../../lib/api/staff/stamps";
+import { defaultProblemType } from "../../../lib/api/problem";
 
 vi.mock("../../../lib/api/staff/stamps", () => ({
   createStampToken: vi.fn(),
@@ -21,6 +22,7 @@ describe("StaffStampsPage", () => {
     createMock.mockResolvedValue({
       ok: false,
       problem: {
+        type: defaultProblemType,
         status: 503,
         title: "Network error",
         detail: "Service not reachable. Please try again.",

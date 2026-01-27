@@ -58,7 +58,7 @@ describe("redeemReward", () => {
         title: "Token expired",
         error_code: "TOKEN_EXPIRED",
       }),
-    } as Response);
+    } as unknown as Response);
 
     const result = await redeemReward({
       redeemToken: "redeem-456",

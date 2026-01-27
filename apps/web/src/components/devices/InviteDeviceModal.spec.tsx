@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { InviteDeviceModal } from "./InviteDeviceModal";
 import { createDeviceRegistrationLink } from "../../lib/api/devices";
+import { defaultProblemType } from "../../lib/api/problem";
 
 vi.mock("../../lib/api/devices", () => ({
   createDeviceRegistrationLink: vi.fn(),
@@ -15,6 +16,7 @@ describe("InviteDeviceModal", () => {
     createDeviceRegistrationLinkMock.mockResolvedValue({
       ok: false,
       problem: {
+        type: defaultProblemType,
         status: 409,
         title: "Conflict",
         error_code: "TOKEN_REUSE",

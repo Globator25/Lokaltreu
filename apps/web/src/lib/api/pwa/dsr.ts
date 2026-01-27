@@ -2,7 +2,7 @@
 
 import type { components, paths } from "@lokaltreu/types";
 import { fetchWithTimeout } from "../fetch-with-timeout";
-import { parseProblem, type Problem } from "../problem";
+import { defaultProblemType, parseProblem, type Problem } from "../problem";
 import { getOrCreateTenantId } from "../../pwa-context";
 
 export type DsrCreateResponse =
@@ -26,6 +26,7 @@ const baseUrl = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const timeoutMs = 8000;
 
 const networkProblem: Problem = {
+  type: defaultProblemType,
   status: 503,
   title: "Network error",
   detail: "Service not reachable. Please try again.",

@@ -38,8 +38,10 @@ describe("createRedisClient", () => {
     delMock.mockResolvedValueOnce(1);
 
     const client = createRedisClient();
+
     await expect(client.get("key")).resolves.toBe("value");
     await expect(client.del("key")).resolves.toBe(1);
+
     expect(getMock).toHaveBeenCalledWith("key");
     expect(delMock).toHaveBeenCalledWith("key");
   });
@@ -47,28 +49,47 @@ describe("createRedisClient", () => {
   it("sets without options by default", async () => {
     setMock.mockResolvedValueOnce("OK");
     const client = createRedisClient();
+
     await client.set("key", "value");
+
     expect(setMock).toHaveBeenCalledWith("key", "value");
   });
 
   it("sets with nx and ex", async () => {
     setMock.mockResolvedValueOnce("OK");
     const client = createRedisClient();
+
     await client.set("key", "value", { nx: true, ex: 10 });
+
     expect(setMock).toHaveBeenCalledWith("key", "value", { nx: true, ex: 10 });
   });
 
   it("sets with nx only", async () => {
     setMock.mockResolvedValueOnce("OK");
     const client = createRedisClient();
+
     await client.set("key", "value", { nx: true });
+
     expect(setMock).toHaveBeenCalledWith("key", "value", { nx: true });
   });
 
   it("sets with ex only", async () => {
     setMock.mockResolvedValueOnce("OK");
     const client = createRedisClient();
+
     await client.set("key", "value", { ex: 5 });
+
     expect(setMock).toHaveBeenCalledWith("key", "value", { ex: 5 });
+  });
+
+  it("sets with empty options object (fallback to plain set)", async () => {
+    setMock.mockResolvedValueOnce("OK");
+    const client = createRedisClient();
+
+    // Triggers the final fallback branch in redisClient.ts:
+    // return client.set(key, value);
+    await client.set("key", "value", {});
+
+    expect(setMock).toHaveBeenCalledWith("key", "value");
   });
 });

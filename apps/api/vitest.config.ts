@@ -22,7 +22,10 @@ export default defineConfig({
         "node_modules/**",
         "scripts/**",
         "tools/**",
-        "artifacts/**"
+        "artifacts/**",
+        "src/dev/**",
+        "src/dev-*.ts",
+        "src/server-main.ts"
       ]
     }
   }

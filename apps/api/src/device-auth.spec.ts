@@ -20,7 +20,16 @@ type DeviceFixture = {
   privateKey: Uint8Array;
 };
 
-const BASE64 = sodium.base64_variants.ORIGINAL;
+type SodiumLike = {
+  base64_variants: { ORIGINAL: number };
+  crypto_sign_detached: (message: Uint8Array, privateKey: Uint8Array) => Uint8Array;
+  from_string: (input: string) => Uint8Array;
+  to_base64: (input: Uint8Array, variant: number) => string;
+  crypto_sign_keypair: () => { publicKey: Uint8Array; privateKey: Uint8Array };
+};
+
+const sodiumLib = sodium as SodiumLike;
+const BASE64 = sodiumLib.base64_variants.ORIGINAL;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -42,11 +51,11 @@ async function createFixture(): Promise<DeviceFixture> {
   await initSodium();
   const repo = new InMemoryDeviceRepository();
   const replayStore = new InMemoryDeviceReplayStore();
-  const keypair = sodium.crypto_sign_keypair();
+  const keypair = sodiumLib.crypto_sign_keypair();
   const record: DeviceRecord = {
     tenantId: "tenant-1",
     deviceId: "device-1",
-    publicKey: sodium.to_base64(keypair.publicKey, BASE64),
+    publicKey: sodiumLib.to_base64(keypair.publicKey, BASE64),
     algorithm: "ed25519",
     enabled: true,
   };
@@ -86,8 +95,8 @@ function buildSignature(input: {
     timestamp: input.timestamp,
     jti: input.jti,
   });
-  const signatureBytes = sodium.crypto_sign_detached(sodium.from_string(message), input.privateKey);
-  return { message, signature: sodium.to_base64(signatureBytes, BASE64) };
+  const signatureBytes = sodiumLib.crypto_sign_detached(sodiumLib.from_string(message), input.privateKey);
+  return { message, signature: sodiumLib.to_base64(signatureBytes, BASE64) };
 }
 
 function buildHeaders(input: {
@@ -150,7 +159,7 @@ describe("device auth middleware", () => {
   it("rejects invalid signatures", async () => {
     await initSodium();
     const fixture = await createFixture();
-    const otherKey = sodium.crypto_sign_keypair().privateKey;
+    const otherKey = sodiumLib.crypto_sign_keypair().privateKey;
     serverHandle = await startServer(fixture);
     const baseUrl = getBaseUrl(serverHandle);
     const timestamp = Math.floor(Date.now() / 1000).toString();

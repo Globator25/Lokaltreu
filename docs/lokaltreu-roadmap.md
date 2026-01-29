@@ -1599,6 +1599,9 @@ organisatorischem Contract-Sync-Ritual.
 
 **Schritt 38: Integrations-/Paralleltests**
 
+**Status**
+DONE (2026-01-29) – Parallel-Suites (claim/redeem), TTL-Expiry und Rate-Limit Burst umgesetzt; Step-38 Doku auditierbar; Lint/Build/Tests grün.
+
 **Ziel/Kontext**
 
 Replay-Schutz, TTL und Idempotenz unter realistischen
@@ -1608,10 +1611,19 @@ Parallelbedingungen beweisen.
 
  • Parallel-Suites für /stamps/claim und /rewards/redeem. 
  • Tests für TTL-Expiry, Rate-Limits und Idempotenz.
+ • apps/api/tests/parallel/README.md
+ • apps/api/tests/parallel/stamps-claim.step38.parallel.spec.ts
+ • apps/api/tests/parallel/rewards-redeem.step38.parallel.spec.ts
+ • apps/api/tests/parallel/ttl-expiry.step38.spec.ts
+ • apps/api/tests/parallel/rate-limit.step38.spec.ts
+ • apps/api/tests/parallel/_util/*
+ • docs/step-38-idempotency-cases.md
+ • (Optional) apps/api/package.json → test:step38
 
 **Definition of Done (DoD)**
 
- • Parallel-Anti-Replay grün (1×201, 9×409). 
+ • Parallel-Anti-Replay grün (1×200, 9×409) – konform zu OpenAPI/SPEC und Implementierung.
+ • Zusätzlich: Rate-Limit Burst liefert mind. eine 429 (Problem+JSON), TTL-Expiry Tests deterministisch ohne Sleeps. 
  • Idempotency-Cases sauber dokumentiert.
 
 **Security / Compliance**

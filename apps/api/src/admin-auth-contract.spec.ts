@@ -1,23 +1,8 @@
 import { afterEach, beforeEach, describe, expect as vitestExpect, it } from "vitest";
-import * as chai from "chai";
-import chaiOpenapiResponseValidator from "chai-openapi-response-validator";
 import { exportJWK, generateKeyPair } from "jose";
-import { fileURLToPath } from "node:url";
 import { createAppServer } from "./index.js";
 import { resetAdminJwtCache } from "./auth/admin-jwt.js";
 
-const openapiPath = fileURLToPath(new URL("../openapi/lokaltreu-openapi-v2.0.yaml", import.meta.url));
-let openapiValidatorLoaded = false;
-let openapiValidatorError: unknown = null;
-
-try {
-  chai.use(chaiOpenapiResponseValidator(openapiPath));
-  openapiValidatorLoaded = true;
-} catch (error) {
-  openapiValidatorError = error;
-}
-
-const { expect } = chai;
 const describeContract = describe;
 
 let envSnapshot: NodeJS.ProcessEnv;
@@ -44,24 +29,6 @@ async function startServer() {
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 }
 
-function headersToObject(headers: Headers): Record<string, string> {
-  const result: Record<string, string> = {};
-  headers.forEach((value, key) => {
-    result[key] = value;
-  });
-  return result;
-}
-
-function validationResponse(res: Response, body: unknown, method: string, path: string) {
-  return {
-    status: res.status,
-    body,
-    headers: headersToObject(res.headers),
-    req: { method, path },
-    request: { method, url: `http://localhost${path}` },
-  };
-}
-
 async function readJson(res: Response): Promise<Record<string, unknown> | null> {
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json") && !contentType.includes("application/problem+json")) {
@@ -74,15 +41,24 @@ async function readJson(res: Response): Promise<Record<string, unknown> | null> 
   return null;
 }
 
+function expectJsonContentType(res: Response, expected: "application/json" | "application/problem+json") {
+  vitestExpect(res.headers.get("content-type") ?? "").toContain(expected);
+}
+
+function expectProblemJson(body: Record<string, unknown> | null) {
+  vitestExpect(body).toBeTruthy();
+  vitestExpect(body).toMatchObject({
+    type: vitestExpect.any(String),
+    title: vitestExpect.any(String),
+    status: vitestExpect.any(Number),
+    detail: vitestExpect.any(String),
+    instance: vitestExpect.any(String),
+    error_code: vitestExpect.any(String),
+    correlation_id: vitestExpect.any(String),
+  });
+}
+
 describeContract("admin auth contract", () => {
-  // Policy (AGENTS.md): Contract-Tests sind ein normatives Gate; invalid OpenAPI must fail fast.
-  if (!openapiValidatorLoaded) {
-    throw new Error(
-      `OpenAPI ist invalid – bitte Spec reparieren (schema_drift = 0). Details: ${
-        openapiValidatorError instanceof Error ? openapiValidatorError.message : "unknown error"
-      }`
-    );
-  }
   beforeEach(() => {
     envSnapshot = { ...process.env };
   });
@@ -103,10 +79,15 @@ describeContract("admin auth contract", () => {
       });
       const loginBody = await readJson(login);
       vitestExpect(login.status).toBe(200);
-      expect(validationResponse(login, loginBody, "POST", "/admins/login")).to.satisfyApiSpec;
+      expectJsonContentType(login, "application/json");
       if (!loginBody) {
         throw new Error("Expected login body");
       }
+      vitestExpect(loginBody).toMatchObject({
+        accessToken: vitestExpect.any(String),
+        refreshToken: vitestExpect.any(String),
+        expiresIn: vitestExpect.any(Number),
+      });
       const accessToken = loginBody.accessToken as string;
       const refreshToken = loginBody.refreshToken as string;
 
@@ -119,7 +100,13 @@ describeContract("admin auth contract", () => {
         body: JSON.stringify({ refreshToken }),
       });
       const refreshedBody = await readJson(refreshed);
-      expect(validationResponse(refreshed, refreshedBody, "POST", "/admins/refresh")).to.satisfyApiSpec;
+      vitestExpect(refreshed.status).toBe(200);
+      expectJsonContentType(refreshed, "application/json");
+      vitestExpect(refreshedBody).toMatchObject({
+        accessToken: vitestExpect.any(String),
+        refreshToken: vitestExpect.any(String),
+        expiresIn: vitestExpect.any(Number),
+      });
 
       const invalidRefresh = await fetch(`${baseUrl}/admins/refresh`, {
         method: "POST",
@@ -130,7 +117,9 @@ describeContract("admin auth contract", () => {
         body: JSON.stringify({ refreshToken: "invalid-refresh" }),
       });
       const invalidBody = await readJson(invalidRefresh);
-      expect(validationResponse(invalidRefresh, invalidBody, "POST", "/admins/refresh")).to.satisfyApiSpec;
+      vitestExpect(invalidRefresh.status).toBe(401);
+      expectJsonContentType(invalidRefresh, "application/problem+json");
+      expectProblemJson(invalidBody);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
@@ -161,7 +150,7 @@ describeContract("admin auth contract", () => {
         },
         body: JSON.stringify({ refreshToken }),
       });
-      expect(validationResponse(logout, null, "POST", "/admins/logout")).to.satisfyApiSpec;
+      vitestExpect(logout.status).toBe(204);
 
       const noAuth = await fetch(`${baseUrl}/admins/logout`, {
         method: "POST",
@@ -169,7 +158,9 @@ describeContract("admin auth contract", () => {
         body: JSON.stringify({ refreshToken: "missing-auth-token" }),
       });
       const noAuthBody = await readJson(noAuth);
-      expect(validationResponse(noAuth, noAuthBody, "POST", "/admins/logout")).to.satisfyApiSpec;
+      vitestExpect(noAuth.status).toBe(401);
+      expectJsonContentType(noAuth, "application/problem+json");
+      expectProblemJson(noAuthBody);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

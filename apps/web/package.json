@@ -11,7 +11,9 @@
     "prism:mock": "npx prism mock ../api/openapi/lokaltreu-openapi-v2.0.yaml -p 4010 --host 127.0.0.1",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "npm run test:e2e",
+    "test:e2e:smoke": "node -e \"const { spawnSync } = require('child_process'); const specs = require('./e2e/smoke.manifest.js'); const isWin = process.platform === 'win32'; const cmd = isWin ? 'cmd.exe' : 'npx'; const args = isWin ? ['/d','/s','/c','npx','playwright','test', ...specs] : ['playwright','test', ...specs]; const res = spawnSync(cmd, args, { stdio: 'inherit' }); if (res.error) { console.error(res.error); process.exit(1); } process.exit(res.status ?? 1);\"",
+    "test:e2e:full": "playwright test",
+    "test:e2e:ci": "node ./e2e/run-e2e-ci.js",
     "test:plan": "node -e \"console.log('test:plan: skip web')\"",
     "test:plan:file": "node -e \"console.log('test:plan:file: skip web')\"",
     "gdpr:dsr": "node -e \"console.log('gdpr:dsr: skip web')\""

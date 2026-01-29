@@ -63,6 +63,7 @@ export function InviteDeviceModal({ open, onClose }: InviteDeviceModalProps) {
         className="relative w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
+        data-testid="device-invite-modal"
       >
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
@@ -91,11 +92,14 @@ export function InviteDeviceModal({ open, onClose }: InviteDeviceModalProps) {
           {status === "success" && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
               <div className="flex flex-col gap-3">
-                <div className="break-all">{link ?? "https://example.invalid/device-register"}</div>
+                <div className="break-all" data-testid="device-invite-link">
+                  {link ?? "https://example.invalid/device-register"}
+                </div>
                 <button
                   type="button"
                   onClick={handleCopy}
                   disabled={!canCopy}
+                  data-testid="device-invite-copy"
                   className="rounded-md border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Link kopieren
@@ -108,6 +112,7 @@ export function InviteDeviceModal({ open, onClose }: InviteDeviceModalProps) {
             <button
               type="button"
               onClick={onClose}
+              data-testid="device-invite-close"
               className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700"
             >
               Schliessen
@@ -116,6 +121,7 @@ export function InviteDeviceModal({ open, onClose }: InviteDeviceModalProps) {
               type="button"
               onClick={handleGenerate}
               disabled={status === "loading"}
+              data-testid="device-invite-generate"
               className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               Link erzeugen

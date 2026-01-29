@@ -165,6 +165,7 @@ export default function OnboardingPage() {
                 Email
                 <input
                   type="email"
+                  data-testid="onboarding-email"
                   value={state.form.email}
                   onChange={(event) => updateFormField("email", event.currentTarget.value)}
                   className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
@@ -180,6 +181,7 @@ export default function OnboardingPage() {
                 Password
                 <input
                   type="password"
+                  data-testid="onboarding-password"
                   value={state.form.password}
                   onChange={(event) => updateFormField("password", event.currentTarget.value)}
                   className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
@@ -215,12 +217,21 @@ export default function OnboardingPage() {
               </div>
 
               {state.registration && (
-                <div className="rounded-lg border border-neutral-200 bg-white p-3 text-xs text-neutral-700">
+                <div
+                  className="rounded-lg border border-neutral-200 bg-white p-3 text-xs text-neutral-700"
+                  data-testid="onboarding-registration"
+                >
                   <div>
-                    <span className="font-semibold">adminId:</span> {state.registration.adminId}
+                    <span className="font-semibold">adminId:</span>{" "}
+                    <span data-testid="onboarding-admin-id">
+                      {state.registration.adminId}
+                    </span>
                   </div>
                   <div>
-                    <span className="font-semibold">tenantId:</span> {state.registration.tenantId}
+                    <span className="font-semibold">tenantId:</span>{" "}
+                    <span data-testid="onboarding-tenant-id">
+                      {state.registration.tenantId}
+                    </span>
                   </div>
                 </div>
               )}
@@ -285,6 +296,7 @@ export default function OnboardingPage() {
               type="button"
               onClick={goNext}
               disabled={!stepValid || isSubmitting}
+              data-testid="onboarding-next"
               className="rounded-full bg-neutral-900 px-6 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isSubmitting ? "Wird gesendet..." : "Weiter"}

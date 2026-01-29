@@ -86,6 +86,7 @@ export default function StaffRedeemPage() {
           <input
             value={form.redeemToken}
             onChange={updateField("redeemToken")}
+            data-testid="staff-redeem-token"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             required
           />
@@ -96,6 +97,7 @@ export default function StaffRedeemPage() {
           <input
             value={form.deviceKey}
             onChange={updateField("deviceKey")}
+            data-testid="staff-redeem-device-key"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             required
           />
@@ -106,6 +108,7 @@ export default function StaffRedeemPage() {
           <input
             value={form.deviceTimestamp}
             onChange={updateField("deviceTimestamp")}
+            data-testid="staff-redeem-device-timestamp"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             required
           />
@@ -116,6 +119,7 @@ export default function StaffRedeemPage() {
           <input
             value={form.deviceProof}
             onChange={updateField("deviceProof")}
+            data-testid="staff-redeem-device-proof"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             type="password"
             required
@@ -125,6 +129,7 @@ export default function StaffRedeemPage() {
         <button
           type="submit"
           disabled={loading}
+          data-testid="staff-redeem-submit"
           className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {loading ? "Bitte warten..." : "Praemie einloesen"}
@@ -134,7 +139,10 @@ export default function StaffRedeemPage() {
       {error ? <ProblemBanner message={error} /> : null}
 
       {payload ? (
-        <section className="rounded-md border border-neutral-200 bg-white p-4 text-sm">
+        <section
+          className="rounded-md border border-neutral-200 bg-white p-4 text-sm"
+          data-testid="staff-redeem-payload"
+        >
           <h2 className="mb-2 text-sm font-semibold">Antwort</h2>
           <pre className="whitespace-pre-wrap break-words text-xs text-neutral-700">
             {JSON.stringify(payload, null, 2)}

@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { seedPwaContext, TEST_CARD_ID } from "./utils";
 
 test.describe("PWA DSR", () => {
   test("create DSR request and then load status", async ({ page }) => {
+    await seedPwaContext(page);
     await page.goto("/pwa/dsr");
 
     await expect(page.getByTestId("dsr-card-id")).toBeVisible();
-    await page
-      .getByTestId("dsr-card-id")
-      .fill("23d57e81-b10a-47c6-90d1-b8452bf9fc3b");
+    await page.getByTestId("dsr-card-id").fill(TEST_CARD_ID);
 
     const submit = page.getByTestId("dsr-submit");
     await expect(submit).toBeEnabled({ timeout: 10000 });

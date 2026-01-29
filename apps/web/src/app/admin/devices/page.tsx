@@ -29,6 +29,7 @@ export default function DevicesPage() {
               <button
                 type="button"
                 onClick={() => setInviteOpen(true)}
+                data-testid="device-invite-open"
                 className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
               >
                 Registrierungslink erzeugen

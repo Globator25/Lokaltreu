@@ -68,17 +68,22 @@ export default function PwaReferralPage() {
         type="button"
         onClick={handleLoad}
         disabled={loading}
+        data-testid="pwa-referral-load"
         className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {loading ? "Bitte warten..." : "Referral-Link laden"}
       </button>
 
       {link ? (
-        <section className="rounded-md border border-neutral-200 bg-white p-4 text-sm">
+        <section
+          className="rounded-md border border-neutral-200 bg-white p-4 text-sm"
+          data-testid="pwa-referral-result"
+        >
           <h2 className="mb-2 text-sm font-semibold">Dein Link</h2>
           <a
             href={link}
             className="break-words text-sm text-blue-700 underline"
+            data-testid="pwa-referral-link"
             target="_blank"
             rel="noreferrer"
           >
@@ -101,4 +106,3 @@ export default function PwaReferralPage() {
     </main>
   );
 }
-

@@ -1644,39 +1644,45 @@ Parallelbedingungen beweisen.
 
 **Schritt 39: E2E-Tests**
 
-**Ziel/Kontext**
+**Status**
+DONE (2026-01-29) – E2E Smoke/CI-Suite im Repo; Windows-stabiler Runner (cmd.exe/npx); Prism Mock-First integriert; PR #63 gemerged; CI/Security/GDPR Gates grün.
 
+**Ziel/Kontext**
 User-Stories Ende-zu-Ende verifizieren (Admin, Mitarbeiter, Endkunde).
 
 **Ergebnisse / Artefakte**
-
- • E2E-Suites für US-1 bis US-n (Onboarding, Gerätebindung, Stempel,
-   Redeem, Referral, DSR-UI).
+ • apps/web/e2e/admin-onboarding.spec.ts
+ • apps/web/e2e/admin-devices.spec.ts
+ • apps/web/e2e/staff-stamps.spec.ts
+ • apps/web/e2e/staff-redeem.spec.ts
+ • apps/web/e2e/pwa-scan.spec.ts
+ • apps/web/e2e/pwa-referral.spec.ts
+ • apps/web/e2e/pwa-dsr.spec.ts
+ • apps/web/e2e/smoke.manifest.js
+ • apps/web/e2e/run-e2e-ci.js
+ • docs/step-39-e2e.md
+ • apps/web/package.json → test:e2e:smoke, test:e2e:ci
 
 **Definition of Done (DoD)**
-
- • Keine kritischen User-Flows ohne E2E-Test. • Smoke-Suite läuft bei
-   jedem PR.
+ • Keine kritischen User-Flows ohne E2E-Test (Admin/Mitarbeiter/PWA Kernflows abgedeckt).
+ • Smoke-Suite läuft bei jedem PR (CI grün; PR #63 gemerged).
+ • Spot-Check/Verification lokal: lint/build/tests + npm run test:e2e:ci → passed.
+ • Mock-first via Prism + LOKALTREU_API_UPSTREAM.
 
 **Security / Compliance**
-
- • Testaccounts klar von produktiven Accounts getrennt.
+ • Testdaten anonym/pseudonym; keine produktiven Accounts/PII.
+ • Test-Header/Tenants strikt von Prod getrennt.
 
 **Umsetzungshinweise**
-
  • Tests entlang realer Customer-Journeys modellieren.
- • Spot-Check/Verification (lokal):
-   o lint/build/tests + e2e smoke/full → passed
-   o Mock-first via Prism + LOKALTREU_API_UPSTREAM
+ • Runner startet/stopt Prism deterministisch (Port-Preflight + Cleanup).
 
 **Owner**
-
-  • Primär: Test-Pilot
-  • Sekundär: Product Owner
+ • Primär: Test-Pilot
+ • Sekundär: Product Owner
 
 **Voraussetzungen**
-
-  • Schritte 28--36, 37--38
+ • Schritte 28--36, 37--38
 
 **Schritt 40: UAT mit Zielgruppe (finale Runde)**
 

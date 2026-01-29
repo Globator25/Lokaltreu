@@ -1644,6 +1644,10 @@ Parallelbedingungen beweisen.
 
 **Schritt 39: E2E-Tests**
 
+**Status**
+DONE (2026-01-29) – E2E Smoke/CI im Repo; Prism Mock orchestration; stabile Selectors; lint/build/tests + e2e smoke grün; PR #63 gemerged.
+
+
 **Ziel/Kontext**
 
 User-Stories Ende-zu-Ende verifizieren (Admin, Mitarbeiter, Endkunde).

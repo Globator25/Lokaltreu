@@ -1557,6 +1557,9 @@ UI-weit konsistente Fehleranzeige auf Basis von Problem+JSON, ohne Detail-Leaks 
 
 **Schritt 37: Unit- & Contract-Tests (Coverage- & Contract-Sync-Review)**
 
+**Status**
+DONE (2026-01-29) – Unit/Contract Tests gehärtet; RFC7807-Assertions stabilisiert; Coverage ≥80% nachgewiesen; PR #60 gemerged; CI Gates grün.
+
 **Ziel/Kontext**
 
 Testabdeckung und Contract-Konformität sicherstellen, inkl.

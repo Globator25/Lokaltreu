@@ -82,7 +82,7 @@ jobs:
         env:
           LOKALTREU_API_UPSTREAM: http://127.0.0.1:4010
           E2E_BASE_URL: http://127.0.0.1:3000
-        run: npm -w apps/web run test:e2e
+        run: npm -w apps/web run test:e2e:ci
 
       - name: Upload Playwright report (on failure)
         if: failure()

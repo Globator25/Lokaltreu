@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createServer } from "node:http";
-import sodium from "libsodium-wrappers/dist/modules/libsodium-wrappers.js";
+import sodium from "libsodium-wrappers";
 import { buildCanonicalMessage, initSodium } from "./modules/auth/device-proof.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";
 import type { DeviceAuthRequest } from "./middleware/device-auth.js";
@@ -104,6 +104,13 @@ function buildHeaders(input: {
   };
 }
 
+function getBaseUrl(handle: ServerHandle | null): string {
+  if (!handle) {
+    throw new Error("Server not started");
+  }
+  return handle.baseUrl;
+}
+
 describe("device auth middleware", () => {
   let serverHandle: ServerHandle | null = null;
 
@@ -117,6 +124,7 @@ describe("device auth middleware", () => {
   it("accepts valid device proof", async () => {
     const fixture = await createFixture();
     serverHandle = await startServer(fixture);
+    const baseUrl = getBaseUrl(serverHandle);
     const path = "/stamps/tokens";
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const jti = "jti-valid";
@@ -127,7 +135,7 @@ describe("device auth middleware", () => {
       jti,
       privateKey: fixture.privateKey,
     });
-    const res = await fetch(`${serverHandle.baseUrl}${path}`, {
+    const res = await fetch(`${baseUrl}${path}`, {
       method: "POST",
       headers: buildHeaders({
         deviceKey: fixture.record.deviceId,
@@ -144,6 +152,7 @@ describe("device auth middleware", () => {
     const fixture = await createFixture();
     const otherKey = sodium.crypto_sign_keypair().privateKey;
     serverHandle = await startServer(fixture);
+    const baseUrl = getBaseUrl(serverHandle);
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const jti = "jti-invalid";
     const { signature } = buildSignature({
@@ -153,7 +162,7 @@ describe("device auth middleware", () => {
       jti,
       privateKey: otherKey,
     });
-    const res = await fetch(`${serverHandle.baseUrl}/stamps/tokens`, {
+    const res = await fetch(`${baseUrl}/stamps/tokens`, {
       method: "POST",
       headers: buildHeaders({
         deviceKey: fixture.record.deviceId,
@@ -171,6 +180,7 @@ describe("device auth middleware", () => {
   it("rejects timestamps outside the skew window", async () => {
     const fixture = await createFixture();
     serverHandle = await startServer(fixture);
+    const baseUrl = getBaseUrl(serverHandle);
     const timestamp = (Math.floor(Date.now() / 1000) + 45).toString();
     const jti = "jti-skew";
     const { signature } = buildSignature({
@@ -180,7 +190,7 @@ describe("device auth middleware", () => {
       jti,
       privateKey: fixture.privateKey,
     });
-    const res = await fetch(`${serverHandle.baseUrl}/stamps/tokens`, {
+    const res = await fetch(`${baseUrl}/stamps/tokens`, {
       method: "POST",
       headers: buildHeaders({
         deviceKey: fixture.record.deviceId,
@@ -198,6 +208,7 @@ describe("device auth middleware", () => {
   it("rejects replays for reused nonces", async () => {
     const fixture = await createFixture();
     serverHandle = await startServer(fixture);
+    const baseUrl = getBaseUrl(serverHandle);
     const path = "/stamps/tokens";
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const jti = "jti-replay";
@@ -216,7 +227,7 @@ describe("device auth middleware", () => {
     });
 
     const sendReplayRequest = async () =>
-      fetch(`${serverHandle.baseUrl}${path}`, {
+      fetch(`${baseUrl}${path}`, {
         method: "POST",
         headers,
       });

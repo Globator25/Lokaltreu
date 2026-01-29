@@ -1,4 +1,4 @@
-import sodium from "libsodium-wrappers/dist/modules/libsodium-wrappers.js";
+import sodium from "libsodium-wrappers";
 
 type CanonicalMessageInput = {
   method: string;

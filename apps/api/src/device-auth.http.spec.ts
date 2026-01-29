@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "node:http";
-import sodium from "libsodium-wrappers/dist/modules/libsodium-wrappers.js";
+import sodium from "libsodium-wrappers";
 import { buildCanonicalMessage, initSodium } from "./modules/auth/device-proof.js";
 import { createDeviceAuthMiddleware } from "./middleware/device-auth.js";
 import type { DeviceAuthRequest } from "./middleware/device-auth.js";

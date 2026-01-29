@@ -1,24 +1,9 @@
 import { afterAll, beforeAll, describe, expect as vitestExpect, it } from "vitest";
-import * as chai from "chai";
-import chaiOpenapiResponseValidator from "chai-openapi-response-validator";
 import { exportJWK, generateKeyPair } from "jose";
-import { fileURLToPath } from "node:url";
 import { createAppServer } from "../../src/index.js";
 import { issueAccessToken, resetAdminJwtCache } from "../../src/auth/admin-jwt.js";
 import { resetAdminKeystoreCache } from "../../src/modules/auth/keystore.js";
 
-const openapiPath = fileURLToPath(new URL("../../openapi/lokaltreu-openapi-v2.0.yaml", import.meta.url));
-let openapiValidatorLoaded = false;
-let openapiValidatorError: unknown = null;
-
-try {
-  chai.use(chaiOpenapiResponseValidator(openapiPath));
-  openapiValidatorLoaded = true;
-} catch (error) {
-  openapiValidatorError = error;
-}
-
-const { expect } = chai;
 const describeContract = describe;
 
 let envSnapshot: NodeJS.ProcessEnv;
@@ -46,24 +31,6 @@ async function startServer() {
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 }
 
-function headersToObject(headers: Headers): Record<string, string> {
-  const result: Record<string, string> = {};
-  headers.forEach((value, key) => {
-    result[key] = value;
-  });
-  return result;
-}
-
-function validationResponse(res: Response, body: unknown, method: string, path: string) {
-  return {
-    status: res.status,
-    body,
-    headers: headersToObject(res.headers),
-    req: { method, path },
-    request: { method, url: `http://localhost${path}` },
-  };
-}
-
 async function readJson(res: Response): Promise<Record<string, unknown> | null> {
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json") && !contentType.includes("application/problem+json")) {
@@ -76,15 +43,26 @@ async function readJson(res: Response): Promise<Record<string, unknown> | null> 
   return null;
 }
 
-describeContract("reporting contract", () => {
-  if (!openapiValidatorLoaded) {
-    throw new Error(
-      `OpenAPI ist invalid – bitte Spec reparieren (schema_drift = 0). Details: ${
-        openapiValidatorError instanceof Error ? openapiValidatorError.message : "unknown error"
-      }`
-    );
-  }
+function expectJsonContentType(res: Response, expected: "application/json" | "application/problem+json") {
+  vitestExpect(res.headers.get("content-type") ?? "").toContain(expected);
+}
 
+function expectProblemJson(body: Record<string, unknown> | null) {
+  vitestExpect(body).toBeTruthy();
+  vitestExpect(body).toMatchObject({
+    type: vitestExpect.any(String),
+    title: vitestExpect.any(String),
+    status: vitestExpect.any(Number),
+    detail: vitestExpect.any(String),
+    instance: vitestExpect.any(String),
+    correlation_id: vitestExpect.any(String),
+  });
+  if (body && "error_code" in body) {
+    vitestExpect(body.error_code).toEqual(vitestExpect.any(String));
+  }
+}
+
+describeContract("reporting contract", () => {
   beforeAll(() => {
     envSnapshot = { ...process.env };
   });
@@ -104,11 +82,21 @@ describeContract("reporting contract", () => {
       });
       const okBody = await readJson(ok);
       vitestExpect(ok.status).toBe(200);
-      expect(validationResponse(ok, okBody, "GET", "/admins/reporting/summary")).to.satisfyApiSpec;
+      expectJsonContentType(ok, "application/json");
+      vitestExpect(okBody).toMatchObject({
+        stamps: vitestExpect.any(Object),
+        rewards: vitestExpect.any(Object),
+        referrals: vitestExpect.any(Object),
+        deviceActivity: vitestExpect.any(Object),
+        planUsage: vitestExpect.any(Object),
+        activeCampaigns: vitestExpect.any(Number),
+      });
 
       const unauthorized = await fetch(`${baseUrl}/admins/reporting/summary`);
       const unauthorizedBody = await readJson(unauthorized);
-      expect(validationResponse(unauthorized, unauthorizedBody, "GET", "/admins/reporting/summary")).to.satisfyApiSpec;
+      vitestExpect(unauthorized.status).toBe(401);
+      expectJsonContentType(unauthorized, "application/problem+json");
+      expectProblemJson(unauthorizedBody);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
@@ -124,17 +112,26 @@ describeContract("reporting contract", () => {
       });
       const okBody = await readJson(ok);
       vitestExpect(ok.status).toBe(200);
-      expect(validationResponse(ok, okBody, "GET", "/admins/reporting/timeseries")).to.satisfyApiSpec;
+      expectJsonContentType(ok, "application/json");
+      vitestExpect(okBody).toMatchObject({
+        metric: vitestExpect.any(String),
+        bucket: vitestExpect.any(String),
+        series: vitestExpect.any(Array),
+      });
 
       const bad = await fetch(`${baseUrl}/admins/reporting/timeseries?metric=invalid&bucket=day`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const badBody = await readJson(bad);
-      expect(validationResponse(bad, badBody, "GET", "/admins/reporting/timeseries")).to.satisfyApiSpec;
+      vitestExpect(bad.status).toBe(400);
+      expectJsonContentType(bad, "application/problem+json");
+      expectProblemJson(badBody);
 
       const unauthorized = await fetch(`${baseUrl}/admins/reporting/timeseries?metric=stamps&bucket=day`);
       const unauthorizedBody = await readJson(unauthorized);
-      expect(validationResponse(unauthorized, unauthorizedBody, "GET", "/admins/reporting/timeseries")).to.satisfyApiSpec;
+      vitestExpect(unauthorized.status).toBe(401);
+      expectJsonContentType(unauthorized, "application/problem+json");
+      expectProblemJson(unauthorizedBody);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

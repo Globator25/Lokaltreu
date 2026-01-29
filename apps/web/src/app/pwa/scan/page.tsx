@@ -113,6 +113,7 @@ export default function PwaScanPage() {
           <input
             value={qrToken}
             onChange={(event) => setQrToken(event.target.value)}
+            data-testid="pwa-scan-token"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             placeholder="qrToken"
             required
@@ -122,6 +123,7 @@ export default function PwaScanPage() {
         <button
           type="submit"
           disabled={loading || !qrToken.trim()}
+          data-testid="pwa-scan-submit"
           className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {loading ? "Bitte warten..." : "Stempel einloesen"}
@@ -129,7 +131,10 @@ export default function PwaScanPage() {
       </form>
 
       {result?.ok ? (
-        <section className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <section
+          className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
+          data-testid="pwa-scan-success"
+        >
           <h2 className="mb-2 text-sm font-semibold">Erfolg</h2>
           <p className="text-sm">Stempel erfolgreich eingeloest.</p>
           {result.payload ? (
@@ -156,4 +161,3 @@ export default function PwaScanPage() {
     </main>
   );
 }
-

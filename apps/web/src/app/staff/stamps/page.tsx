@@ -101,6 +101,7 @@ export default function StaffStampsPage() {
         type="button"
         onClick={handleCreate}
         disabled={loading || Boolean(getValidationMessage(form))}
+        data-testid="staff-stamps-submit"
         className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {loading ? "Bitte warten..." : "Neuen Code erzeugen"}
@@ -112,6 +113,7 @@ export default function StaffStampsPage() {
           <input
             value={form.deviceKey}
             onChange={updateField("deviceKey")}
+            data-testid="staff-stamps-device-key"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             required
           />
@@ -122,6 +124,7 @@ export default function StaffStampsPage() {
           <input
             value={form.deviceTimestamp}
             onChange={updateField("deviceTimestamp")}
+            data-testid="staff-stamps-device-timestamp"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             required
           />
@@ -132,6 +135,7 @@ export default function StaffStampsPage() {
           <input
             value={form.deviceProof}
             onChange={updateField("deviceProof")}
+            data-testid="staff-stamps-device-proof"
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm"
             type="password"
             required
@@ -146,7 +150,10 @@ export default function StaffStampsPage() {
       {error ? <ProblemBanner message={error} /> : null}
 
       {payload ? (
-        <section className="rounded-md border border-neutral-200 bg-white p-4 text-sm">
+        <section
+          className="rounded-md border border-neutral-200 bg-white p-4 text-sm"
+          data-testid="staff-stamps-payload"
+        >
           <h2 className="mb-2 text-sm font-semibold">Token</h2>
           <pre className="whitespace-pre-wrap break-words text-xs text-neutral-700">
             {JSON.stringify(payload, null, 2)}

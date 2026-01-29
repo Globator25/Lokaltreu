@@ -1665,6 +1665,9 @@ User-Stories Ende-zu-Ende verifizieren (Admin, Mitarbeiter, Endkunde).
 **Umsetzungshinweise**
 
  • Tests entlang realer Customer-Journeys modellieren.
+ • Spot-Check/Verification (lokal):
+   o lint/build/tests + e2e smoke/full → passed
+   o Mock-first via Prism + LOKALTREU_API_UPSTREAM
 
 **Owner**
 

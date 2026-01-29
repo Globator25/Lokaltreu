@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
+    "test:step38": "vitest run -t \"step-38\"",
     "test:security:replay": "vitest run src/mw/__tests__/idempotency-http.spec.ts src/mw/__tests__/idempotency-conflict.spec.ts src/mw/__tests__/idempotency-replay-policy.spec.ts src/mw/__tests__/idempotency-retry.spec.ts",
     "test:security:device-proof": "vitest run src/device-auth.spec.ts src/device-auth.http.spec.ts",
     "test:security:plan-gate": "vitest run tests/plan",

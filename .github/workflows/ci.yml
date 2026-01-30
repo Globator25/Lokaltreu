@@ -78,10 +78,10 @@ jobs:
           set -euo pipefail
           echo "CI GIT_SHA=$GITHUB_SHA BRANCH=${GITHUB_REF_NAME:-unknown}"
           sed -n '1,120p' apps/web/e2e/run-e2e-ci.js
-          echo "CI E2E_BASE_URL='$E2E_BASE_URL'"
-          echo "CI E2E_RUNNER_OWNS_WEBSERVER='$E2E_RUNNER_OWNS_WEBSERVER'"
-          echo "CI LOKALTREU_API_UPSTREAM='$LOKALTREU_API_UPSTREAM'"
-          echo "CI LOKALTREU_STAFF_API_UPSTREAM='$LOKALTREU_STAFF_API_UPSTREAM'"
+          echo "CI E2E_BASE_URL='${E2E_BASE_URL:-}'"
+          echo "CI E2E_RUNNER_OWNS_WEBSERVER='${E2E_RUNNER_OWNS_WEBSERVER:-}'"
+          echo "CI LOKALTREU_API_UPSTREAM='${LOKALTREU_API_UPSTREAM:-}'"
+          echo "CI LOKALTREU_STAFF_API_UPSTREAM='${LOKALTREU_STAFF_API_UPSTREAM:-}'"
           node apps/web/e2e/run-e2e-ci.js
 
       - name: E2E cleanup (always)

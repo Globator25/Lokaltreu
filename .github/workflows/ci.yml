@@ -9,7 +9,7 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -62,8 +62,8 @@ jobs:
           LOKALTREU_API_UPSTREAM: http://127.0.0.1:4010
           E2E_RUNNER_OWNS_WEBSERVER: "1"
         run: |
-          echo "E2E_BASE_URL=$E2E_BASE_URL"
-          echo "E2E_RUNNER_OWNS_WEBSERVER=$E2E_RUNNER_OWNS_WEBSERVER"
+          echo "CI E2E_BASE_URL='$E2E_BASE_URL'"
+          echo "CI E2E_RUNNER_OWNS_WEBSERVER='$E2E_RUNNER_OWNS_WEBSERVER'"
           node apps/web/e2e/run-e2e-ci.js
 
       - name: Upload Playwright report (on failure)

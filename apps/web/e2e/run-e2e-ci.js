@@ -357,6 +357,18 @@ function killPrism(proc) {
 
 async function main() {
   const specs = require("./smoke.manifest.js");
+  const prismPort = process.env.PRISM_PORT ?? "4010";
+  const prismBase = `http://127.0.0.1:${prismPort}`;
+  const apiUpstream =
+    (process.env.LOKALTREU_API_UPSTREAM || "").trim() || prismBase;
+  const staffUpstream =
+    (process.env.LOKALTREU_STAFF_API_UPSTREAM || "").trim() || apiUpstream;
+  process.env.LOKALTREU_API_UPSTREAM = apiUpstream;
+  process.env.LOKALTREU_STAFF_API_UPSTREAM = staffUpstream;
+  console.log(`[e2e] LOKALTREU_API_UPSTREAM=${process.env.LOKALTREU_API_UPSTREAM}`);
+  console.log(
+    `[e2e] LOKALTREU_STAFF_API_UPSTREAM=${process.env.LOKALTREU_STAFF_API_UPSTREAM}`,
+  );
   process.env.E2E_RUNNER_OWNS_WEBSERVER = "1";
   if (!process.env.E2E_BASE_URL) {
     process.env.E2E_BASE_URL = "http://127.0.0.1:3002";
@@ -453,6 +465,16 @@ async function main() {
         HOSTNAME: process.env.HOSTNAME ?? "127.0.0.1",
         PORT: process.env.PORT ?? "3002",
       };
+      env.LOKALTREU_API_UPSTREAM =
+        (env.LOKALTREU_API_UPSTREAM || "").trim() || "http://127.0.0.1:4010";
+      env.LOKALTREU_STAFF_API_UPSTREAM =
+        (env.LOKALTREU_STAFF_API_UPSTREAM || "").trim() || env.LOKALTREU_API_UPSTREAM;
+      console.log(
+        `[e2e] Web env LOKALTREU_API_UPSTREAM=${env.LOKALTREU_API_UPSTREAM}`,
+      );
+      console.log(
+        `[e2e] Web env LOKALTREU_STAFF_API_UPSTREAM=${env.LOKALTREU_STAFF_API_UPSTREAM}`,
+      );
       const port = env.PORT;
       const hostname = env.HOSTNAME;
       e2eBaseUrl = `http://127.0.0.1:${port}`;

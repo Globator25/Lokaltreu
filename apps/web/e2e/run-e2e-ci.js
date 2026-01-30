@@ -518,6 +518,7 @@ async function main() {
       await waitForHttpOk(webCheckUrl, webServerTimeoutMs, webServerPollIntervalMs);
     }
 
+    console.log(`[e2e] E2E_BASE_URL=${process.env.E2E_BASE_URL || ""} -> ${e2eBaseUrl}`);
     // Ensure Playwright always receives a valid baseURL for relative page.goto().
     const code = await runPlaywright(specs, {
       E2E_BASE_URL: e2eBaseUrl,

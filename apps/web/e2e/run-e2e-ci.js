@@ -448,6 +448,7 @@ async function main() {
       };
       const port = env.PORT;
       const hostname = env.HOSTNAME;
+      process.env.E2E_BASE_URL = `http://127.0.0.1:${port}`;
       const free = await isPortFree(hostname, port);
       if (!free) {
         console.error(

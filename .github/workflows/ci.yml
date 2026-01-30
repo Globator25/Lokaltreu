@@ -9,7 +9,7 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +60,6 @@ jobs:
       - name: Web E2E (Playwright - Smoke, Runner owns)
         env:
           LOKALTREU_API_UPSTREAM: http://127.0.0.1:4010
-          E2E_BASE_URL: http://127.0.0.1:3002
           E2E_RUNNER_OWNS_WEBSERVER: "1"
         run: node apps/web/e2e/run-e2e-ci.js
 

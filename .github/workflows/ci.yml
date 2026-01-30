@@ -12,10 +12,19 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Debug workflow file (prove SHA)
+        run: |
+          echo "DEBUG: workflow file from workspace:"
+          sed -n '1,220p' .github/workflows/ci.yml
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          check-latest: true
 
       - name: AGENTS.md sentinels
         shell: pwsh

@@ -57,32 +57,12 @@ jobs:
       - name: Install Playwright browsers (web)
         run: npx playwright install --with-deps chromium
 
-      - name: Start Prism mock (DSR) in background
-        shell: bash
-        run: |
-          npx prism mock "$GITHUB_WORKSPACE/apps/api/openapi/lokaltreu-openapi-v2.0.yaml" -p 4010 --host 127.0.0.1 > /tmp/prism.log 2>&1 &
-          echo $! > /tmp/prism.pid
-
-      - name: Wait for Prism healthcheck
-        shell: bash
-        run: |
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:4010/.well-known/jwks.json > /dev/null; then
-              echo "Prism ready"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "Prism did not become ready in time"
-          echo "---- prism.log (tail) ----"
-          tail -n 200 /tmp/prism.log || true
-          exit 1
-
-      - name: Web E2E (Playwright)
+      - name: Web E2E (Playwright - Smoke, Runner owns)
         env:
           LOKALTREU_API_UPSTREAM: http://127.0.0.1:4010
-          E2E_BASE_URL: http://127.0.0.1:3000
-        run: npm -w apps/web run test:e2e
+          E2E_BASE_URL: http://127.0.0.1:3002
+          E2E_RUNNER_OWNS_WEBSERVER: "1"
+        run: node apps/web/e2e/run-e2e-ci.js
 
       - name: Upload Playwright report (on failure)
         if: failure()
@@ -93,4 +73,3 @@ jobs:
             apps/web/playwright-report
             apps/web/test-results
           if-no-files-found: ignore
-

@@ -293,9 +293,13 @@ function isPortFree(hostname, port) {
   });
 }
 
-function runPlaywright(specs, envOverrides = {}) {
+function runPlaywright(specs, envOverrides = {}, cwdOverride) {
   return new Promise((resolve) => {
     const cmd = isWin ? "cmd.exe" : "npx";
+    const cwd = cwdOverride ?? path.join(__dirname, "..");
+    const env = { ...process.env, ...envOverrides };
+    const configPath = path.resolve(path.join(__dirname, "..", "playwright.config.ts"));
+    console.log(`[e2e] spawning playwright: cwd=${cwd} baseURL=${env.E2E_BASE_URL}`);
     const args = isWin
       ? [
           "/d",
@@ -304,6 +308,7 @@ function runPlaywright(specs, envOverrides = {}) {
           "npx",
           "playwright",
           "test",
+          `--config=${configPath}`,
           "--workers=1",
           "--retries=1",
           "--reporter=line",
@@ -312,13 +317,14 @@ function runPlaywright(specs, envOverrides = {}) {
       : [
           "playwright",
           "test",
+          `--config=${configPath}`,
           "--workers=1",
           "--retries=1",
           "--reporter=line",
           ...specs,
         ];
 
-    const proc = spawnCmd(cmd, args, { env: { ...process.env, ...envOverrides } });
+    const proc = spawnCmd(cmd, args, { env, cwd });
     proc.on("close", (code) => resolve(code ?? 1));
   });
 }
@@ -520,10 +526,14 @@ async function main() {
 
     console.log(`[e2e] E2E_BASE_URL=${process.env.E2E_BASE_URL || ""} -> ${e2eBaseUrl}`);
     // Ensure Playwright always receives a valid baseURL for relative page.goto().
-    const code = await runPlaywright(specs, {
-      E2E_BASE_URL: e2eBaseUrl,
-      E2E_RUNNER_OWNS_WEBSERVER: "1",
-    });
+    const code = await runPlaywright(
+      specs,
+      {
+        E2E_BASE_URL: e2eBaseUrl,
+        E2E_RUNNER_OWNS_WEBSERVER: "1",
+      },
+      path.join(__dirname, ".."),
+    );
     await cleanup();
     process.exit(code);
   } catch (err) {

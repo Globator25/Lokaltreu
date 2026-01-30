@@ -1,7 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const isCi = Boolean(process.env.CI);
-const baseURL = process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
+const rawBaseUrl = process.env.E2E_BASE_URL;
+const baseURL =
+  rawBaseUrl && rawBaseUrl.trim().length > 0
+    ? rawBaseUrl.trim()
+    : "http://127.0.0.1:3000";
+
 const basePort = (() => {
   try {
     return new URL(baseURL).port || "3000";

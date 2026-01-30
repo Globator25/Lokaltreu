@@ -293,7 +293,7 @@ function isPortFree(hostname, port) {
   });
 }
 
-function runPlaywright(specs) {
+function runPlaywright(specs, envOverrides = {}) {
   return new Promise((resolve) => {
     const cmd = isWin ? "cmd.exe" : "npx";
     const args = isWin
@@ -318,7 +318,7 @@ function runPlaywright(specs) {
           ...specs,
         ];
 
-    const proc = spawnCmd(cmd, args, { env: process.env });
+    const proc = spawnCmd(cmd, args, { env: { ...process.env, ...envOverrides } });
     proc.on("close", (code) => resolve(code ?? 1));
   });
 }
@@ -438,6 +438,7 @@ async function main() {
       throw new Error("Prism readiness check failed after startup.");
     }
 
+    let e2eBaseUrl = process.env.E2E_BASE_URL;
     if (!useExternalWebServer) {
       ensureStandaloneAssets();
       const entry = resolveStandaloneServerEntry();
@@ -448,7 +449,8 @@ async function main() {
       };
       const port = env.PORT;
       const hostname = env.HOSTNAME;
-      process.env.E2E_BASE_URL = `http://127.0.0.1:${port}`;
+      e2eBaseUrl = `http://127.0.0.1:${port}`;
+      process.env.E2E_BASE_URL = e2eBaseUrl;
       const free = await isPortFree(hostname, port);
       if (!free) {
         console.error(
@@ -512,10 +514,15 @@ async function main() {
         exitEarly,
       ]);
     } else {
+      e2eBaseUrl = e2eBaseUrl ?? process.env.E2E_BASE_URL ?? "http://127.0.0.1:3002";
       await waitForHttpOk(webCheckUrl, webServerTimeoutMs, webServerPollIntervalMs);
     }
 
-    const code = await runPlaywright(specs);
+    // Ensure Playwright always receives a valid baseURL for relative page.goto().
+    const code = await runPlaywright(specs, {
+      E2E_BASE_URL: e2eBaseUrl,
+      E2E_RUNNER_OWNS_WEBSERVER: "1",
+    });
     await cleanup();
     process.exit(code);
   } catch (err) {
